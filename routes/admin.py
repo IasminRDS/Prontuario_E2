@@ -64,7 +64,7 @@ def novo_usuario():
 @admin_requerido
 def editar_usuario(id):
     user = User.query.get_or_404(id)
-    unidades = Unidade.query.filter_by(ativo=True).order_by(Unidade.nome).all()
+    unidades = UnidadeSaude.query.filter_by(ativo=True).order_by(UnidadeSaude.nome).all()
     if request.method == "POST":
         user.nome = request.form.get("nome", "").strip()
         user.perfil = request.form.get("perfil", user.perfil)
@@ -93,6 +93,41 @@ def toggle_usuario(id):
     auditar_aqui("users", acao)
     db.session.commit()
     flash(f'Usuário {"ativado" if user.ativo else "desativado"}.', "info")
+    return redirect(url_for("admin.index"))
+
+
+@admin_bp.post("/usuarios/<int:id>/ativar")
+@login_required
+def ativar_usuario(id):
+    """Reativa a conta. Explícito em vez de toggle: o clique diz o que faz."""
+    user = User.query.get_or_404(id)
+    if user.ativo:
+        flash("A conta já está ativa.", "info")
+        return redirect(url_for("admin.index"))
+
+    user.ativo = True
+    auditar_aqui("users", "activate", f"Conta reativada ({user.email})")
+    db.session.commit()
+    flash(f"Conta de {user.nome} reativada.", "success")
+    return redirect(url_for("admin.index"))
+
+
+@admin_bp.post("/usuarios/<int:id>/desativar")
+@login_required
+def desativar_usuario(id):
+    """Desativa a conta. Nunca a própria — evita o admin se trancar fora."""
+    user = User.query.get_or_404(id)
+    if user.id == current_user.id:
+        flash("Você não pode desativar sua própria conta.", "warning")
+        return redirect(url_for("admin.index"))
+    if not user.ativo:
+        flash("A conta já está inativa.", "info")
+        return redirect(url_for("admin.index"))
+
+    user.ativo = False
+    auditar_aqui("users", "deactivate", f"Conta desativada ({user.email})")
+    db.session.commit()
+    flash(f"Conta de {user.nome} desativada.", "info")
     return redirect(url_for("admin.index"))
 
 

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}{{ 'Editar prontuário' if edicao else 'Novo prontuário' }}{% endblock %}
+{% block page_title %}{{ 'Editar prontuário' if edicao else 'Novo prontuário' }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('pacientes.perfil', id=paciente.id) }}">
+    Voltar ao paciente
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="audit-notice">
+  {{ icon('shield-check') }}
+  <span>
+    Registro clínico de <strong>{{ paciente.nome_exibicao }}</strong>
+    {%- if paciente.idade is not none %}, {{ paciente.idade }} anos{% endif %}.
+    A gravação é auditada e, após assinatura, o documento não pode ser alterado.
+  </span>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+  {# ---------- SOAP ---------- #}
+  <div class="card mb-2">
+    <div class="card__header">
+      <div>
+        <div class="card__title">Evolução clínica (SOAP)</div>
+        <div class="text-xs text-muted">
+          Subjetivo, Objetivo, Avaliação e Plano — estrutura padrão do registro.
+        </div>
+      </div>
+    </div>
+    <div class="card__body">
+      <div class="stack stack--sm">
+        <div class="field">
+          <label class="field__label" for="subjetivo">
+            <strong>S</strong> — Subjetivo: queixa e história relatadas pelo paciente
+          </label>
+          <textarea class="textarea" id="subjetivo" name="subjetivo" rows="3"
+                    >{{ prontuario.subjetivo or '' if prontuario else '' }}</textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="objetivo">
+            <strong>O</strong> — Objetivo: exame físico e achados
+          </label>
+          <textarea class="textarea" id="objetivo" name="objetivo" rows="3"
+                    >{{ prontuario.objetivo or '' if prontuario else '' }}</textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="avaliacao">
+            <strong>A</strong> — Avaliação: hipótese diagnóstica
+          </label>
+          <textarea class="textarea" id="avaliacao" name="avaliacao" rows="3"
+                    >{{ prontuario.avaliacao or '' if prontuario else '' }}</textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="plano">
+            <strong>P</strong> — Plano: conduta, exames e orientações
+          </label>
+          <textarea class="textarea" id="plano" name="plano" rows="3"
+                    >{{ prontuario.plano or '' if prontuario else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Sinais vitais ---------- #}
+  <div class="card mb-2">
+    <div class="card__header"><div class="card__title">Sinais vitais e medidas</div></div>
+    <div class="card__body">
+      <div class="form-grid">
+        <div class="field col-3">
+          <label class="field__label" for="pressao_arterial">Pressão arterial</label>
+          <input class="input" id="pressao_arterial" name="pressao_arterial"
+                 placeholder="120/80" maxlength="10"
+                 value="{{ prontuario.pressao_arterial or '' if prontuario else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="temperatura">Temperatura (°C)</label>
+          <input class="input" id="temperatura" name="temperatura" inputmode="decimal"
+                 value="{{ prontuario.temperatura if prontuario and prontuario.temperatura is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="frequencia_cardiaca">FC (bpm)</label>
+          <input class="input" id="frequencia_cardiaca" name="frequencia_cardiaca" inputmode="numeric"
+                 value="{{ prontuario.frequencia_cardiaca if prontuario and prontuario.frequencia_cardiaca is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="frequencia_respiratoria">FR (irpm)</label>
+          <input class="input" id="frequencia_respiratoria" name="frequencia_respiratoria" inputmode="numeric"
+                 value="{{ prontuario.frequencia_respiratoria if prontuario and prontuario.frequencia_respiratoria is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="saturacao_o2">SpO₂ (%)</label>
+          <input class="input" id="saturacao_o2" name="saturacao_o2" inputmode="decimal"
+                 value="{{ prontuario.saturacao_o2 if prontuario and prontuario.saturacao_o2 is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="glicemia">Glicemia (mg/dL)</label>
+          <input class="input" id="glicemia" name="glicemia" inputmode="decimal"
+                 value="{{ prontuario.glicemia if prontuario and prontuario.glicemia is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="peso">Peso (kg)</label>
+          <input class="input" id="peso" name="peso" inputmode="decimal"
+                 value="{{ prontuario.peso if prontuario and prontuario.peso is not none else '' }}" />
+        </div>
+        <div class="field col-3">
+          <label class="field__label" for="altura">Altura (cm)</label>
+          <input class="input" id="altura" name="altura" inputmode="decimal"
+                 value="{{ prontuario.altura if prontuario and prontuario.altura is not none else '' }}" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Diagnóstico e conduta ---------- #}
+  <div class="card mb-2">
+    <div class="card__header">
+      <div class="card__title">Diagnóstico e conduta</div>
+      <a class="btn btn--ghost btn--sm" target="_blank" rel="noreferrer"
+         href="{{ url_for('terminologia.index', tabela='cid10') }}">
+        {{ icon('table') }} Consultar CID-10
+      </a>
+    </div>
+    <div class="card__body">
+      <div class="form-grid">
+        <div class="field col-4">
+          <label class="field__label" for="cid_principal">CID-10 principal</label>
+          <input class="input mono" id="cid_principal" name="cid_principal"
+                 list="lista-cid" maxlength="10" placeholder="ex.: A90"
+                 value="{{ prontuario.cid_principal or '' if prontuario else '' }}" />
+          <span class="field__hint">
+            CID de notificação compulsória gera ficha SINAN automaticamente.
+          </span>
+        </div>
+        <div class="field col-4">
+          <label class="field__label" for="cid_secundario">CID-10 secundário</label>
+          <input class="input mono" id="cid_secundario" name="cid_secundario"
+                 list="lista-cid" maxlength="10"
+                 value="{{ prontuario.cid_secundario or '' if prontuario else '' }}" />
+        </div>
+        <div class="field col-4">
+          <label class="field__label" for="retorno_dias">Retorno em (dias)</label>
+          <input class="input" id="retorno_dias" name="retorno_dias" inputmode="numeric"
+                 value="{{ prontuario.retorno_dias if prontuario and prontuario.retorno_dias is not none else '' }}" />
+        </div>
+        <div class="field col-6">
+          <label class="field__label" for="prescricao">Prescrição</label>
+          <textarea class="textarea" id="prescricao" name="prescricao" rows="3"
+                    >{{ prontuario.prescricao or '' if prontuario else '' }}</textarea>
+        </div>
+        <div class="field col-6">
+          <label class="field__label" for="encaminhamento">Encaminhamento</label>
+          <textarea class="textarea" id="encaminhamento" name="encaminhamento" rows="3"
+                    >{{ prontuario.encaminhamento or '' if prontuario else '' }}</textarea>
+        </div>
+      </div>
+
+      <datalist id="lista-cid"></datalist>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">
+      {{ icon('check-circle') }} {{ 'Salvar alterações' if edicao else 'Registrar prontuário' }}
+    </button>
+    <a class="btn btn--ghost" href="{{ url_for('pacientes.perfil', id=paciente.id) }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Autocomplete de CID-10 contra /tabelas/api/cid10 — o mesmo catálogo que a
+  // tela de terminologias usa, sem duplicar a lista no cliente.
+  (function () {
+    var lista = document.getElementById('lista-cid');
+    var campos = [
+      document.getElementById('cid_principal'),
+      document.getElementById('cid_secundario'),
+    ].filter(Boolean);
+    var timer = null;
+
+    function buscar(termo) {
+      if (!termo || termo.length < 2) return;
+      fetch('{{ url_for("terminologia.api", tabela="cid10") }}?q=' + encodeURIComponent(termo))
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (itens) {
+          lista.innerHTML = '';
+          itens.forEach(function (i) {
+            var o = document.createElement('option');
+            o.value = i.codigo;
+            o.label = i.codigo + ' — ' + i.descricao;
+            lista.appendChild(o);
+          });
+        })
+        .catch(function () { /* offline: o campo segue aceitando digitação livre */ });
+    }
+
+    campos.forEach(function (campo) {
+      campo.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { buscar(campo.value.trim()); }, 250);
+      });
+    });
+  })();
+</script>
+{% endblock %}

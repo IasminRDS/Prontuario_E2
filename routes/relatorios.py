@@ -344,3 +344,11 @@ def triagem():
         data_ini=data_ini,
         data_fim=data_fim,
     )
+
+
+# Produção por unidade: mesmo relatório, com o recorte territorial do usuário
+# já aplicado por `_escopo_unidade()`. Existe como endpoint próprio porque a
+# tela inicial de relatórios linka os dois separadamente.
+relatorios_bp.add_url_rule(
+    "/producao/unidade", endpoint="producao_unidade", view_func=producao
+)

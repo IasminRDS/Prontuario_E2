@@ -27,25 +27,31 @@ CINZA_BORDA = colors.HexColor("#D8DDE6")
 def _estilos():
     s = getSampleStyleSheet()
     base = dict(fontName="Helvetica", textColor=CINZA_TEXTO)
+
+    def _ps(nome, **kw):
+        """ParagraphStyle com os defaults de `base`; o estilo sempre vence.
+
+        Antes era `ParagraphStyle(nome, **base, fontName=...)`, que duplicava o
+        keyword e quebrava toda emissão de PDF com TypeError.
+        """
+        return ParagraphStyle(nome, **{**base, **kw})
+
     return {
-        "titulo": ParagraphStyle(
+        "titulo": _ps(
             "titulo",
-            **base,
             fontSize=13,
             fontName="Helvetica-Bold",
             textColor=AZUL_SUS,
             spaceAfter=2,
         ),
-        "subtitulo": ParagraphStyle(
+        "subtitulo": _ps(
             "subtitulo",
-            **base,
             fontSize=9,
             textColor=colors.HexColor("#5A6478"),
             spaceAfter=8,
         ),
-        "secao": ParagraphStyle(
+        "secao": _ps(
             "secao",
-            **base,
             fontSize=8,
             fontName="Helvetica-Bold",
             textColor=AZUL_MEDIO,
@@ -53,24 +59,22 @@ def _estilos():
             spaceAfter=4,
             borderPad=2,
         ),
-        "corpo": ParagraphStyle("corpo", **base, fontSize=9, leading=14, spaceAfter=4),
-        "label": ParagraphStyle(
+        "corpo": _ps("corpo", fontSize=9, leading=14, spaceAfter=4),
+        "label": _ps(
             "label",
-            **base,
             fontSize=7.5,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#5A6478"),
         ),
-        "valor": ParagraphStyle("valor", **base, fontSize=9, leading=12),
-        "rodape": ParagraphStyle(
+        "valor": _ps("valor", fontSize=9, leading=12),
+        "rodape": _ps(
             "rodape",
-            **base,
             fontSize=7,
             textColor=colors.HexColor("#8A95A8"),
             alignment=TA_CENTER,
         ),
-        "assinatura": ParagraphStyle("assin", **base, fontSize=9, alignment=TA_CENTER),
-        "direita": ParagraphStyle("dir", **base, fontSize=8, alignment=TA_RIGHT),
+        "assinatura": _ps("assin", fontSize=9, alignment=TA_CENTER),
+        "direita": _ps("dir", fontSize=8, alignment=TA_RIGHT),
     }
 
 

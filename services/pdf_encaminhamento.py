@@ -37,43 +37,48 @@ PRIORIDADE_LABELS = {
 
 def _estilos():
     base = dict(fontName="Helvetica", textColor=CINZA)
+
+    def _ps(nome, **kw):
+        """ParagraphStyle com os defaults de `base`; o estilo sempre vence.
+
+        Antes era `ParagraphStyle(nome, **base, fontName=...)`, que duplicava o
+        keyword e quebrava toda emissão de PDF com TypeError.
+        """
+        return ParagraphStyle(nome, **{**base, **kw})
+
     return {
-        "titulo": ParagraphStyle(
+        "titulo": _ps(
             "t",
-            **base,
             fontSize=13,
             fontName="Helvetica-Bold",
             textColor=AZUL,
             spaceAfter=2,
         ),
-        "secao": ParagraphStyle(
+        "secao": _ps(
             "s",
-            **base,
             fontSize=8,
             fontName="Helvetica-Bold",
             textColor=AZUL2,
             spaceBefore=10,
             spaceAfter=4,
         ),
-        "corpo": ParagraphStyle("c", **base, fontSize=9, leading=14, spaceAfter=4),
-        "label": ParagraphStyle(
+        "corpo": _ps("c", fontSize=9, leading=14, spaceAfter=4),
+        "label": _ps(
             "l",
-            **base,
             fontSize=7.5,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#5A6478"),
         ),
-        "valor": ParagraphStyle("v", **base, fontSize=9, leading=12),
-        "rodape": ParagraphStyle(
+        "valor": _ps("v", fontSize=9, leading=12),
+        "rodape": _ps(
             "r",
-            **base,
             fontSize=7,
             textColor=colors.HexColor("#8A95A8"),
             alignment=TA_CENTER,
         ),
-        "centro": ParagraphStyle("ce", **base, fontSize=9, alignment=TA_CENTER),
-        "direita": ParagraphStyle("d", **base, fontSize=8, alignment=TA_RIGHT),
-        "prio": ParagraphStyle(
+        "centro": _ps("ce", fontSize=9, alignment=TA_CENTER),
+        "direita": _ps("d", fontSize=8, alignment=TA_RIGHT),
+        "prio": _ps(
             "p",
             fontName="Helvetica-Bold",
             fontSize=11,

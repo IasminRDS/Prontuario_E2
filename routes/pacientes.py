@@ -1,13 +1,19 @@
-from datetime import date
+from datetime import date, datetime
 
-from flask import Blueprint, request, jsonify, render_template, current_app
+from flask import (
+    Blueprint, abort, current_app, flash, jsonify, redirect, render_template,
+    request, url_for,
+)
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 
 from database.db import db
+from models.atendimento import Atendimento
 from models.paciente import Paciente
+from models.prontuario import Prontuario
 from utils.security import validar_cpf, validar_cns, pode_acessar_paciente
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import audit_log, auditar_aqui, registrar
+from utils.rbac import requer_permissao
 
 pacientes_bp = Blueprint("pacientes", __name__, url_prefix="/pacientes")
 
@@ -258,6 +264,132 @@ def novo():
 @login_required
 def qrscan():
     return render_template("pacientes/qrscan.html")
+
+
+# =========================================================
+# Telas HTML do paciente
+# =========================================================
+@pacientes_bp.get("/<int:id>/perfil")
+@login_required
+@requer_permissao("patient:read")
+def perfil(id):
+    """Sumário do paciente: dados, atendimentos e prontuários.
+
+    Equivale ao `/pacientes/[id]` do frontend Next. Abrir esta tela é acesso a
+    prontuário e por isso entra na trilha de auditoria.
+    """
+    paciente = Paciente.query.get_or_404(id)
+
+    if _rbac_strict() and not (_is_dev_mode() or _bypass_scope()):
+        if not pode_acessar_paciente(paciente, current_user):
+            abort(403)
+
+    atendimentos = (
+        Atendimento.query
+        .filter_by(paciente_id=paciente.id)
+        .order_by(Atendimento.data_hora.desc())
+        .limit(50)
+        .all()
+    )
+    prontuarios = (
+        Prontuario.query
+        .filter_by(paciente_id=paciente.id)
+        .order_by(Prontuario.criado_em.desc())
+        .limit(50)
+        .all()
+    )
+
+    registrar("pacientes", paciente.id, "read",
+              f"Sumário do paciente aberto ({paciente.nome})", commit=True)
+
+    return render_template(
+        "pacientes/perfil.html",
+        paciente=paciente,
+        atendimentos=atendimentos,
+        prontuarios=prontuarios,
+    )
+
+
+@pacientes_bp.route("/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@requer_permissao("patient:update")
+def editar(id):
+    paciente = Paciente.query.get_or_404(id)
+
+    if _rbac_strict() and not (_is_dev_mode() or _bypass_scope()):
+        if not pode_acessar_paciente(paciente, current_user):
+            abort(403)
+
+    if request.method == "POST":
+        campos_texto = (
+            "nome", "nome_social", "rg", "sexo", "raca_cor", "nome_mae", "nome_pai",
+            "telefone", "telefone2", "email", "cep", "logradouro", "numero",
+            "complemento", "bairro", "municipio", "uf", "tipo_sanguineo",
+            "alergias", "observacoes",
+        )
+
+        cpf = _so_digitos(request.form.get("cpf"))
+        cns = _so_digitos(request.form.get("cns"))
+
+        if cpf and not validar_cpf(cpf):
+            flash("CPF inválido.", "warning")
+            return render_template("pacientes/form.html", paciente=paciente)
+        if cns and not validar_cns(cns):
+            flash("CNS inválido.", "warning")
+            return render_template("pacientes/form.html", paciente=paciente)
+
+        # Unicidade: outro paciente já com o mesmo CPF.
+        if cpf:
+            duplicado = Paciente.query.filter(
+                Paciente.cpf == cpf, Paciente.id != paciente.id
+            ).first()
+            if duplicado:
+                flash(f"Já existe paciente com este CPF: {duplicado.nome}.", "danger")
+                return render_template("pacientes/form.html", paciente=paciente)
+
+        alteracoes = []
+        for campo in campos_texto:
+            if campo not in request.form:
+                continue
+            novo = (request.form.get(campo) or "").strip() or None
+            if campo == "uf" and novo:
+                novo = novo.upper()
+            if getattr(paciente, campo) != novo:
+                alteracoes.append(campo)
+                setattr(paciente, campo, novo)
+
+        for campo, valor in (("cpf", cpf), ("cns", cns)):
+            if getattr(paciente, campo) != (valor or None):
+                alteracoes.append(campo)
+                setattr(paciente, campo, valor or None)
+
+        nascimento = (request.form.get("data_nascimento") or "").strip()
+        if nascimento:
+            try:
+                nova_data = date.fromisoformat(nascimento)
+            except ValueError:
+                flash("Data de nascimento inválida.", "warning")
+                return render_template("pacientes/form.html", paciente=paciente)
+            if paciente.data_nascimento != nova_data:
+                alteracoes.append("data_nascimento")
+                paciente.data_nascimento = nova_data
+
+        if alteracoes:
+            paciente.atualizado_em = datetime.utcnow()
+            registrar("pacientes", paciente.id, "update",
+                      f"Campos alterados: {', '.join(sorted(set(alteracoes)))}")
+            db.session.commit()
+            flash("Cadastro atualizado.", "success")
+        else:
+            flash("Nenhuma alteração a salvar.", "info")
+
+        return redirect(url_for("pacientes.perfil", id=paciente.id))
+
+    return render_template("pacientes/form.html", paciente=paciente)
+
+
+def _so_digitos(valor):
+    return "".join(c for c in (valor or "") if c.isdigit()) or None
 
 
 # =========================================================

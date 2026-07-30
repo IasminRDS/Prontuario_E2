@@ -290,7 +290,15 @@ def gerar_alta(internacao, paciente, medico, unidade):
         s.append(Spacer(1, 0.2 * cm))
 
     # ── Prescrições ativas na alta ──
-    prescricoes_ativas = [p for p in internacao.prescricoes_hosp if p.status == "ativa"]
+    # `Internacao` não tem backref para PrescricaoHospitalar — a relação existe
+    # só pela FK. Consultamos direto em vez de acessar um atributo inexistente.
+    from models.prescricao_hospitalar import PrescricaoHospitalar
+
+    prescricoes_ativas = (
+        PrescricaoHospitalar.query
+        .filter_by(internacao_id=internacao.id, status="ativa")
+        .all()
+    )
     if prescricoes_ativas:
         pres = prescricoes_ativas[0]
         bloco = [Paragraph("Medicamentos em Uso na Alta", e["secao"])]
@@ -327,21 +335,22 @@ def gerar_alta(internacao, paciente, medico, unidade):
     # ── Exames realizados ──
     from models.exame import ExameSolicitado
 
-    exames = (
-        ExameSolicitado.query.filter_by(
-            internacao_id=internacao.id if hasattr(internacao, "id") else None
-        ).all()
-        if hasattr(internacao, "id")
-        else []
-    )
-    # fallback: buscar por paciente no período
-    if not exames and hasattr(internacao, "paciente_id"):
-        from database.db import db as _db
+    # `ExameSolicitado` não tem FK para internação: o vínculo é o paciente mais a
+    # janela da internação. Antes havia um filter_by(internacao_id=...) sobre
+    # coluna inexistente, que estourava InvalidRequestError e derrubava o PDF.
+    filtros = [ExameSolicitado.paciente_id == internacao.paciente_id]
+    if internacao.data_entrada:
+        filtros.append(ExameSolicitado.data_solicitacao >= internacao.data_entrada)
+    # Fecha a janela na alta, para não trazer exame de internação posterior.
+    if internacao.data_alta:
+        filtros.append(ExameSolicitado.data_solicitacao <= internacao.data_alta)
 
-        exames = ExameSolicitado.query.filter(
-            ExameSolicitado.paciente_id == internacao.paciente_id,
-            ExameSolicitado.data_solicitacao >= internacao.data_entrada,
-        ).all()
+    exames = (
+        ExameSolicitado.query
+        .filter(*filtros)
+        .order_by(ExameSolicitado.data_solicitacao)
+        .all()
+    )
     if exames:
         bloco = [Paragraph("Exames Realizados", e["secao"])]
         for ex in exames[:10]:

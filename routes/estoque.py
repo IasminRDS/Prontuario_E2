@@ -66,6 +66,85 @@ def novo():
             flash(f'Erro: {e}', 'danger')
     return render_template('estoque/form.html')
 
+@estoque_bp.route('/<int:item_id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar(item_id):
+    """Edita o cadastro do item.
+
+    A QUANTIDADE não é editável aqui de propósito: saldo só muda por
+    movimentação, que deixa rastro em mov_estoque. Editar o número direto
+    apagaria o histórico.
+    """
+    item = ItemEstoque.query.get_or_404(item_id)
+
+    if request.method == 'POST':
+        campos_texto = ('nome', 'categoria', 'apresentacao', 'unidade_medida',
+                        'codigo_interno', 'lote_atual')
+        alteracoes = []
+
+        for campo in campos_texto:
+            if campo not in request.form:
+                continue
+            novo = (request.form.get(campo) or '').strip() or None
+            if getattr(item, campo) != novo:
+                alteracoes.append(campo)
+                setattr(item, campo, novo)
+
+        if not item.nome:
+            flash('O nome do item é obrigatório.', 'warning')
+            return render_template('estoque/form.html', item=item)
+
+        for campo in ('estoque_minimo', 'estoque_maximo', 'preco_unitario'):
+            if campo not in request.form:
+                continue
+            bruto = (request.form.get(campo) or '').strip().replace(',', '.')
+            if not bruto:
+                if getattr(item, campo) is not None:
+                    alteracoes.append(campo)
+                    setattr(item, campo, None)
+                continue
+            try:
+                valor = float(bruto)
+            except ValueError:
+                flash(f'{campo.replace("_", " ").capitalize()} deve ser numérico.', 'warning')
+                return render_template('estoque/form.html', item=item)
+            if getattr(item, campo) != valor:
+                alteracoes.append(campo)
+                setattr(item, campo, valor)
+
+        validade = (request.form.get('validade') or '').strip()
+        if 'validade' in request.form:
+            nova = None
+            if validade:
+                try:
+                    nova = datetime.strptime(validade, '%Y-%m-%d').date()
+                except ValueError:
+                    flash('Data de validade inválida.', 'warning')
+                    return render_template('estoque/form.html', item=item)
+            if item.validade != nova:
+                alteracoes.append('validade')
+                item.validade = nova
+
+        if 'ativo' in request.form:
+            ativo = request.form.get('ativo') in ('1', 'on', 'true')
+            if item.ativo != ativo:
+                alteracoes.append('ativo')
+                item.ativo = ativo
+
+        if alteracoes:
+            auditar_aqui('itens_estoque', 'update',
+                         f'Campos alterados em {item.nome}: '
+                         f'{", ".join(sorted(set(alteracoes)))}')
+            db.session.commit()
+            flash(f'{item.nome} atualizado.', 'success')
+        else:
+            flash('Nenhuma alteração a salvar.', 'info')
+
+        return redirect(url_for('estoque.index'))
+
+    return render_template('estoque/form.html', item=item)
+
+
 @estoque_bp.route('/<int:id>/movimentar', methods=['GET', 'POST'])
 @login_required
 def movimentar(id):

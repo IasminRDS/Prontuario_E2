@@ -37,5 +37,45 @@ class Cirurgia(db.Model):
     criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relações explícitas: `sala` já vem do backref em SalaCirurgica.
+    paciente = db.relationship('Paciente', backref='cirurgias')
+    medico = db.relationship('Medico', backref='cirurgias')
+    # O sumário de alta lista as cirurgias da internação por `internacao.cirurgias`.
+    internacao = db.relationship('Internacao', backref='cirurgias')
+
+    # Rótulos de apresentação. Devolvem (texto, cor) para os templates não
+    # precisarem conhecer os valores crus do banco — mesmo padrão de
+    # Internacao.status_label e Leito.status_label.
+    STATUS = {
+        'agendada': ('Agendada', 'azul'),
+        'em_andamento': ('Em andamento', 'amarelo'),
+        'concluida': ('Concluída', 'verde'),
+        'realizada': ('Realizada', 'verde'),
+        'cancelada': ('Cancelada', 'cinza'),
+        'suspensa': ('Suspensa', 'vermelho'),
+    }
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, (self.status or '—', 'cinza'))
+
+    @property
+    def carater_label(self):
+        """Caráter do procedimento, derivado da sala.
+
+        O modelo espelha o schema do monorepo, que não guarda caráter em coluna
+        própria; sala de urgência implica procedimento de urgência.
+        """
+        tipo = (self.sala.tipo if self.sala else '') or ''
+        if 'urgen' in tipo.lower() or 'emerg' in tipo.lower():
+            return ('Urgência', 'vermelho')
+        return ('Eletiva', 'cinza')
+
+    @property
+    def duracao_minutos(self):
+        if not (self.data_inicio and self.data_fim):
+            return None
+        return int((self.data_fim - self.data_inicio).total_seconds() // 60)
+
     def __repr__(self):
         return f'<Cirurgia {self.id} Status: {self.status}>'

@@ -1,4 +1,8 @@
-from flask import Blueprint, request, jsonify
+from datetime import datetime
+
+from flask import (
+    Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for,
+)
 from flask_login import login_required, current_user
 
 from database.db import db
@@ -6,10 +10,71 @@ from models.prontuario import Prontuario
 from models.paciente import Paciente
 from models.medico import Medico
 from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_paciente
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import audit_log, auditar_aqui, registrar
 from utils.audit import log_auditoria
+from utils.rbac import requer_permissao
+from utils.terminologias import descricao_cid
 
 prontuario_bp = Blueprint("prontuario", __name__, url_prefix="/prontuarios")
+
+# Campos SOAP + sinais vitais aceitos pelo formulário.
+CAMPOS_TEXTO = ("subjetivo", "objetivo", "avaliacao", "plano",
+                "prescricao", "encaminhamento", "pressao_arterial")
+CAMPOS_NUM = ("temperatura", "saturacao_o2", "peso", "altura", "glicemia")
+CAMPOS_INT = ("frequencia_cardiaca", "frequencia_respiratoria", "retorno_dias")
+
+
+def _tem_vitais(p):
+    return any(
+        getattr(p, c) not in (None, "")
+        for c in CAMPOS_NUM + CAMPOS_INT + ("pressao_arterial",)
+    )
+
+
+def _medico_do_usuario():
+    return Medico.query.filter_by(user_id=current_user.id).first()
+
+
+def _preencher(p, form):
+    """Aplica o formulário no prontuário. Devolve a lista de erros."""
+    erros = []
+
+    for campo in CAMPOS_TEXTO:
+        if campo in form:
+            setattr(p, campo, (form.get(campo) or "").strip() or None)
+
+    for campo in CAMPOS_NUM:
+        if campo in form:
+            bruto = (form.get(campo) or "").strip().replace(",", ".")
+            if not bruto:
+                setattr(p, campo, None)
+                continue
+            try:
+                setattr(p, campo, float(bruto))
+            except ValueError:
+                erros.append(f"{campo.replace('_', ' ')} deve ser numérico")
+
+    for campo in CAMPOS_INT:
+        if campo in form:
+            bruto = (form.get(campo) or "").strip()
+            if not bruto:
+                setattr(p, campo, None)
+                continue
+            try:
+                setattr(p, campo, int(bruto))
+            except ValueError:
+                erros.append(f"{campo.replace('_', ' ')} deve ser inteiro")
+
+    for campo in ("cid_principal", "cid_secundario"):
+        if campo not in form:
+            continue
+        cid = (form.get(campo) or "").strip().upper() or None
+        if cid and not validar_cid10(cid):
+            erros.append(f"{campo.replace('_', ' ')} não é um CID-10 válido")
+        else:
+            setattr(p, campo, cid)
+
+    return erros
 
 def to_dict(p):
     return {
@@ -54,6 +119,152 @@ def _query_prontuario_escopo():
         q = q.filter(Prontuario.id == -1)
 
     return q
+
+
+@prontuario_bp.route("/novo/<int:paciente_id>", methods=["GET", "POST"])
+@login_required
+@requer_permissao("clinical:write")
+def novo(paciente_id):
+    """Registro clínico em formato SOAP."""
+    paciente = Paciente.query.get_or_404(paciente_id)
+    if not pode_acessar_paciente(paciente, current_user):
+        abort(403)
+
+    if request.method == "POST":
+        p = Prontuario(paciente_id=paciente.id)
+        medico = _medico_do_usuario()
+        p.medico_id = medico.id if medico else None
+        p.unidade_id = current_user.unidade_id
+        p.atendimento_id = request.form.get("atendimento_id", type=int)
+
+        erros = _preencher(p, request.form)
+        if erros:
+            for e in erros:
+                flash(e.capitalize() + ".", "warning")
+            return render_template("prontuario/form.html", paciente=paciente,
+                                   prontuario=p, edicao=False)
+
+        db.session.add(p)
+        db.session.flush()
+
+        _gerar_notificacao_se_compulsorio(p)
+
+        registrar("prontuarios", p.id, "create",
+                  f"Prontuário criado para {paciente.nome}"
+                  + (f" — CID {p.cid_principal}" if p.cid_principal else ""))
+        db.session.commit()
+
+        flash("Prontuário registrado.", "success")
+        return redirect(url_for("prontuario.visualizar", id=p.id))
+
+    return render_template("prontuario/form.html", paciente=paciente,
+                           prontuario=None, edicao=False)
+
+
+@prontuario_bp.route("/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@requer_permissao("clinical:write")
+def editar(id):
+    p = Prontuario.query.get_or_404(id)
+    if not pode_acessar_prontuario(p, current_user):
+        abort(403)
+
+    # Prontuário assinado é documento fechado: nem o autor reescreve.
+    if p.assinado:
+        flash("Prontuário assinado não pode ser alterado. Registre uma nova evolução.",
+              "warning")
+        return redirect(url_for("prontuario.visualizar", id=p.id))
+
+    if request.method == "POST":
+        erros = _preencher(p, request.form)
+        if erros:
+            for e in erros:
+                flash(e.capitalize() + ".", "warning")
+            return render_template("prontuario/form.html", paciente=p.paciente,
+                                   prontuario=p, edicao=True)
+
+        p.atualizado_em = datetime.utcnow()
+        _gerar_notificacao_se_compulsorio(p)
+
+        registrar("prontuarios", p.id, "update", "Prontuário editado")
+        db.session.commit()
+
+        flash("Prontuário atualizado.", "success")
+        return redirect(url_for("prontuario.visualizar", id=p.id))
+
+    return render_template("prontuario/form.html", paciente=p.paciente,
+                           prontuario=p, edicao=True)
+
+
+@prontuario_bp.get("/<int:id>/ver")
+@login_required
+@requer_permissao("clinical:read")
+def visualizar(id):
+    p = Prontuario.query.get_or_404(id)
+    if not pode_acessar_prontuario(p, current_user):
+        abort(403)
+
+    registrar("prontuarios", p.id, "read",
+              f"Prontuário visualizado (paciente {p.paciente_id})", commit=True)
+
+    return render_template(
+        "prontuario/visualizar.html",
+        prontuario=p,
+        paciente=p.paciente,
+        tem_vitais=_tem_vitais(p),
+        cid_descricao=descricao_cid(p.cid_principal) if p.cid_principal else None,
+    )
+
+
+@prontuario_bp.get("/paciente/<int:paciente_id>")
+@login_required
+@requer_permissao("clinical:read")
+def historico(paciente_id):
+    """Histórico longitudinal — todos os prontuários do paciente."""
+    paciente = Paciente.query.get_or_404(paciente_id)
+    if not pode_acessar_paciente(paciente, current_user):
+        abort(403)
+
+    prontuarios = (
+        Prontuario.query
+        .filter_by(paciente_id=paciente.id)
+        .order_by(Prontuario.criado_em.desc())
+        .all()
+    )
+
+    registrar("prontuarios", paciente.id, "read",
+              f"Histórico clínico consultado ({paciente.nome})", commit=True)
+
+    return render_template("prontuario/historico.html",
+                           paciente=paciente, prontuarios=prontuarios)
+
+
+def _gerar_notificacao_se_compulsorio(p):
+    """Cria notificação SINAN quando o CID lançado é de notificação obrigatória.
+
+    É o gatilho que o repo1 tem no domínio clínico: o profissional não precisa
+    saber quais agravos são notificáveis — o sistema deriva do CID.
+    """
+    from models.notificacao import NotificacaoCompulsoria, agravo_para_cid
+
+    for cid in (p.cid_principal, p.cid_secundario):
+        agravo = agravo_para_cid(cid)
+        if not agravo:
+            continue
+        existe = NotificacaoCompulsoria.query.filter_by(
+            prontuario_id=p.id, cid=cid.strip().upper()
+        ).first()
+        if existe:
+            continue
+        db.session.add(NotificacaoCompulsoria(
+            paciente_id=p.paciente_id,
+            prontuario_id=p.id,
+            unidade_id=p.unidade_id,
+            cid=cid.strip().upper(),
+            agravo=agravo,
+            status="pendente",
+        ))
+        break
 
 
 @prontuario_bp.get("/")

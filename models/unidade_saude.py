@@ -13,3 +13,20 @@ class UnidadeSaude(db.Model):
     cidade = db.Column(db.String(80), nullable=True, index=True)
     uf = db.Column(db.String(2), nullable=True, index=True)
     ativo = db.Column(db.Boolean, default=True, nullable=False)
+
+    @property
+    def municipio(self):
+        """Alias de `cidade`.
+
+        Os geradores de PDF e alguns templates usam `unidade.municipio`, que é
+        como o campo se chama em Paciente. Sem o alias, cada emissão de documento
+        estourava AttributeError.
+        """
+        return self.cidade
+
+    @municipio.setter
+    def municipio(self, valor):
+        self.cidade = valor
+
+    def __repr__(self):
+        return f"<UnidadeSaude {self.nome}>"

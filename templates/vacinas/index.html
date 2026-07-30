@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Vacinas{% endblock %}
+{% block page_title %}Vacinas{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('vacinas.catalogo') }}">
+    {{ icon('syringe') }} Catálogo
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Localizar o cidadão para abrir o cartão</label>
+        <input class="input" type="search" id="q" name="q" value="{{ q }}"
+               placeholder="nome, CPF ou CNS" autocomplete="off" autofocus />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+    </form>
+
+    {% if pacientes %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead><tr><th>Nome</th><th>Nascimento</th><th>CPF</th><th>CNS</th><th class="actions"></th></tr></thead>
+          <tbody>
+            {% for p in pacientes %}
+              <tr>
+                <td>{{ p.nome }}</td>
+                <td class="text-xs">{{ p.data_nascimento.strftime('%d/%m/%Y') if p.data_nascimento }}</td>
+                <td class="mono text-xs">{{ p.cpf or '—' }}</td>
+                <td class="mono text-xs">{{ p.cns or '—' }}</td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--secondary"
+                     href="{{ url_for('vacinas.cartao', paciente_id=p.id) }}">
+                    {{ icon('id-card') }} Cartão
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% elif q %}
+      <div class="empty-state">
+        {{ icon('search') }}
+        <p class="empty-state__title">Nenhum cidadão encontrado</p>
+        <p class="empty-state__hint">Confira o nome, CPF ou CNS digitado.</p>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('syringe') }}
+        <p class="empty-state__title">Busque o cidadão</p>
+        <p class="empty-state__hint">
+          O cartão mostra as doses aplicadas e o que falta do calendário nacional.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

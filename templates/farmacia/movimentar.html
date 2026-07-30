@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Movimentar estoque{% endblock %}
+{% block page_title %}Movimentar {{ item.nome }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('farmacia.index') }}">Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <div class="card__header">
+      <div>
+        <div class="card__title">{{ item.nome }}</div>
+        {% if item.apresentacao %}
+          <div class="text-xs text-muted">{{ item.apresentacao }}</div>
+        {% endif %}
+      </div>
+      {% set critico = item.quantidade is not none and item.estoque_minimo is not none
+                       and item.quantidade <= item.estoque_minimo %}
+      <span class="badge badge--{{ 'red' if critico else 'green' }}">
+        {{ item.quantidade | default(0) }} {{ item.unidade_medida or 'un' }}
+      </span>
+    </div>
+
+    <div class="card__body">
+      {% if critico %}
+        <div class="alert alert--warning">
+          {{ icon('alert-triangle') }}
+          <div class="alert__body">
+            Saldo no ou abaixo do mínimo ({{ item.estoque_minimo }} {{ item.unidade_medida or 'un' }}).
+          </div>
+        </div>
+      {% endif %}
+
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="form-grid">
+          <div class="field col-6">
+            <label class="field__label" for="tipo">Tipo de movimentação <span class="field__req">*</span></label>
+            <select class="select" id="tipo" name="tipo" required>
+              {% for t in tipos_mov %}
+                <option value="{{ t }}" {% if t == 'dispensacao' %}selected{% endif %}>
+                  {{ t | capitalize }}
+                </option>
+              {% endfor %}
+            </select>
+            <span class="field__hint">Só "entrada" soma ao saldo; as demais subtraem.</span>
+          </div>
+
+          <div class="field col-6">
+            <label class="field__label" for="quantidade">
+              Quantidade ({{ item.unidade_medida or 'un' }}) <span class="field__req">*</span>
+            </label>
+            <input class="input mono" id="quantidade" name="quantidade" required
+                   inputmode="decimal" placeholder="0" />
+          </div>
+
+          <div class="field col-6">
+            <label class="field__label" for="lote">Lote</label>
+            <input class="input" id="lote" name="lote" value="{{ item.lote_atual or '' }}" />
+          </div>
+
+          <div class="field col-6">
+            <label class="field__label" for="nota_fiscal">Nota fiscal</label>
+            <input class="input" id="nota_fiscal" name="nota_fiscal" />
+          </div>
+
+          <div class="field col-6">
+            <label class="field__label" for="fornecedor">Fornecedor</label>
+            <input class="input" id="fornecedor" name="fornecedor" />
+          </div>
+
+          <div class="field col-12">
+            <label class="field__label" for="motivo">Motivo / observação</label>
+            <input class="input" id="motivo" name="motivo"
+                   placeholder="paciente, setor de destino, justificativa da perda…" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn--primary" type="submit">
+            {{ icon('package') }} Registrar movimentação
+          </button>
+          <a class="btn btn--ghost" href="{{ url_for('farmacia.index') }}">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header"><div class="card__title">Últimas movimentações</div></div>
+    <div class="card__body">
+      {% if movimentacoes %}
+        <div class="table-wrap">
+          <table class="table table--compact">
+            <thead>
+              <tr><th>Quando</th><th>Tipo</th><th class="num">Qtd.</th><th class="num">Saldo</th><th>Motivo</th></tr>
+            </thead>
+            <tbody>
+              {% for m in movimentacoes %}
+                <tr>
+                  <td class="text-xs mono">{{ m.criado_em.strftime('%d/%m/%Y %H:%M') if m.criado_em }}</td>
+                  <td>
+                    <span class="badge badge--{{ 'green' if m.tipo == 'entrada' else 'amber' if m.tipo == 'ajuste' else 'red' if m.tipo == 'perda' else 'slate' }}">
+                      {{ m.tipo | capitalize }}
+                    </span>
+                  </td>
+                  <td class="num mono">{{ m.quantidade | default(0) }}</td>
+                  <td class="num mono">{{ m.quantidade_posterior | default('—') }}</td>
+                  <td class="text-xs">{{ m.motivo or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <p class="empty-state__title">Nenhuma movimentação registrada</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
