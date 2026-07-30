@@ -131,7 +131,7 @@ def _seed_hospital():
         ('Cirurgia Geral', 'CG', 'enfermaria', '2º andar', 8),
     ]
     for nome, sigla, tipo, andar, qtd in setores_data:
-        s = Setor(nome=nome, sigla=sigla, tipo=tipo, andar=andar, unidade_id=unidade_id)
+        s = Setor(nome=nome, sigla=sigla, tipo=tipo, andar=andar)
         db.session.add(s)
         db.session.flush()
         for i in range(1, qtd + 1):

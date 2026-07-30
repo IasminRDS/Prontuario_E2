@@ -5,11 +5,45 @@ from models.medicamento import Medicamento, Prescricao, ItemPrescricao
 from models.paciente import Paciente
 from models.medico import Medico
 from database.db import db
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from utils.security import medico_requerido
 from datetime import datetime
 
 medicamentos_bp = Blueprint('medicamentos', __name__, url_prefix='/medicamentos')
+
+
+# ── Índice de prescrições (porta de entrada do módulo) ──
+@medicamentos_bp.get('/')
+@login_required
+def index():
+    """Todas as prescrições, mais recentes primeiro."""
+    termo = (request.args.get('q') or '').strip()
+    status = (request.args.get('status') or '').strip()
+    pagina = request.args.get('pagina', type=int) or 1
+
+    query = Prescricao.query
+    if status in ('ativa', 'suspensa', 'concluida'):
+        query = query.filter(Prescricao.status == status)
+    if termo:
+        like = f'%{termo}%'
+        query = query.join(Paciente, Prescricao.paciente_id == Paciente.id).filter(
+            Paciente.nome.ilike(like) | Paciente.cpf.ilike(like)
+        )
+
+    paginacao = (query.order_by(Prescricao.criado_em.desc())
+                 .paginate(page=pagina, per_page=30, error_out=False))
+
+    ids_pac = {p.paciente_id for p in paginacao.items}
+    pacientes = ({p.id: p for p in Paciente.query.filter(Paciente.id.in_(ids_pac)).all()}
+                 if ids_pac else {})
+
+    return render_template('medicamentos/index.html',
+                           paginacao=paginacao,
+                           prescricoes=paginacao.items,
+                           pacientes=pacientes,
+                           termo=termo,
+                           status=status,
+                           total_catalogo=Medicamento.query.filter_by(ativo=True).count())
 
 
 # ── Prescrições do paciente ──
@@ -79,7 +113,7 @@ def prescrever(paciente_id, prontuario_id=None):
                 )
                 db.session.add(item)
 
-            audit_log(acao_default="create", tabela_default="prescricoes")()
+            auditar_aqui("prescricoes", "create")
             db.session.commit()
             flash('Prescrição registrada com sucesso!', 'success')
             return redirect(url_for('medicamentos.visualizar', id=pres.id))
@@ -108,7 +142,7 @@ def atualizar_status(id):
     novo  = request.form.get('status')
     if novo in Prescricao.STATUS_LABELS:
         pres.status = novo
-        audit_log(acao_default="update", tabela_default="prescricoes")()
+        auditar_aqui("prescricoes", "update")
         db.session.commit()
         flash('Status atualizado!', 'success')
     return redirect(url_for('medicamentos.lista_paciente',
@@ -146,7 +180,7 @@ def novo_medicamento():
             )
             db.session.add(m)
             db.session.flush()
-            audit_log(acao_default="create", tabela_default="medicamentos")()
+            auditar_aqui("medicamentos", "create")
             db.session.commit()
             flash(f'{m.nome_generico} cadastrado!', 'success')
             return redirect(url_for('medicamentos.catalogo'))

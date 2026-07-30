@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from models.triagem import Triagem
 from models.paciente import Paciente
 from database.db import db
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from datetime import datetime, date
 
 triagem_bp = Blueprint("triagem", __name__, url_prefix="/triagem")
@@ -107,10 +107,7 @@ def nova(paciente_id=None):
             )
             db.session.add(t)
             db.session.flush()
-            audit_log(
-                acao_default="create",
-                tabela_default="triagens"
-            )
+            auditar_aqui("triagens", "create")
             db.session.commit()
             flash(f"Triagem registrada — classificação: {t.cor_info[0]}.", "success")
             return redirect(url_for("triagem.index"))
@@ -148,7 +145,7 @@ def atualizar_status(id):
     novo = request.form.get("status")
     if novo in ("aguardando", "em_atendimento", "finalizado"):
         t.status = novo
-        audit_log(acao_default="update", tabela_default="triagens")
+        auditar_aqui("triagens", "update")
         db.session.commit()
     return redirect(url_for("triagem.index"))
 

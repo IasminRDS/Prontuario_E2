@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Atendimentos{% endblock %}
+{% block page_title %}Atendimentos{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Buscar paciente</label>
+        <input class="input" type="search" id="q" name="q" value="{{ termo }}"
+               placeholder="nome, CPF ou CNS" autocomplete="off" />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+      {% if termo %}<a class="btn btn--ghost" href="{{ url_for('atendimento.index') }}">Limpar</a>{% endif %}
+    </form>
+
+    {% if atendimentos %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Data</th><th>Paciente</th><th>Profissional</th><th>Tipo</th><th>Prontuário</th><th class="actions"></th></tr>
+          </thead>
+          <tbody>
+            {% for a in atendimentos %}
+              {% set pac = pacientes.get(a.paciente_id) %}
+              {% set med = medicos.get(a.medico_id) %}
+              {% set pr = prontuarios.get(a.id) %}
+              <tr>
+                <td class="text-xs">{{ a.data_hora.strftime('%d/%m/%Y %H:%M') if a.data_hora }}</td>
+                <td>
+                  {% if pac %}
+                    <a href="{{ url_for('pacientes.obter_paciente', paciente_id=pac.id) }}">{{ pac.nome }}</a>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-sm">
+                  {% if med %}
+                    {{ med.user.nome if med.user else '—' }}
+                    {% if med.crm %}<span class="mono text-muted text-xs">{{ med.crm }}</span>{% endif %}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td><span class="badge badge--slate">{{ a.tipo | capitalize }}</span></td>
+                <td>
+                  {% if pr %}
+                    {% if pr.assinado %}
+                      <span class="badge badge--green">{{ icon('file-check') }} Assinado</span>
+                    {% else %}
+                      <span class="badge badge--amber">Em aberto</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge badge--slate">Não documentado</span>
+                  {% endif %}
+                </td>
+                <td class="actions">
+                  {% if pr %}
+                    <a class="btn btn--sm btn--ghost"
+                       href="{{ url_for('prontuario.obter_prontuario', prontuario_id=pr.id) }}">{{ icon('eye') }} Ver</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if paginacao.pages > 1 %}
+        <div class="pagination">
+          <span>Página {{ paginacao.page }} de {{ paginacao.pages }} — {{ paginacao.total }} atendimento(s)</span>
+          <div class="pagination__pages">
+            <a class="{{ 'is-disabled' if not paginacao.has_prev }}"
+               href="{{ url_for('atendimento.index', pagina=paginacao.prev_num, q=termo) }}">Anterior</a>
+            <a class="{{ 'is-disabled' if not paginacao.has_next }}"
+               href="{{ url_for('atendimento.index', pagina=paginacao.next_num, q=termo) }}">Próxima</a>
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        {{ icon('stethoscope') }}
+        <p class="empty-state__title">Nenhum atendimento registrado</p>
+        <p class="empty-state__hint">Os atendimentos aparecem aqui conforme forem criados.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

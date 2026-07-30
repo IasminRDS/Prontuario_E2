@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Tabelas oficiais{% endblock %}
+{% block page_title %}Tabelas oficiais{% endblock %}
+
+{% block content %}
+<p class="pagehead__subtitle mb-2">
+  Consulta às terminologias que padronizam o registro clínico no SUS.
+</p>
+
+<div class="tabs" role="tablist">
+  {% for chave, (sigla, nome) in tabelas.items() %}
+    <a class="tab" role="tab" href="{{ url_for('terminologia.index', tabela=chave, q=termo) }}"
+       aria-selected="{{ 'true' if chave == tabela else 'false' }}" title="{{ nome }}">
+      {{ sigla }}
+    </a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card__header">
+    <div>
+      <div class="card__title">{{ tabelas[tabela][0] }}</div>
+      <div class="text-xs text-muted">{{ tabelas[tabela][1] }}</div>
+    </div>
+  </div>
+
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <input type="hidden" name="tabela" value="{{ tabela }}" />
+      <div class="field field--grow">
+        <label class="field__label" for="q">Buscar por código ou descrição</label>
+        <input class="input" type="search" id="q" name="q" value="{{ termo }}"
+               placeholder="ex.: A90, dengue, dipirona…" autocomplete="off" />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+      {% if termo %}
+        <a class="btn btn--ghost" href="{{ url_for('terminologia.index', tabela=tabela) }}">Limpar</a>
+      {% endif %}
+    </form>
+
+    {% if resultados %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>{% for c in colunas %}<th>{{ c | replace('_', ' ') | capitalize }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for linha in resultados %}
+              <tr>
+                {% for c in colunas %}
+                  <td {% if c in ('codigo', 'cnes') %}class="mono"{% endif %}>{{ linha[c] }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-muted mt-1">
+        {{ resultados | length }} resultado(s){% if resultados | length == limite %} — refine a busca para ver mais{% endif %}.
+      </p>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('search') }}
+        <p class="empty-state__title">Nenhum registro encontrado</p>
+        <p class="empty-state__hint">Tente outro código ou parte da descrição.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

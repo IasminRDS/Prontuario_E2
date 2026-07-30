@@ -1,51 +1,63 @@
-"""
-models package bootstrap seguro:
-- tenta importar módulos/classes comuns
-- ignora os que não existem
-- monta __all__ automaticamente
-- cria aliases de compatibilidade (ex.: Unidade -> UnidadeSaude)
-"""
+"""Bootstrap do pacote de models.
 
+Importa cada model e re-exporta as classes num namespace único, para que
+`from models import Paciente` funcione.
+
+Antes isso era feito com `try/except Exception: continue`, o que engolia erros de
+import de verdade: o mapa apontava para o módulo ``"regionais"`` quando o arquivo
+é ``regional.py``, então ``Regional`` nunca era exportado e ninguém percebia.
+Também faltavam no mapa 6 módulos (cirurgia, faturamento, medicamento,
+prescricao_hospitalar, pronto_socorro, agenda_evento). Agora um módulo declarado
+que não importa é erro explícito.
+"""
 from importlib import import_module
 
-# mapa: modulo -> classes esperadas
+# módulo -> classes esperadas
 _MODEL_IMPORTS = {
+    "agenda_evento": ["AgendaEvento"],
     "agendamento": ["Agendamento"],
     "atendimento": ["Atendimento"],
+    "audit_log": ["AuditLog"],
+    "catalogo_exame": ["CatalogoExame"],
+    "catalogo_vacina": ["CatalogoVacina"],
+    "cirurgia": ["SalaCirurgica", "Cirurgia"],
+    "configuracao": ["Configuracao"],
     "encaminhamento": ["Encaminhamento"],
-    "estoque": ["ItemEstoque", "MovEstoque", "EstoqueItem"],
-    "exame": ["TipoExame", "ExameSolicitado", "Exame"],
+    "estoque": ["ItemEstoque", "MovEstoque"],
+    "exame": ["TipoExame", "ExameSolicitado"],
+    "faturamento": ["AIH", "APAC"],
     "internacao": ["Setor", "Leito", "Internacao", "EvolucaoInternacao"],
+    "lgpd": ["ConsentimentoLgpd", "DocumentoAssinado", "EnvioRnds"],
+    "medicamento": ["Medicamento", "Prescricao", "ItemPrescricao"],
     "medico": ["Medico"],
+    "notificacao": ["NotificacaoCompulsoria"],
     "paciente": ["Paciente"],
+    "prescricao_hospitalar": [
+        "PrescricaoHospitalar",
+        "ItemPrescricaoHosp",
+        "AdministracaoMed",
+    ],
+    "pronto_socorro": ["AtendimentoPS"],
     "prontuario": ["Prontuario"],
-    "regionais": ["Regional"],
+    "regional": ["Regional"],
     "triagem": ["Triagem"],
-    "unidade": ["Unidade"],
     "unidade_saude": ["UnidadeSaude"],
     "user": ["User"],
     "vacina": ["Vacina", "VacinaAplicada"],
-    "catalogo_exame": ["CatalogoExame"],
-    "catalogo_vacina": ["CatalogoVacina"],
-    "audit_log": ["AuditLog"],
 }
 
 __all__ = []
 
-for module_name, class_names in _MODEL_IMPORTS.items():
-    try:
-        mod = import_module(f"{__name__}.{module_name}")
-    except Exception:
-        continue
+for _modulo, _classes in _MODEL_IMPORTS.items():
+    _mod = import_module(f"{__name__}.{_modulo}")
+    for _cls in _classes:
+        if not hasattr(_mod, _cls):
+            raise ImportError(f"models.{_modulo} não define {_cls}")
+        globals()[_cls] = getattr(_mod, _cls)
+        __all__.append(_cls)
 
-    for cls in class_names:
-        if hasattr(mod, cls):
-            globals()[cls] = getattr(mod, cls)
-            if cls not in __all__:
-                __all__.append(cls)
+# Compatibilidade legada: relationship("Unidade") e models/unidade.py.
+Unidade = globals()["UnidadeSaude"]
+__all__.append("Unidade")
 
-# Compatibilidade legada: relationship("Unidade")
-if "Unidade" not in globals() and "UnidadeSaude" in globals():
-    Unidade = UnidadeSaude
-    if "Unidade" not in __all__:
-        __all__.append("Unidade")
+del import_module, _modulo, _classes, _mod, _cls

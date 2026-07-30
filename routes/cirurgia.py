@@ -6,7 +6,7 @@ from models.internacao import Internacao
 from models.paciente import Paciente
 from models.medico import Medico
 from database.db import db
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from utils.security import medico_requerido
 from datetime import datetime, date
 
@@ -27,7 +27,7 @@ def painel():
                  .filter(db.func.date(Cirurgia.data_agendada) == data_f)
                  .order_by(Cirurgia.data_agendada)
                  .all())
-    salas = SalaCirurgica.query.filter_by(ativo=True).all()
+    salas = SalaCirurgica.query.filter_by(ativa=True).all()
 
     agendadas   = sum(1 for c in cirurgias if c.status == 'agendada')
     realizadas  = sum(1 for c in cirurgias if c.status == 'realizada')
@@ -47,7 +47,7 @@ def painel():
 def nova(paciente_id=None):
     pacientes = Paciente.query.filter_by(ativo=True).order_by(Paciente.nome).all()
     medicos   = Medico.query.all()
-    salas     = SalaCirurgica.query.filter_by(ativo=True).all()
+    salas     = SalaCirurgica.query.filter_by(ativa=True).all()
 
     if request.method == 'POST':
         try:
@@ -74,7 +74,7 @@ def nova(paciente_id=None):
             )
             db.session.add(cir)
             db.session.flush()
-            audit_log(acao_default="create", tabela_default="cirurgias")()
+            auditar_aqui("cirurgias", "create")
             db.session.commit()
             flash('Cirurgia agendada!', 'success')
             return redirect(url_for('cirurgia.visualizar', id=cir.id))
@@ -109,7 +109,7 @@ def iniciar(id):
     cir.data_inicio= datetime.utcnow()
     if cir.sala:
         cir.sala.status = 'em_uso'
-    audit_log(acao_default="update", tabela_default="cirurgias")()
+    auditar_aqui("cirurgias", "update")
     db.session.commit()
     flash('Cirurgia iniciada!', 'success')
     return redirect(url_for('cirurgia.visualizar', id=id))
@@ -132,7 +132,7 @@ def finalizar(id):
             cir.cid_pos_op     = request.form.get('cid_pos_op', '').strip().upper() or None
             if cir.sala:
                 cir.sala.status = 'em_limpeza'
-            audit_log(acao_default="update", tabela_default="cirurgias")()
+            auditar_aqui("cirurgias", "update")
             db.session.commit()
             flash('Cirurgia finalizada!', 'success')
             return redirect(url_for('cirurgia.visualizar', id=id))
@@ -152,7 +152,7 @@ def cancelar(id):
     cir.observacoes = (cir.observacoes or '') + f'\nCancelamento: {motivo}'
     if cir.sala:
         cir.sala.status = 'livre'
-    audit_log(acao_default="update", tabela_default="cirurgias")()
+    auditar_aqui("cirurgias", "update")
     db.session.commit()
     flash('Cirurgia cancelada.', 'info')
     return redirect(url_for('cirurgia.painel'))

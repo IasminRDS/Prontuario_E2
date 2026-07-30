@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Configurar verificação em duas etapas{% endblock %}
+{% block page_title %}Verificação em duas etapas{% endblock %}
+
+{% block content %}
+<div class="card maxw-sm">
+  <div class="card__header">
+    <div class="card__title">Passo 1 — escaneie o código</div>
+  </div>
+  <div class="card__body">
+    <p class="text-sm text-muted mb-2">
+      Abra seu aplicativo autenticador (Google Authenticator, Authy, Microsoft
+      Authenticator) e escaneie o código abaixo.
+    </p>
+
+    {% if qrcode %}
+      <div class="text-center mb-2">
+        <img src="{{ qrcode }}" alt="Código QR para configurar o autenticador"
+             width="220" height="220" style="margin:0 auto;border:1px solid var(--clinic-border);border-radius:var(--radius)" />
+      </div>
+    {% else %}
+      <div class="alert alert--warning">
+        {{ icon('alert-triangle') }}
+        <div class="alert__body">
+          Não foi possível gerar a imagem do QR. Cadastre a chave manualmente.
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="field">
+      <label class="field__label">Não consegue escanear? Digite esta chave no app:</label>
+      <input class="input mono" value="{{ secret }}" readonly
+             onclick="this.select()" aria-label="Chave secreta para configuração manual" />
+    </div>
+
+    <div class="alert alert--info mt-2">
+      {{ icon('info') }}
+      <div class="alert__body text-xs">
+        Guarde esta chave em local seguro. Ela é a única forma de reconfigurar o
+        autenticador se você perder o celular.
+      </div>
+    </div>
+  </div>
+
+  <div class="card__footer">
+    <form method="post" action="{{ url_for('conta.mfa_enable') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="field">
+        <label class="field__label" for="codigo">
+          Passo 2 — digite o código de 6 dígitos que o app mostra
+        </label>
+        <input class="input mfa-code" id="codigo" name="codigo" required
+               inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,9}"
+               maxlength="9" placeholder="000000" autofocus />
+        <span class="field__hint">
+          A ativação só é concluída quando o código for aceito — assim você não corre
+          o risco de ficar trancado fora da conta.
+        </span>
+      </div>
+      <div class="row" style="gap:.5rem">
+        <button class="btn btn--primary" type="submit">{{ icon('shield-check') }} Ativar</button>
+        <a class="btn btn--ghost" href="{{ url_for('conta.index') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

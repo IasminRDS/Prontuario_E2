@@ -1,19 +1,112 @@
 {% extends "base.html" %}
-{% block title %}Log de Auditoria{% endblock %}
-{% block page_title %}Log de Auditoria{% endblock %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Auditoria{% endblock %}
+{% block page_title %}Trilha de auditoria{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('auditoria.verificar') }}">
+    {{ icon('shield-check') }} Verificar integridade
+  </a>
+{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width:1100px;margin:0 auto;">
-  <div class="card-body">
-    <table class="tabela">
-      <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Módulo</th></tr></thead>
-      <tbody>
-        {% for l in logs %}
-        <tr><td>{{ l.quando }}</td><td>{{ l.usuario }}</td><td>{{ l.acao }}</td><td>{{ l.modulo }}</td></tr>
-        {% else %}
-        <tr><td colspan="4" class="text-muted">Sem logs.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="audit-notice">
+  {{ icon('shield-check') }}
+  <span>
+    Cada evento carrega o hash do anterior. Alterar ou remover uma linha rompe a
+    cadeia, e a verificação aponta exatamente onde.
+  </span>
+</div>
+
+<div class="card">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Buscar</label>
+        <input class="input" type="search" id="q" name="q" value="{{ filtros.q }}"
+               placeholder="descrição, tabela ou IP" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="acao">Ação</label>
+        <select class="select" id="acao" name="acao">
+          <option value="">Todas</option>
+          {% for a in acoes %}
+            <option value="{{ a }}" {% if filtros.acao == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="tabela">Módulo</label>
+        <select class="select" id="tabela" name="tabela">
+          <option value="">Todos</option>
+          {% for t in tabelas %}
+            <option value="{{ t }}" {% if filtros.tabela == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="dias">Período</label>
+        <select class="select" id="dias" name="dias">
+          {% for d in [7, 30, 90, 365, 0] %}
+            <option value="{{ d }}" {% if filtros.dias == d %}selected{% endif %}>
+              {{ (d ~ ' dias') if d else 'Tudo' }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Filtrar</button>
+    </form>
+
+    {% if logs %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Quando</th><th>Usuário</th><th>Ação</th>
+              <th>Módulo</th><th class="num">Registro</th><th>Descrição</th><th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in logs %}
+              <tr>
+                <td class="text-xs mono">{{ l.quando.strftime('%d/%m/%Y %H:%M:%S') if l.quando else '—' }}</td>
+                <td class="text-sm">{{ l.usuario }}</td>
+                <td>
+                  {% set tom = 'red' if l.acao in ('delete', 'login_falha', 'mfa_falha')
+                               else 'amber' if l.acao in ('update', 'export')
+                               else 'green' if l.acao in ('create', 'login', 'sign')
+                               else 'slate' %}
+                  <span class="badge badge--{{ tom }}">{{ l.acao }}</span>
+                </td>
+                <td class="text-xs mono">{{ l.tabela }}</td>
+                <td class="num text-xs mono">{{ l.registro_id or '—' }}</td>
+                <td class="text-xs">{{ l.descricao or '—' }}</td>
+                <td class="text-xs mono">{{ l.ip or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if paginacao.pages > 1 %}
+        <div class="pagination">
+          <span>Página {{ paginacao.page }} de {{ paginacao.pages }} — {{ paginacao.total }} evento(s)</span>
+          <div class="pagination__pages">
+            <a class="{{ 'is-disabled' if not paginacao.has_prev }}"
+               href="{{ url_for('auditoria.index', pagina=paginacao.prev_num, **filtros) }}">Anterior</a>
+            <a class="{{ 'is-disabled' if not paginacao.has_next }}"
+               href="{{ url_for('auditoria.index', pagina=paginacao.next_num, **filtros) }}">Próxima</a>
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        {{ icon('shield-check') }}
+        <p class="empty-state__title">Nenhum evento no filtro atual</p>
+        <p class="empty-state__hint">Amplie o período ou limpe os filtros.</p>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

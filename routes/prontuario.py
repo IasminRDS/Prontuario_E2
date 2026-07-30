@@ -6,7 +6,7 @@ from models.prontuario import Prontuario
 from models.paciente import Paciente
 from models.medico import Medico
 from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_paciente
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from utils.audit import log_auditoria
 
 prontuario_bp = Blueprint("prontuario", __name__, url_prefix="/prontuarios")
@@ -73,7 +73,7 @@ def listar_prontuarios():
 
     itens = q.order_by(Prontuario.criado_em.desc()).all()
 
-    log_auditoria(tabela="prontuarios", acao="list")()
+    auditar_aqui("prontuarios", "list")
 
     return (
         jsonify(
@@ -210,7 +210,7 @@ def criar_prontuario():
     db.session.add(novo)
     db.session.commit()
 
-    audit_log(acao_default="create", tabela_default="prontuarios")()
+    auditar_aqui("prontuarios", "create")
 
     return jsonify({"mensagem": "Prontuário criado com sucesso", "id": novo.id}), 201
 
@@ -261,7 +261,7 @@ def atualizar_prontuario(prontuario_id):
 
     db.session.commit()
 
-    audit_log(acao_default="update", tabela_default="prontuarios")()
+    auditar_aqui("prontuarios", "update")
 
     return jsonify({"mensagem": "Prontuário atualizado com sucesso"}), 200
 
@@ -284,7 +284,7 @@ def assinar_prontuario(prontuario_id):
     p.assinar()
     db.session.commit()
 
-    audit_log(acao_default="sign", tabela_default="prontuarios")()
+    auditar_aqui("prontuarios", "sign")
 
     return jsonify({"mensagem": "Prontuário assinado com sucesso"}), 200
 
@@ -300,6 +300,6 @@ def excluir_prontuario(prontuario_id):
     db.session.delete(p)
     db.session.commit()
 
-    audit_log(acao_default="delete", tabela_default="prontuarios")()
+    auditar_aqui("prontuarios", "delete")
 
     return jsonify({"mensagem": "Prontuário excluído com sucesso"}), 200

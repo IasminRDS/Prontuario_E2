@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Portal do Cidadão{% endblock %}
+{% block page_title %}Portal do Cidadão{% endblock %}
+
+{% block content %}
+<div class="audit-notice">
+  {{ icon('shield-check') }}
+  <span>
+    Esta tela expõe ao titular quem acessou seu prontuário, conforme o art. 9º da
+    LGPD. Sua própria consulta aqui também é registrada.
+  </span>
+</div>
+
+<div class="card mb-2">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Localizar o cidadão</label>
+        <input class="input" type="search" id="q" name="q" value="{{ termo }}"
+               placeholder="nome, CPF ou CNS" autocomplete="off" />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+    </form>
+
+    {% if pacientes and not paciente %}
+      <div class="table-wrap mt-2">
+        <table class="table table--compact">
+          <thead><tr><th>Nome</th><th>Nascimento</th><th>CPF</th><th class="actions"></th></tr></thead>
+          <tbody>
+            {% for p in pacientes %}
+              <tr>
+                <td>{{ p.nome }}</td>
+                <td class="text-xs">{{ p.data_nascimento.strftime('%d/%m/%Y') if p.data_nascimento }}</td>
+                <td class="mono text-xs">{{ p.cpf or '—' }}</td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--secondary"
+                     href="{{ url_for('portal_cidadao.index', q=termo, paciente_id=p.id) }}">Abrir</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if paciente %}
+  <div class="pagehead">
+    <div>
+      <div class="pagehead__title">{{ paciente.nome }}</div>
+      <div class="pagehead__subtitle">
+        {% if paciente.data_nascimento %}Nascimento {{ paciente.data_nascimento.strftime('%d/%m/%Y') }} · {% endif %}
+        {% if paciente.cns %}CNS <span class="mono">{{ paciente.cns }}</span>{% elif paciente.cpf %}CPF <span class="mono">{{ paciente.cpf }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    {# --- Cartão de vacinas --- #}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">{{ icon('syringe') }} Cartão de vacinas</div>
+      </div>
+      <div class="card__body">
+        {% if cartao %}
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <thead><tr><th>Imunobiológico</th><th>Doses</th><th>Última aplicação</th></tr></thead>
+              <tbody>
+                {% for v in cartao %}
+                  <tr>
+                    <td>
+                      {{ v.nome }}
+                      {% if v.sigla %}<span class="text-muted mono text-xs"> {{ v.sigla }}</span>{% endif %}
+                    </td>
+                    <td>
+                      {% set n = v.doses | length %}
+                      {% if v.previstas %}
+                        {% if n >= v.previstas %}
+                          <span class="badge badge--green">{{ n }}/{{ v.previstas }} completo</span>
+                        {% elif n > 0 %}
+                          <span class="badge badge--amber">{{ n }}/{{ v.previstas }} em curso</span>
+                        {% else %}
+                          <span class="badge badge--slate">0/{{ v.previstas }} pendente</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="badge badge--slate">{{ n }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-xs">
+                      {% if v.doses %}
+                        {{ v.doses[-1].data_aplicacao.strftime('%d/%m/%Y') if v.doses[-1].data_aplicacao }}
+                        {% if v.doses[-1].unidade %}<div class="text-muted">{{ v.doses[-1].unidade }}</div>{% endif %}
+                      {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            {{ icon('syringe') }}
+            <p class="empty-state__title">Nenhuma vacina no calendário</p>
+            <p class="empty-state__hint">Cadastre imunobiológicos no catálogo de vacinas.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# --- Quem acessou meu prontuário --- #}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">{{ icon('eye') }} Quem acessou este prontuário</div>
+        <span class="text-xs text-muted">{{ acessos | length }} registro(s)</span>
+      </div>
+      <div class="card__body">
+        {% if acessos %}
+          <div class="timeline">
+            {% for a in acessos %}
+              <div class="timeline__item">
+                <div class="timeline__when">
+                  {{ a.quando.strftime('%d/%m/%Y às %H:%M') if a.quando }}
+                  {% if a.ip %}· <span class="mono">{{ a.ip }}</span>{% endif %}
+                </div>
+                <div class="timeline__title">{{ a.quem }} <span class="badge badge--slate">{{ a.perfil }}</span></div>
+                <div class="timeline__body">{{ a.descricao or a.acao }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            {{ icon('shield-check') }}
+            <p class="empty-state__title">Nenhum acesso registrado</p>
+            <p class="empty-state__hint">
+              A trilha passa a registrar a partir do primeiro acesso auditado.
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

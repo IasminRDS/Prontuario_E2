@@ -1,0 +1,112 @@
+{% from "_icons.html" import icon %}<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verificação de documento — SNPE</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('snpe-tema');
+          document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        } catch (e) { document.documentElement.dataset.theme = 'light'; }
+      })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dsgov.css') }}" />
+  </head>
+  <body>
+    <div class="govbar">
+      <div class="govbar__inner">
+        <a class="govbar__brand" href="https://www.gov.br" target="_blank" rel="noreferrer">gov<span>.br</span></a>
+      </div>
+    </div>
+
+    <div class="auth">
+      <main class="auth__main">
+        <div class="auth__card" style="max-width:30rem">
+          <div class="auth__brand">
+            <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="7" fill="var(--clinic-primary)" />
+              <path d="M16 8v16M8 16h16" stroke="#fff" stroke-width="3.4" stroke-linecap="round" />
+            </svg>
+            <div class="auth__title">Verificação de documento</div>
+            <div class="auth__subtitle">Confira a autenticidade de um documento emitido pelo SNPE.</div>
+          </div>
+
+          {% if doc %}
+            {% if doc.valido %}
+              <div class="alert alert--success">
+                {{ icon('check-circle') }}
+                <div class="alert__body">
+                  <span class="alert__title">Documento autêntico.</span>
+                  Emitido por este sistema e não revogado.
+                </div>
+              </div>
+            {% else %}
+              <div class="alert alert--danger">
+                {{ icon('x-circle') }}
+                <div class="alert__body">
+                  <span class="alert__title">Documento revogado.</span>
+                  {{ doc.motivo_revogacao or 'Este documento foi invalidado pelo emissor.' }}
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="stack stack--sm mt-2">
+              <div class="row row--between"><span class="text-muted">Código</span><span class="mono text-strong">{{ doc.codigo }}</span></div>
+              <div class="row row--between"><span class="text-muted">Tipo</span><span>{{ doc.tipo | capitalize }}</span></div>
+              <div class="row row--between">
+                <span class="text-muted">Emitido em</span>
+                <span>{{ doc.emitido_em.strftime('%d/%m/%Y às %H:%M') if doc.emitido_em }}</span>
+              </div>
+              {% if doc.assinante_nome %}
+                <div class="row row--between">
+                  <span class="text-muted">Emissor</span>
+                  <span>
+                    {{ doc.assinante_nome }}
+                    {% if doc.assinante_registro %}<span class="mono text-muted">{{ doc.assinante_registro }}</span>{% endif %}
+                  </span>
+                </div>
+              {% endif %}
+              {% if doc.revogado_em %}
+                <div class="row row--between">
+                  <span class="text-muted">Revogado em</span>
+                  <span>{{ doc.revogado_em.strftime('%d/%m/%Y') }}</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="field mt-2">
+              <label class="field__label">Impressão digital do conteúdo (SHA-256)</label>
+              <input class="input mono text-xs" value="{{ doc.hash_conteudo }}" readonly onclick="this.select()" />
+              <span class="field__hint">
+                Confere com o arquivo em mãos? Então o documento não foi alterado.
+              </span>
+            </div>
+
+            <p class="text-xs text-muted mt-2">
+              Por proteção ao titular (LGPD), esta página não exibe conteúdo clínico —
+              apenas a prova de autenticidade.
+            </p>
+          {% else %}
+            <div class="alert alert--warning">
+              {{ icon('alert-triangle') }}
+              <div class="alert__body">
+                <span class="alert__title">Documento não encontrado.</span>
+                Nenhum documento com o código
+                <span class="mono">{{ codigo }}</span> foi emitido por este sistema.
+              </div>
+            </div>
+            <p class="text-xs text-muted mt-2">
+              Confira o código impresso no documento. Ele tem 12 caracteres.
+            </p>
+          {% endif %}
+        </div>
+      </main>
+
+      <footer class="govfooter">
+        <p><strong>SNPE</strong> — Sistema Nacional de Prontuário Eletrônico · Ministério da Saúde</p>
+      </footer>
+    </div>
+  </body>
+</html>

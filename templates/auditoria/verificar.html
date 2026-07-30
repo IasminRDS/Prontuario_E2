@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Integridade da auditoria{% endblock %}
+{% block page_title %}Integridade da trilha de auditoria{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('auditoria.index') }}">Voltar à trilha</a>
+{% endblock %}
+
+{% block content %}
+<div class="card maxw-md">
+  <div class="card__body">
+    {% if integra %}
+      <div class="alert alert--success">
+        {{ icon('check-circle') }}
+        <div class="alert__body">
+          <span class="alert__title">Cadeia íntegra.</span>
+          Os {{ total }} evento(s) foram recalculados e cada hash corresponde ao
+          conteúdo gravado e ao elo anterior.
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert--danger">
+        {{ icon('alert-triangle') }}
+        <div class="alert__body">
+          <span class="alert__title">{{ problemas | length }} inconsistência(s) em {{ total }} evento(s).</span>
+          Um evento alterado ou removido rompe a cadeia a partir daquele ponto.
+        </div>
+      </div>
+
+      <div class="table-wrap mt-2">
+        <table class="table table--compact">
+          <thead><tr><th class="num">Evento</th><th>Motivo</th></tr></thead>
+          <tbody>
+            {% for p in problemas %}
+              <tr>
+                <td class="num mono">#{{ p.id }}</td>
+                <td class="text-sm">{{ p.motivo }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+    <p class="text-xs text-muted mt-2">
+      A verificação recalcula o SHA-256 de cada evento a partir do próprio conteúdo
+      mais o hash do evento anterior. Não depende de permissão do banco — funciona
+      mesmo se alguém tiver acesso direto à tabela.
+    </p>
+  </div>
+</div>
+{% endblock %}

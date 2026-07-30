@@ -6,7 +6,7 @@ from models.internacao import Internacao
 from models.medico import Medico
 from models.medicamento import Medicamento
 from database.db import db
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from utils.security import medico_requerido
 from datetime import datetime, timedelta
 
@@ -90,7 +90,7 @@ def nova(internacao_id):
             if ant and ant.id != pres.id:
                 ant.status = 'suspensa'
 
-            audit_log(acao_default="create", tabela_default="prescricoes_hospitalares")
+            auditar_aqui("prescricoes_hospitalares", "create")
             db.session.commit()
             flash('Prescrição registrada!', 'success')
             return redirect(url_for('pres_hosp.visualizar', id=pres.id))
@@ -123,7 +123,7 @@ def administrar(item_id):
         observacoes     = obs,
     )
     db.session.add(adm)
-    audit_log(acao_default="create", tabela_default="administracoes_med")
+    auditar_aqui("administracoes_med", "create")
     db.session.commit()
     flash(f'{item.nome_exibicao} — {status}.', 'success')
     return redirect(url_for('pres_hosp.visualizar', id=item.prescricao_id))

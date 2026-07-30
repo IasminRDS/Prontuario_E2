@@ -1,0 +1,41 @@
+{% from "_icons.html" import icon %}<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Erro interno — SNPE</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('snpe-tema');
+          document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        } catch (e) { document.documentElement.dataset.theme = 'light'; }
+      })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dsgov.css') }}" />
+  </head>
+  <body>
+    <div class="govbar">
+      <div class="govbar__inner">
+        <a class="govbar__brand" href="https://www.gov.br" target="_blank" rel="noreferrer">gov<span>.br</span></a>
+      </div>
+    </div>
+
+    <div class="auth">
+      <main class="auth__main">
+        <div class="auth__card text-center">
+          <div style="font-size:3rem;font-weight:700;color:var(--slate-300)" class="mono">500</div>
+          <h1 class="auth__title mt-1">Erro interno</h1>
+          <p class="auth__subtitle mt-1">
+            Algo falhou ao processar sua solicitação. A transação foi desfeita — nada
+            ficou gravado pela metade.
+          </p>
+          <a class="btn btn--primary mt-3" href="/">Voltar ao painel</a>
+        </div>
+      </main>
+      <footer class="govfooter">
+        <p><strong>SNPE</strong> — Sistema Nacional de Prontuário Eletrônico</p>
+      </footer>
+    </div>
+  </body>
+</html>

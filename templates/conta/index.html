@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Minha conta{% endblock %}
+{% block page_title %}Minha conta{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  {# --- Identificação --- #}
+  <div class="card">
+    <div class="card__header"><div class="card__title">Identificação</div></div>
+    <div class="card__body">
+      <div class="stack stack--sm">
+        <div class="row row--between"><span class="text-muted">Nome</span><span class="text-strong">{{ current_user.nome }}</span></div>
+        <div class="row row--between"><span class="text-muted">E-mail</span><span class="mono text-sm">{{ current_user.email }}</span></div>
+        <div class="row row--between"><span class="text-muted">Perfil</span><span class="badge badge--blue">{{ current_user.perfil }}</span></div>
+        <div class="row row--between"><span class="text-muted">Nível de acesso</span><span>{{ current_user.nivel_acesso }}</span></div>
+        {% if current_user.unidade %}
+          <div class="row row--between"><span class="text-muted">Unidade</span><span>{{ current_user.unidade.nome }}</span></div>
+        {% endif %}
+        {% if current_user.govbr_sub %}
+          <div class="row row--between">
+            <span class="text-muted">Conta gov.br</span>
+            <span class="badge badge--green">vinculada{% if current_user.govbr_nivel %} — {{ current_user.govbr_nivel }}{% endif %}</span>
+          </div>
+        {% endif %}
+        {% if current_user.ultimo_acesso %}
+          <div class="row row--between">
+            <span class="text-muted">Último acesso</span>
+            <span class="text-sm">{{ current_user.ultimo_acesso.strftime('%d/%m/%Y %H:%M') }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Verificação em duas etapas --- #}
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Verificação em duas etapas</div>
+      {% if current_user.mfa_ativo %}
+        <span class="badge badge--green">{{ icon('shield-check') }} Ativa</span>
+      {% else %}
+        <span class="badge badge--amber">Inativa</span>
+      {% endif %}
+    </div>
+    <div class="card__body">
+      {% if current_user.mfa_ativo %}
+        <p class="text-sm text-muted mb-2">
+          Ativa desde {{ current_user.mfa_confirmado_em.strftime('%d/%m/%Y') if current_user.mfa_confirmado_em else '—' }}.
+          A cada login será pedido o código de 6 dígitos do seu aplicativo autenticador.
+        </p>
+        <form method="post" action="{{ url_for('conta.mfa_disable') }}"
+              data-confirm="Desativar a verificação em duas etapas? Sua conta fica menos protegida.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="field">
+            <label class="field__label" for="senha">Confirme sua senha para desativar</label>
+            <input class="input" type="password" id="senha" name="senha" required autocomplete="current-password" />
+          </div>
+          <button class="btn btn--danger btn--sm" type="submit">Desativar</button>
+        </form>
+      {% else %}
+        <p class="text-sm text-muted mb-2">
+          Adiciona uma segunda barreira ao login: além da senha, um código temporário
+          gerado no seu celular (Google Authenticator, Authy, Microsoft Authenticator).
+        </p>
+        <form method="post" action="{{ url_for('conta.mfa_setup') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn--primary" type="submit">{{ icon('key-round') }} Configurar agora</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {# --- Senha --- #}
+  <div class="card">
+    <div class="card__header"><div class="card__title">Alterar senha</div></div>
+    <div class="card__body">
+      <form method="post" action="{{ url_for('conta.trocar_senha') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="field">
+          <label class="field__label" for="senha_atual">Senha atual</label>
+          <input class="input" type="password" id="senha_atual" name="senha_atual" required autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="senha_nova">Nova senha</label>
+          <input class="input" type="password" id="senha_nova" name="senha_nova" required minlength="8" autocomplete="new-password" />
+          <span class="field__hint">Mínimo de 8 caracteres.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="senha_confirma">Confirme a nova senha</label>
+          <input class="input" type="password" id="senha_confirma" name="senha_confirma" required minlength="8" autocomplete="new-password" />
+        </div>
+        <button class="btn btn--primary" type="submit">Alterar senha</button>
+      </form>
+    </div>
+  </div>
+
+  {# --- Permissões efetivas --- #}
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Minhas permissões</div>
+      <span class="text-xs text-muted">{{ permissoes | length }} concedida(s)</span>
+    </div>
+    <div class="card__body">
+      <p class="text-xs text-muted mb-2">
+        Derivadas do perfil <strong>{{ current_user.perfil }}</strong>. O backend é a
+        autoridade — a interface apenas espelha estas permissões.
+      </p>
+      <div class="row row--wrap" style="gap:.375rem">
+        {% for p in permissoes %}
+          <span class="badge badge--slate mono">{{ p }}</span>
+        {% else %}
+          <span class="text-muted text-sm">Nenhuma permissão atribuída.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

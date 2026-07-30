@@ -5,7 +5,7 @@ from models.audit_log import AuditLog
 from models.unidade_saude import UnidadeSaude
 from database.db import db
 from utils.security import admin_requerido
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 from datetime import datetime
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -52,7 +52,7 @@ def novo_usuario():
         user.set_password(request.form.get("senha", "Mudar@123"))
         db.session.add(user)
         db.session.flush()
-        audit_log(acao_default="create", tabela_default="users")()
+        auditar_aqui("users", "create")
         db.session.commit()
         flash(f"Usuário {user.nome} criado com sucesso!", "success")
         return redirect(url_for("admin.index"))
@@ -73,7 +73,7 @@ def editar_usuario(id):
         nova_senha = request.form.get("senha", "").strip()
         if nova_senha:
             user.set_password(nova_senha)
-        audit_log(acao_default="update", tabela_default="users")()
+        auditar_aqui("users", "update")
         db.session.commit()
         flash("Usuário atualizado!", "success")
         return redirect(url_for("admin.index"))
@@ -90,7 +90,7 @@ def toggle_usuario(id):
         return redirect(url_for("admin.index"))
     user.ativo = not user.ativo
     acao = "activate" if user.ativo else "delete"
-    audit_log(acao_default=acao, tabela_default="users")()
+    auditar_aqui("users", acao)
     db.session.commit()
     flash(f'Usuário {"ativado" if user.ativo else "desativado"}.', "info")
     return redirect(url_for("admin.index"))

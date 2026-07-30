@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Payload FHIR — {{ tipo }}{% endblock %}
+{% block page_title %}Payload FHIR{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('rnds.index') }}">Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header">
+    <div>
+      <div class="card__title">{{ tipo }} <span class="mono text-muted">#{{ entity_id }}</span></div>
+      <div class="text-xs text-muted">Recurso FHIR R4 exatamente como seria despachado.</div>
+    </div>
+    <form method="post" action="{{ url_for('rnds.enviar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="tipo" value="{{ tipo }}" />
+      <input type="hidden" name="entity_id" value="{{ entity_id }}" />
+      <button class="btn btn--primary btn--sm" type="submit">{{ icon('send') }} Enviar este recurso</button>
+    </form>
+  </div>
+  <div class="card__body">
+    <div class="table-wrap">
+      <pre class="mono text-xs" style="margin:0;padding:1rem;background:var(--slate-50);border-radius:var(--radius);overflow-x:auto">{{ payload }}</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

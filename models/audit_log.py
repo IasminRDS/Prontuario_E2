@@ -24,7 +24,33 @@ class AuditLog(db.Model):
         db.DateTime, default=datetime.utcnow, nullable=False, index=True
     )
 
+    # --- Encadeamento por hash (integridade da trilha) -------------------
+    # Cada registro carrega o hash do anterior. Alterar ou remover uma linha
+    # no meio quebra a cadeia e a verificação aponta exatamente onde. É o que
+    # torna a trilha WORM na prática, sem depender de permissão do banco.
+    hash_anterior = db.Column(db.String(64), nullable=True)
+    hash_atual = db.Column(db.String(64), nullable=True, index=True)
+
     usuario = db.relationship("User", backref="logs_auditoria")
+
+    def calcular_hash(self):
+        """SHA-256 do conteúdo canônico + hash do registro anterior."""
+        import hashlib
+
+        campos = "|".join(
+            str(v) if v is not None else ""
+            for v in (
+                self.tabela,
+                self.registro_id,
+                self.acao,
+                self.descricao,
+                self.usuario_id,
+                self.ip,
+                self.criado_em.isoformat() if self.criado_em else "",
+                self.hash_anterior or "",
+            )
+        )
+        return hashlib.sha256(campos.encode("utf-8")).hexdigest()
 
     @property
     def detalhe(self):

@@ -1,264 +1,145 @@
-<!doctype html>
+{% from "_icons.html" import icon %}<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login — Prontuário Único SUS</title>
-  <style>
-    :root{
-      --bg:#e9eef5;
-      --card:#ffffff;
-      --blue:#1f4f9a;
-      --blue2:#245cb3;
-      --line:#cfdaea;
-      --text:#0f2b50;
-      --muted:#5f7390;
-      --input:#bfd0e8;
-      --btn:#1f4f9a;
-      --btn-hover:#1a4485;
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <title>Entrar — SNPE</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('snpe-tema');
+          document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        } catch (e) { document.documentElement.dataset.theme = 'light'; }
+      })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dsgov.css') }}" />
+  </head>
 
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0}
+  <body>
+    <a class="skip-link" href="#formulario">Ir para o formulário de acesso</a>
 
-    body{
-      min-height:100vh;
-      display:grid;
-      place-items:center;
-      padding:16px;
-      background:var(--bg);
-      color:var(--text);
-      font-family:"Segoe UI",Tahoma,Arial,sans-serif;
-    }
-
-    .shell{
-      width:min(820px,92%);
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:14px;
-      overflow:hidden;
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      box-shadow:0 8px 22px rgba(6,22,49,.08);
-
-      /* diminui o layout inteiro */
-      transform:scale(.88);
-      transform-origin:center;
-    }
-
-    .left{
-      background:linear-gradient(180deg,var(--blue),var(--blue2));
-      color:#fff;
-      padding:22px;
-    }
-
-    .pill{
-      display:inline-block;
-      border:1px solid rgba(255,255,255,.35);
-      background:rgba(255,255,255,.08);
-      border-radius:999px;
-      padding:5px 10px;
-      font-size:12px;
-      font-weight:700;
-      margin-bottom:10px;
-    }
-
-    .left h1{
-      margin:0 0 8px;
-      font-size:40px;
-      line-height:1.05;
-    }
-
-    .desc{
-      margin:0 0 14px;
-      font-size:22px;
-      line-height:1.32;
-      max-width:26ch;
-    }
-
-    .features{
-      list-style:none;
-      margin:0;
-      padding:0;
-      display:grid;
-      gap:8px;
-      font-size:21px;
-      line-height:1.32;
-    }
-
-    .features li{
-      display:flex;
-      gap:8px;
-      align-items:flex-start;
-    }
-
-    .icon{
-      width:18px;
-      flex:0 0 18px;
-      text-align:center;
-    }
-
-    .right{
-      padding:22px;
-      background:#fff;
-    }
-
-    .right h2{
-      margin:2px 0 6px;
-      font-size:40px;
-      line-height:1.05;
-      color:#11315d;
-    }
-
-    .sub{
-      margin:0 0 12px;
-      font-size:22px;
-      color:var(--muted);
-      line-height:1.3;
-    }
-
-    .flash{
-      margin-bottom:10px;
-      border:1px solid #afc7ec;
-      background:#edf4ff;
-      color:#1d4e98;
-      border-radius:8px;
-      padding:8px 10px;
-      font-size:13px;
-    }
-
-    .field{margin-bottom:10px}
-    .field label{
-      display:block;
-      margin-bottom:5px;
-      font-size:20px;
-      font-weight:700;
-    }
-
-    .field input{
-      width:100%;
-      border:1px solid var(--input);
-      border-radius:9px;
-      padding:9px 10px;
-      font-size:20px;
-      outline:none;
-      background:#fff;
-    }
-    .field input:focus{
-      border-color:#8eb0e6;
-      box-shadow:0 0 0 3px rgba(66,133,244,.12);
-    }
-
-    .meta{
-      margin:2px 0 10px;
-      display:flex;
-      justify-content:space-between;
-      gap:8px;
-      flex-wrap:wrap;
-      color:#5c6f8c;
-      font-size:20px;
-    }
-
-    .btn{
-      width:100%;
-      border:0;
-      border-radius:10px;
-      padding:10px 12px;
-      font-size:20px;
-      font-weight:800;
-      color:#fff;
-      background:var(--btn);
-      cursor:pointer;
-    }
-    .btn:hover{background:var(--btn-hover)}
-
-    .demo{
-      margin-top:10px;
-      border:1px dashed #c7d7ee;
-      border-radius:8px;
-      padding:8px 10px;
-      color:#46628b;
-      font-size:19px;
-      line-height:1.4;
-    }
-    .demo strong{color:#325782}
-
-    .foot{
-      text-align:center;
-      margin-top:8px;
-      color:#667a97;
-      font-size:18px;
-    }
-
-    @media (max-width:960px){
-      .shell{
-        grid-template-columns:1fr;
-        transform:none;
-        width:min(680px,96%);
-      }
-      .left,.right{padding:16px}
-      .left h1,.right h2{font-size:31px}
-      .desc,.sub{font-size:18px}
-      .features{font-size:17px}
-      .field label,.field input,.meta,.btn{font-size:17px}
-      .demo,.foot{font-size:15px}
-    }
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <section class="left">
-      <div class="pill">SUS • Prontuário Único</div>
-      <h1>Prontuário Único</h1>
-      <p class="desc">Sistema de gestão clínica para atenção básica, hospital e integração estadual.</p>
-
-      <ul class="features">
-        <li><span class="icon">✓</span><span>Prontuário integrado em tempo real</span></li>
-        <li><span class="icon">＋</span><span>Triagem, exames, vacinas e prescrição</span></li>
-        <li><span class="icon">🔒</span><span>Acesso seguro com auditoria</span></li>
-      </ul>
-    </section>
-
-    <section class="right">
-      <h2>Entrar no sistema</h2>
-      <p class="sub">Use seu e-mail institucional e senha.</p>
-
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="flash">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
-      <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="field">
-          <label for="email">E-mail institucional</label>
-          <input id="email" type="email" name="email" placeholder="usuario@sus.gov.br" required>
+    <div class="govbar">
+      <div class="govbar__inner">
+        <a class="govbar__brand" href="https://www.gov.br" target="_blank" rel="noreferrer">gov<span>.br</span></a>
+        <div class="govbar__right">
+          <nav class="govbar__links" aria-label="Links institucionais">
+            <a href="https://www.gov.br/pt-br/orgaos-do-governo" target="_blank" rel="noreferrer">Órgãos do Governo</a>
+            <a class="is-optional" href="https://www.gov.br/acessoainformacao" target="_blank" rel="noreferrer">Acesso à Informação</a>
+          </nav>
+          <button type="button" class="theme-toggle" data-theme-toggle
+                  aria-label="Alternar entre tema claro e escuro" title="Alternar tema">
+            <span class="icon-moon">{{ icon('moon') }}</span>
+            <span class="icon-sun">{{ icon('sun') }}</span>
+          </button>
         </div>
-
-        <div class="field">
-          <label for="senha">Senha</label>
-          <input id="senha" type="password" name="senha" required>
-        </div>
-
-        <div class="meta">
-          <span>Ambiente: PROD</span>
-          <span>Acesso restrito</span>
-        </div>
-
-        <button class="btn" type="submit">Entrar no Sistema</button>
-      </form>
-
-      <div class="demo">
-        <strong>Acesso demo:</strong><br>
-        Admin: admin@sus.gov.br / admin123<br>
-        Médico: medico@sus.gov.br / medico123
       </div>
+    </div>
 
-      <div class="foot">SUS © 2026</div>
-    </section>
-  </div>
-</body>
+    <div class="auth">
+      <main class="auth__main" id="formulario">
+        <div class="auth__card">
+          <div class="auth__brand">
+            <svg width="48" height="48" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="7" fill="var(--clinic-primary)" />
+              <path d="M16 8v16M8 16h16" stroke="#fff" stroke-width="3.4" stroke-linecap="round" />
+            </svg>
+            <div>
+              <div class="auth__title">SNPE</div>
+              <div class="auth__subtitle">Sistema Nacional de Prontuário Eletrônico</div>
+            </div>
+          </div>
+
+          {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% for categoria, mensagem in mensagens %}
+              {% set tom = {'success':'success','info':'info','message':'info',
+                            'warning':'warning','danger':'danger','error':'danger'}.get(categoria,'info') %}
+              {% set ico = {'success':'check-circle','info':'info',
+                            'warning':'alert-triangle','danger':'x-circle'}.get(tom,'info') %}
+              <div class="alert alert--{{ tom }}" role="alert">
+                {{ icon(ico) }}<div class="alert__body">{{ mensagem }}</div>
+              </div>
+            {% endfor %}
+          {% endwith %}
+
+          {% if mfa_pendente %}
+            {# ---------- Etapa 2: código do autenticador ---------- #}
+            <div class="alert alert--info">
+              {{ icon('key-round') }}
+              <div class="alert__body">
+                <span class="alert__title">Verificação em duas etapas.</span>
+                Abra seu aplicativo autenticador e informe o código de 6 dígitos.
+              </div>
+            </div>
+
+            <form method="post" action="{{ url_for('auth.mfa_verify') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <div class="field">
+                <label class="field__label" for="codigo">Código de verificação</label>
+                <input class="input mfa-code" id="codigo" name="codigo" required autofocus
+                       inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="9" placeholder="000000" />
+              </div>
+              <button class="btn btn--primary btn--block" type="submit">
+                {{ icon('shield-check') }} Verificar e entrar
+              </button>
+            </form>
+
+            <form method="post" action="{{ url_for('auth.mfa_cancelar') }}" class="mt-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button class="btn btn--ghost btn--block btn--sm" type="submit">
+                Entrar com outra conta
+              </button>
+            </form>
+
+          {% else %}
+            {# ---------- Etapa 1: e-mail e senha ---------- #}
+            <form method="post" action="{{ url_for('auth.login_post') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="next" value="{{ proximo }}" />
+
+              <div class="field">
+                <label class="field__label" for="email">E-mail</label>
+                <input class="input" type="email" id="email" name="email" required autofocus
+                       autocomplete="username" placeholder="nome@sus.gov.br" />
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="senha">Senha</label>
+                <input class="input" type="password" id="senha" name="senha" required
+                       autocomplete="current-password" />
+              </div>
+
+              <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+            </form>
+
+            <div class="auth__divider">ou</div>
+
+            <a class="btn btn--govbr btn--block" href="{{ url_for('auth.govbr_login') }}">
+              Entrar com <strong>gov.br</strong>
+            </a>
+            {% if not govbr_ativo %}
+              <p class="text-xs text-muted text-center mt-1">
+                Ambiente sem credenciais de produção — o gov.br abre em modo simulador.
+              </p>
+            {% endif %}
+          {% endif %}
+
+          <p class="text-xs text-muted text-center mt-3">
+            Acesso auditado. Todas as consultas a prontuário são registradas
+            conforme a LGPD (Lei 13.709/2018).
+          </p>
+        </div>
+      </main>
+
+      <footer class="govfooter">
+        <p>
+          <strong>SNPE</strong> — Sistema Nacional de Prontuário Eletrônico ·
+          Ministério da Saúde (ambiente de desenvolvimento)
+        </p>
+      </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dsgov.js') }}" defer></script>
+  </body>
 </html>

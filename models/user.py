@@ -34,6 +34,19 @@ class User(UserMixin, db.Model):
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     ultimo_acesso = db.Column(db.DateTime, nullable=True)
 
+    # --- Verificação em duas etapas (TOTP) -------------------------------
+    # O segredo base32 do autenticador. Fica nulo até o usuário concluir o
+    # setup; `mfa_ativo` só vira True depois de ele provar um código válido —
+    # assim ninguém se tranca fora da conta por ter escaneado o QR e parado.
+    mfa_secret = db.Column(db.String(64), nullable=True)
+    mfa_ativo = db.Column(db.Boolean, nullable=False, default=False)
+    mfa_confirmado_em = db.Column(db.DateTime, nullable=True)
+
+    # --- Identidade federada gov.br --------------------------------------
+    govbr_sub = db.Column(db.String(120), unique=True, nullable=True, index=True)
+    govbr_nivel = db.Column(db.String(20), nullable=True)  # bronze | prata | ouro
+    cpf = db.Column(db.String(11), nullable=True, index=True)
+
     unidade = db.relationship("UnidadeSaude", backref="users")
     # regional = db.relationship("models.regional.Regional", backref="users")
 
@@ -44,10 +57,40 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.senha_hash, senha)
 
     def is_medico(self):
-        return self.perfil == "medico"
+        from utils.rbac import MEDICO, _normalizar
+
+        return _normalizar(self.perfil) == MEDICO
 
     def is_admin(self):
-        return self.perfil == "admin"
+        from utils.rbac import ADMINISTRADOR, SUPER_ADMIN, _normalizar
+
+        return _normalizar(self.perfil) in (ADMINISTRADOR, SUPER_ADMIN)
+
+    # --- RBAC -------------------------------------------------------------
+
+    @property
+    def permissoes(self):
+        from utils.rbac import permissoes_de
+
+        return permissoes_de(self.perfil)
+
+    def tem_permissao(self, *permissoes):
+        from utils.rbac import pode
+
+        return pode(*permissoes, usuario=self)
+
+    # --- MFA --------------------------------------------------------------
+
+    def verificar_totp(self, codigo):
+        """Valida um código TOTP de 6 dígitos, com 1 janela de tolerância."""
+        if not self.mfa_secret or not codigo:
+            return False
+        try:
+            import pyotp
+        except ImportError:
+            return False
+        codigo = str(codigo).strip().replace(" ", "")
+        return pyotp.TOTP(self.mfa_secret).verify(codigo, valid_window=1)
 
     # Helpers territoriais
     def is_estado(self):

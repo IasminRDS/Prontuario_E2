@@ -11,7 +11,7 @@ from models.encaminhamento import Encaminhamento
 from services.pdf_service import gerar_prontuario, gerar_receituario, gerar_atestado
 from services.pdf_encaminhamento import gerar_encaminhamento
 from services.pdf_manager import PDFManager
-from utils.audit import audit_log
+from utils.audit import registrar
 
 pdf_bp = Blueprint('pdf', __name__, url_prefix='/pdf')
 
@@ -23,7 +23,7 @@ def prontuario(id):
     medico   = p.medico
     unidade  = p.unidade
     buf = gerar_prontuario(p, paciente, medico, unidade)
-    audit_log(acao_default="read", tabela_default="prontuarios")
+    registrar("prontuarios", id, "read", "PDF do prontuário gerado", commit=True)
     nome = f'prontuario_{paciente.nome.split()[0].lower()}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
@@ -38,7 +38,7 @@ def receituario(id):
     medico   = p.medico
     unidade  = p.unidade
     buf = gerar_receituario(p, paciente, medico, unidade)
-    audit_log(acao_default="read", tabela_default="prontuarios")
+    registrar("prontuarios", id, "read", "PDF do receituário gerado", commit=True)
     nome = f'receituario_{paciente.nome.split()[0].lower()}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
@@ -55,7 +55,7 @@ def atestado(paciente_id):
         cid  = request.form.get('cid', '').strip().upper() or None
         obs  = request.form.get('observacao', '').strip() or None
         buf  = gerar_atestado(paciente, medico, unidade, dias, cid, obs)
-        audit_log(acao_default="read", tabela_default="pacientes")
+        registrar("pacientes", paciente_id, "read", "PDF de atestado gerado", commit=True)
         nome = f'atestado_{paciente.nome.split()[0].lower()}.pdf'
         return send_file(buf, mimetype='application/pdf',
                          as_attachment=False, download_name=nome)
@@ -70,10 +70,47 @@ def encaminhamento(id):
     medico   = enc.medico
     unidade  = enc.unidade_origem
     buf = gerar_encaminhamento(enc, paciente, medico, unidade)
-    audit_log(acao_default="read", tabela_default="encaminhamentos")
+    registrar("encaminhamentos", id, "read", "PDF de encaminhamento gerado", commit=True)
     nome = f'encaminhamento_{enc.especialidade.lower().replace(" ","_")}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
+
+
+@pdf_bp.route('/alta/<int:internacao_id>')
+@login_required
+def alta_hospitalar(internacao_id):
+    from models.internacao import Internacao
+    from services.pdf_alta import gerar_alta
+
+    intern = Internacao.query.get_or_404(internacao_id)
+    buf = gerar_alta(intern, intern.paciente, intern.medico, intern.unidade)
+    registrar("internacoes", internacao_id, "read", "PDF sumário de alta gerado", commit=True)
+    nome = f"alta_{intern.paciente.nome.split()[0].lower()}_{internacao_id}.pdf"
+    return send_file(buf, mimetype='application/pdf',
+                     as_attachment=False, download_name=nome)
+
+
+@pdf_bp.route('/qrcode/paciente/<int:paciente_id>')
+@login_required
+def qrcode_paciente(paciente_id):
+    """QR Code com o CNS/CPF do paciente, para leitura rápida na recepção."""
+    from io import BytesIO
+
+    try:
+        import qrcode
+    except ImportError:
+        abort(503, 'Dependência ausente: pip install "qrcode[pil]"')
+
+    pac = Paciente.query.get_or_404(paciente_id)
+    qr = qrcode.QRCode(version=1, box_size=8, border=3)
+    qr.add_data(pac.cns or pac.cpf or str(pac.id))
+    qr.make(fit=True)
+
+    buf = BytesIO()
+    qr.make_image(fill_color="black", back_color="white").save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png',
+                     download_name=f'qr_{pac.nome.split()[0].lower()}.png')
 
 
 # ==========================================
@@ -112,13 +149,13 @@ def processar_pdf():
         if acao == 'compactar':
             nivel = request.form.get('nivel_compactacao', 'medio')
             PDFManager.compactar_pdf(caminho_temp, caminho_saida, nivel)
-            audit_log(acao_default="process", tabela_default="pdf_tools")
+            registrar("pdf_tools", None, "process", f"Ferramenta PDF: {acao}", commit=True)
 
         elif acao == 'proteger':
             senha = request.form.get('senha_pdf')
             permitir_impressao = request.form.get('permitir_impressao') == 'sim'
             PDFManager.proteger_pdf(caminho_temp, caminho_saida, senha, permitir_impressao)
-            audit_log(acao_default="process", tabela_default="pdf_tools")
+            registrar("pdf_tools", None, "process", f"Ferramenta PDF: {acao}", commit=True)
 
         return send_file(caminho_saida, as_attachment=True, download_name=nome_download)
         
@@ -155,7 +192,7 @@ def reorganizar():
         nova_ordem = [int(x) for x in ordem.split(',')]
         
         PDFManager.reorganizar_pdf(caminho_temp, caminho_saida, nova_ordem)
-        audit_log(acao_default="process", tabela_default="pdf_tools")
+        registrar("pdf_tools", None, "process", "Ferramenta PDF: reorganizar", commit=True)
         
         return send_file(caminho_saida, as_attachment=True, download_name=f"novo_{nome_seguro}")
     except Exception as e:

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Integrações RNDS{% endblock %}
+{% block page_title %}Integrações RNDS{% endblock %}
+
+{% block content %}
+<p class="pagehead__subtitle mb-2">
+  Envio de registros clínicos em <strong>FHIR R4</strong> à Rede Nacional de Dados
+  em Saúde.
+</p>
+
+<div class="alert alert--info">
+  {{ icon('info') }}
+  <div class="alert__body">
+    <span class="alert__title">Despacho simulado.</span>
+    O payload FHIR é montado, validado e persistido, com protocolo sintético. O
+    envio real exige certificado ICP-Brasil e credenciais do DATASUS — a troca é
+    isolada na função <span class="mono">_despachar</span>.
+  </div>
+</div>
+
+<div class="stats">
+  {% for s, rot in [('enviado', 'Enviados'), ('pendente', 'Pendentes'), ('erro', 'Com erro')] %}
+    <div class="stat">
+      <div class="stat__label">{{ icon('network') }} {{ rot }}</div>
+      <div class="stat__value">{{ contagens.get(s, 0) }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card mb-2">
+  <div class="card__header"><div class="card__title">Novo envio</div></div>
+  <div class="card__body">
+    <form method="post" action="{{ url_for('rnds.enviar') }}" class="filters">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="field">
+        <label class="field__label" for="tipo">Recurso FHIR</label>
+        <select class="select" id="tipo" name="tipo" required>
+          {% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+        <span class="field__hint">Patient usa id do paciente; Encounter e Observation usam id do prontuário.</span>
+      </div>
+      <div class="field">
+        <label class="field__label" for="entity_id">Identificador</label>
+        <input class="input mono" type="number" id="entity_id" name="entity_id" required min="1" style="width:9rem" />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('send') }} Enviar</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__header">
+    <div class="card__title">Histórico de envios</div>
+    <form method="get">
+      <select class="select" name="status" onchange="this.form.submit()" style="width:auto">
+        <option value="">Todos</option>
+        {% for s in ['enviado', 'pendente', 'erro'] %}
+          <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="card__body">
+    {% if envios %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Quando</th><th>Recurso</th><th>Origem</th><th>Situação</th>
+              <th>Protocolo</th><th class="num">Tent.</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in envios %}
+              <tr>
+                <td class="text-xs">{{ (e.enviado_em or e.criado_em).strftime('%d/%m/%Y %H:%M') }}</td>
+                <td><span class="badge badge--blue mono">{{ e.tipo }}</span></td>
+                <td class="text-xs mono">{{ e.entidade_tabela }}#{{ e.entidade_id }}</td>
+                <td>
+                  {% if e.status == 'enviado' %}<span class="badge badge--green">Enviado</span>
+                  {% elif e.status == 'erro' %}<span class="badge badge--red" title="{{ e.erro }}">Erro</span>
+                  {% else %}<span class="badge badge--amber">Pendente</span>{% endif %}
+                </td>
+                <td class="mono text-xs">{{ e.protocolo or '—' }}</td>
+                <td class="num">{{ e.tentativas }}</td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--ghost"
+                     href="{{ url_for('rnds.preview', tipo=e.tipo, entity_id=e.entidade_id) }}">{{ icon('eye') }} JSON</a>
+                  {% if e.status == 'erro' %}
+                    <form method="post" action="{{ url_for('rnds.reenviar', id=e.id) }}" style="display:inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button class="btn btn--sm btn--secondary" type="submit">{{ icon('refresh-cw') }} Reenviar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('network') }}
+        <p class="empty-state__title">Nenhum envio registrado</p>
+        <p class="empty-state__hint">Use o formulário acima para enviar o primeiro recurso.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Epidemiologia{% endblock %}
+{% block page_title %}Painel epidemiológico{% endblock %}
+
+{% block topbar_actions %}
+  <form method="get" class="row">
+    <label class="field__label" for="dias" style="margin:0 .5rem 0 0">Período</label>
+    <select class="select" id="dias" name="dias" onchange="this.form.submit()" style="width:auto">
+      {% for d in [7, 30, 90, 180, 365] %}
+        <option value="{{ d }}" {% if dias == d %}selected{% endif %}>{{ d }} dias</option>
+      {% endfor %}
+    </select>
+  </form>
+{% endblock %}
+
+{% macro barras(titulo, dados, vazio) %}
+  <div class="card">
+    <div class="card__header"><div class="card__title">{{ titulo }}</div></div>
+    <div class="card__body">
+      {% if dados %}
+        {% set maximo = dados | map(attribute='valor') | max %}
+        <div class="stack stack--sm">
+          {% for d in dados %}
+            <div>
+              <div class="row row--between text-xs mb-1" style="margin-bottom:.25rem">
+                <span class="truncate" title="{{ d.rotulo }}">{{ d.rotulo }}</span>
+                <span class="text-strong mono">{{ d.valor }}</span>
+              </div>
+              <div class="meter">
+                <div class="meter__fill" style="width: {{ (d.valor / maximo * 100) | round }}%"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <p class="empty-state__title">{{ vazio }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="stats">
+  <div class="stat">
+    <div class="stat__label">{{ icon('siren') }} Notificações</div>
+    <div class="stat__value">{{ resumo.notificacoes }}</div>
+    <div class="stat__hint">{{ resumo.notificacoes_pendentes }} pendente(s) de envio</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('bed-double') }} Ocupação de leitos</div>
+    <div class="stat__value">{{ resumo.ocupacao_pct }}%</div>
+    <div class="stat__hint">{{ resumo.leitos_ocupados }} de {{ resumo.leitos_total }} leitos</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('heart-pulse') }} Internações ativas</div>
+    <div class="stat__value">{{ resumo.internacoes_ativas }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('arrow-left-right') }} Fila de regulação</div>
+    <div class="stat__value">{{ resumo.regulacao_fila }}</div>
+    <div class="stat__hint">aguardando parecer</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('clipboard-list') }} Triagens</div>
+    <div class="stat__value">{{ resumo.triagens }}</div>
+    <div class="stat__hint">no período</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-2">
+  {{ barras('Agravos de notificação compulsória', agravos, 'Nenhuma notificação no período.') }}
+  {{ barras('Notificações por município', municipios, 'Sem dados de município no período.') }}
+</div>
+
+<div class="grid-2">
+  {# --- Classificação de risco Manchester --- #}
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Classificação de risco (Manchester)</div>
+    </div>
+    <div class="card__body">
+      <div class="stack stack--sm">
+        {% for m in manchester %}
+          <div>
+            <div class="row row--between text-xs" style="margin-bottom:.25rem">
+              <span class="row" style="gap:.375rem">
+                <span class="risk risk--{{ m.cor }}">{{ m.rotulo }}</span>
+                <span class="text-muted">{{ m.meta }}</span>
+              </span>
+              <span class="text-strong mono">{{ m.valor }} ({{ m.pct }}%)</span>
+            </div>
+            <div class="meter">
+              <div class="meter__fill" style="width: {{ m.pct }}%; background: var(--risk-{{
+                'red' if m.cor == 'vermelho' else 'orange' if m.cor == 'laranja'
+                else 'yellow' if m.cor == 'amarelo' else 'green' if m.cor == 'verde' else 'blue' }})"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Ocupação por setor --- #}
+  <div class="card">
+    <div class="card__header"><div class="card__title">Ocupação de leitos por setor</div></div>
+    <div class="card__body">
+      {% if setores %}
+        <div class="stack stack--sm">
+          {% for s in setores %}
+            <div>
+              <div class="row row--between text-xs" style="margin-bottom:.25rem">
+                <span class="truncate">{{ s.rotulo }}{% if s.sigla %} <span class="text-muted mono">({{ s.sigla }})</span>{% endif %}</span>
+                <span class="text-strong mono">{{ s.ocupados }}/{{ s.total }} — {{ s.pct }}%</span>
+              </div>
+              <div class="meter">
+                <div class="meter__fill {{ 'meter__fill--danger' if s.pct >= 90 else 'meter__fill--warning' if s.pct >= 75 else 'meter__fill--ok' }}"
+                     style="width: {{ s.pct }}%"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <p class="empty-state__title">Nenhum setor com leitos ativos</p>
+          <p class="empty-state__hint">Cadastre setores e leitos em Internação.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

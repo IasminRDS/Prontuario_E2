@@ -7,7 +7,7 @@ from sqlalchemy import or_, and_
 from database.db import db
 from models.paciente import Paciente
 from utils.security import validar_cpf, validar_cns, pode_acessar_paciente
-from utils.audit import audit_log
+from utils.audit import audit_log, auditar_aqui
 
 pacientes_bp = Blueprint("pacientes", __name__, url_prefix="/pacientes")
 
@@ -160,7 +160,7 @@ def index():
         if getattr(p, "idade", None) is None:
             p.idade = _idade_anos(p.data_nascimento)
 
-    audit_log(acao_default="read", tabela_default="pacientes")
+    auditar_aqui("pacientes", "read")
     return render_template("pacientes/listar.html", pacientes=pacientes, **filtros)
 
 
@@ -186,7 +186,7 @@ def listar_pacientes_api():
     query, filtros = _aplicar_filtros(query)
     itens = query.order_by(Paciente.nome.asc()).all()
 
-    audit_log(acao_default="read", tabela_default="pacientes")
+    auditar_aqui("pacientes", "read")
 
     return jsonify([{
         "id": p.id,
@@ -272,7 +272,7 @@ def obter_paciente(paciente_id):
         if not pode_acessar_paciente(p, current_user):
             return jsonify({"erro": "Sem permissão para acessar este paciente"}), 403
 
-    audit_log(acao_default="read", tabela_default="pacientes")
+    auditar_aqui("pacientes", "read")
     return jsonify({
         "id": p.id,
         "nome": p.nome,
@@ -381,7 +381,7 @@ def criar_paciente():
     db.session.add(p)
     db.session.commit()
 
-    audit_log(acao_default="create", tabela_default="pacientes")()
+    auditar_aqui("pacientes", "create")
     return jsonify({"mensagem": "Paciente criado com sucesso", "id": p.id}), 201
 
 
@@ -442,7 +442,7 @@ def atualizar_paciente(paciente_id):
             p.municipio_ibge = data.get("municipio_ibge", getattr(p, "municipio_ibge", None))
 
     db.session.commit()
-    audit_log(acao_default="update", tabela_default="pacientes")()
+    auditar_aqui("pacientes", "update")
     return jsonify({"mensagem": "Paciente atualizado com sucesso"}), 200
 
 
@@ -456,5 +456,5 @@ def desativar_paciente(paciente_id):
 
     p.ativo = False
     db.session.commit()
-    audit_log(acao_default="delete", tabela_default="pacientes")()
+    auditar_aqui("pacientes", "delete")
     return jsonify({"mensagem": "Paciente desativado com sucesso"}), 200

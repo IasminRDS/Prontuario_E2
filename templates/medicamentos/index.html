@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Prescrição{% endblock %}
+{% block page_title %}Prescrição{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('medicamentos.catalogo') }}">
+    {{ icon('pill') }} Catálogo RENAME ({{ total_catalogo }})
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Buscar paciente</label>
+        <input class="input" type="search" id="q" name="q" value="{{ termo }}"
+               placeholder="nome ou CPF" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="status">Situação</label>
+        <select class="select" id="status" name="status" onchange="this.form.submit()">
+          <option value="">Todas</option>
+          {% for s in ['ativa', 'suspensa', 'concluida'] %}
+            <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+    </form>
+
+    {% if prescricoes %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Itens</th><th>Situação</th><th class="actions"></th></tr>
+          </thead>
+          <tbody>
+            {% for p in prescricoes %}
+              {% set pac = pacientes.get(p.paciente_id) %}
+              <tr>
+                <td class="text-xs">{{ p.criado_em.strftime('%d/%m/%Y %H:%M') if p.criado_em }}</td>
+                <td>
+                  {% if pac %}
+                    <a href="{{ url_for('medicamentos.lista_paciente', paciente_id=pac.id) }}">{{ pac.nome }}</a>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td><span class="badge badge--slate">{{ (p.tipo or 'ambulatorial') | capitalize }}</span></td>
+                <td class="num">{{ p.itens | length }}</td>
+                <td>
+                  {% if p.status == 'ativa' %}<span class="badge badge--green">Ativa</span>
+                  {% elif p.status == 'suspensa' %}<span class="badge badge--amber">Suspensa</span>
+                  {% else %}<span class="badge badge--slate">{{ (p.status or '—') | capitalize }}</span>{% endif %}
+                </td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--ghost"
+                     href="{{ url_for('medicamentos.visualizar', id=p.id) }}">{{ icon('eye') }} Ver</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if paginacao.pages > 1 %}
+        <div class="pagination">
+          <span>Página {{ paginacao.page }} de {{ paginacao.pages }} — {{ paginacao.total }} prescrição(ões)</span>
+          <div class="pagination__pages">
+            <a class="{{ 'is-disabled' if not paginacao.has_prev }}"
+               href="{{ url_for('medicamentos.index', pagina=paginacao.prev_num, q=termo, status=status) }}">Anterior</a>
+            <a class="{{ 'is-disabled' if not paginacao.has_next }}"
+               href="{{ url_for('medicamentos.index', pagina=paginacao.next_num, q=termo, status=status) }}">Próxima</a>
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        {{ icon('pill') }}
+        <p class="empty-state__title">Nenhuma prescrição encontrada</p>
+        <p class="empty-state__hint">Prescreva a partir da ficha do paciente.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

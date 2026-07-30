@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Sobre o sistema{% endblock %}
+{% block page_title %}Sobre o sistema{% endblock %}
+
+{% block content %}
+<div class="card mb-2">
+  <div class="card__body">
+    <div class="row" style="gap:.75rem;align-items:flex-start">
+      <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="flex-shrink:0">
+        <rect width="32" height="32" rx="7" fill="var(--clinic-primary)" />
+        <path d="M16 8v16M8 16h16" stroke="#fff" stroke-width="3.4" stroke-linecap="round" />
+      </svg>
+      <div>
+        <h2 style="font-size:1.125rem">SNPE — Sistema Nacional de Prontuário Eletrônico</h2>
+        <p class="text-sm text-muted mt-1">
+          Prontuário eletrônico hospitalar estilo SUS, cobrindo o fluxo clínico
+          completo: chegada → triagem → atendimento → exames → prescrição →
+          internação → evolução → alta.
+        </p>
+        <div class="row row--wrap mt-2" style="gap:.375rem">
+          <span class="badge badge--blue mono">{{ app_versao }}</span>
+          <span class="badge badge--slate">Flask + Jinja2 + SQLAlchemy</span>
+          <span class="badge badge--slate">{{ total_blueprints }} módulos</span>
+          <span class="badge badge--slate">{{ total_rotas }} rotas</span>
+          <span class="badge badge--slate">{{ total_permissoes }} permissões RBAC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  {# --- Conformidade --- #}
+  <div class="card">
+    <div class="card__header"><div class="card__title">Conformidade</div></div>
+    <div class="card__body">
+      <div class="stack stack--sm">
+        {% for titulo, descricao in conformidade %}
+          <div>
+            <div class="row" style="gap:.375rem">
+              {{ icon('check-circle') }}
+              <span class="text-strong text-sm">{{ titulo }}</span>
+            </div>
+            <p class="text-xs text-muted" style="margin-left:1.375rem">{{ descricao }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Mapa do site --- #}
+  <div class="card">
+    <div class="card__header"><div class="card__title">Mapa do site</div></div>
+    <div class="card__body">
+      <div class="stack stack--sm">
+        {% for grupo in grupos %}
+          {% set visiveis = grupo.itens | selectattr('endpoint', 'in', endpoints) | list %}
+          {% if visiveis %}
+            <div>
+              <div class="text-xs text-strong text-muted" style="text-transform:uppercase;letter-spacing:.06em">
+                {{ grupo.titulo or 'Início' }}
+              </div>
+              <ul class="mt-1">
+                {% for item in visiveis %}
+                  <li class="row" style="gap:.375rem;padding:.125rem 0">
+                    {{ icon(item.icone) }}
+                    <a href="{{ url_for(item.endpoint) }}" class="text-sm">{{ item.label }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

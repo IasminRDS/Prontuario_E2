@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Documentos emitidos{% endblock %}
+{% block page_title %}Documentos emitidos{% endblock %}
+
+{% block content %}
+<p class="pagehead__subtitle mb-2">
+  Cada documento emitido recebe um código e a impressão digital (SHA-256) do
+  arquivo, verificáveis publicamente em <span class="mono">/verificar/&lt;código&gt;</span>.
+</p>
+
+<div class="card">
+  <div class="card__header">
+    <div class="card__title">{{ docs | length }} documento(s)</div>
+    <form method="get">
+      <select class="select" name="tipo" onchange="this.form.submit()" style="width:auto">
+        <option value="">Todos os tipos</option>
+        {% for t in tipos %}
+          <option value="{{ t }}" {% if tipo == t %}selected{% endif %}>{{ t | capitalize }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="card__body">
+    {% if docs %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Código</th><th>Tipo</th><th>Emitido</th><th>Emissor</th><th>Situação</th><th class="actions"></th></tr>
+          </thead>
+          <tbody>
+            {% for d in docs %}
+              <tr>
+                <td class="mono text-strong">{{ d.codigo }}</td>
+                <td>{{ d.tipo | capitalize }}</td>
+                <td class="text-xs">{{ d.emitido_em.strftime('%d/%m/%Y %H:%M') if d.emitido_em }}</td>
+                <td class="text-sm">
+                  {{ d.assinante_nome or '—' }}
+                  {% if d.assinante_registro %}<span class="mono text-muted text-xs">{{ d.assinante_registro }}</span>{% endif %}
+                </td>
+                <td>
+                  {% if d.valido %}<span class="badge badge--green">Válido</span>
+                  {% else %}<span class="badge badge--red" title="{{ d.motivo_revogacao }}">Revogado</span>{% endif %}
+                </td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--ghost" target="_blank" rel="noreferrer"
+                     href="{{ url_for('documentos.verificar', codigo=d.codigo) }}">{{ icon('file-check') }} Verificar</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('file-check') }}
+        <p class="empty-state__title">Nenhum documento emitido</p>
+        <p class="empty-state__hint">
+          Documentos passam a aparecer aqui conforme forem gerados em PDF.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

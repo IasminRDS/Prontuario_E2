@@ -1,0 +1,82 @@
+{% from "_icons.html" import icon %}<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulador gov.br — SNPE</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('snpe-tema');
+          document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+        } catch (e) { document.documentElement.dataset.theme = 'light'; }
+      })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dsgov.css') }}" />
+  </head>
+
+  <body>
+    <div class="govbar">
+      <div class="govbar__inner">
+        <a class="govbar__brand" href="https://www.gov.br" target="_blank" rel="noreferrer">gov<span>.br</span></a>
+      </div>
+    </div>
+
+    <div class="auth">
+      <main class="auth__main">
+        <div class="auth__card" style="max-width:28rem">
+          <div class="alert alert--warning">
+            {{ icon('alert-triangle') }}
+            <div class="alert__body">
+              <span class="alert__title">Este NÃO é o gov.br real.</span>
+              Simulador de desenvolvimento. Nenhuma credencial é verificada — escolha
+              uma conta da base para entrar.
+            </div>
+          </div>
+
+          <div class="auth__brand">
+            <div class="auth__title">Escolha a conta</div>
+            <div class="auth__subtitle">
+              Em produção, o gov.br devolveria a identidade por OIDC.
+            </div>
+          </div>
+
+          {% if contas %}
+            <form method="post" action="{{ url_for('auth.govbr_simulador_post') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="state" value="{{ state }}" />
+
+              <div class="stack stack--sm">
+                {% for c in contas %}
+                  <label class="radio" style="display:flex;padding:.5rem .625rem;border:1px solid var(--clinic-border);border-radius:var(--radius)">
+                    <input type="radio" name="user_id" value="{{ c.id }}" {% if loop.first %}checked{% endif %} />
+                    <span style="min-width:0">
+                      <strong>{{ c.nome }}</strong>
+                      <span class="badge badge--slate">{{ c.perfil }}</span>
+                      <span class="field__hint mono" style="margin-top:0">{{ c.email }}</span>
+                    </span>
+                  </label>
+                {% endfor %}
+              </div>
+
+              <button class="btn btn--govbr btn--block mt-2" type="submit">
+                Continuar com <strong>gov.br</strong>
+              </button>
+            </form>
+          {% else %}
+            <div class="empty-state">
+              <p class="empty-state__title">Nenhuma conta ativa na base</p>
+              <p class="empty-state__hint">Rode <span class="mono">flask seed</span> para criar as contas de demonstração.</p>
+            </div>
+          {% endif %}
+
+          <a class="btn btn--ghost btn--block btn--sm mt-1" href="{{ url_for('auth.login') }}">Voltar</a>
+        </div>
+      </main>
+
+      <footer class="govfooter">
+        <p><strong>SNPE</strong> — ambiente de desenvolvimento</p>
+      </footer>
+    </div>
+  </body>
+</html>

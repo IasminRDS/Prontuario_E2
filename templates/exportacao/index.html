@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Exportação{% endblock %}
+{% block page_title %}Exportação de dados{% endblock %}
+
+{% block content %}
+<div class="audit-notice">
+  {{ icon('shield-check') }}
+  <span>
+    Toda exportação é auditada: fica registrado quem exportou, quando, quantos
+    registros e quais campos.
+  </span>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Base de pacientes</div>
+      <span class="badge badge--slate">{{ total_pacientes }} ativo(s)</span>
+    </div>
+    <div class="card__body">
+      <form method="post" action="{{ url_for('exportacao.pacientes_csv') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="field">
+          <span class="field__label">Escopo dos dados</span>
+          <label class="radio" style="display:flex;margin-bottom:.5rem">
+            <input type="radio" name="escopo" value="anonimizado" checked />
+            <span>
+              <strong>Anonimizado</strong>
+              <span class="field__hint" style="margin-top:0">
+                Sem nome, CPF, CNS ou contato — não permite reidentificar o titular.
+                Use para estatística.
+              </span>
+            </span>
+          </label>
+          <label class="radio" style="display:flex">
+            <input type="radio" name="escopo" value="identificado" />
+            <span>
+              <strong>Identificado</strong>
+              <span class="field__hint" style="margin-top:0">
+                Inclui dado pessoal direto. Exige base legal e finalidade definida.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label class="checkbox">
+            <input type="checkbox" name="ciente" value="1" />
+            <span class="text-xs">
+              Declaro ciência da responsabilidade pelo tratamento destes dados
+              (obrigatório para o escopo identificado).
+            </span>
+          </label>
+        </div>
+
+        <button class="btn btn--primary" type="submit">{{ icon('download-cloud') }} Exportar CSV</button>
+        <span class="field__hint">Separador <span class="mono">;</span> e BOM UTF-8 — abre no Excel pt-BR sem quebrar acento.</span>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header"><div class="card__title">Trilha de auditoria</div></div>
+    <div class="card__body">
+      <p class="text-sm text-muted mb-2">
+        Exporta todos os eventos com os hashes da cadeia, permitindo verificar a
+        integridade fora do sistema.
+      </p>
+      <form method="post" action="{{ url_for('exportacao.auditoria_csv') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn--secondary" type="submit">{{ icon('shield-check') }} Exportar auditoria</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card__header"><div class="card__title">Exportações recentes</div></div>
+  <div class="card__body">
+    {% if exportacoes %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead><tr><th>Quando</th><th>Usuário</th><th>Detalhe</th><th>IP</th></tr></thead>
+          <tbody>
+            {% for e in exportacoes %}
+              <tr>
+                <td class="text-xs">{{ e.criado_em.strftime('%d/%m/%Y %H:%M') if e.criado_em }}</td>
+                <td class="text-sm">{{ e.usuario.nome if e.usuario else '—' }}</td>
+                <td class="text-xs">{{ e.descricao }}</td>
+                <td class="mono text-xs">{{ e.ip or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p class="empty-state__title">Nenhuma exportação registrada</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

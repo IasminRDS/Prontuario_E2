@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Vigilância (SINAN){% endblock %}
+{% block page_title %}Vigilância epidemiológica{% endblock %}
+
+{% block content %}
+<p class="pagehead__subtitle mb-2">
+  Fila de notificações compulsórias detectadas automaticamente pelo CID registrado
+  no prontuário (Portaria GM/MS 217/2023).
+</p>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat__label">{{ icon('siren') }} Pendentes</div>
+    <div class="stat__value">{{ contagens.get('pendente', 0) }}</div>
+    <div class="stat__hint">aguardando envio ao SINAN</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('send') }} Enviadas</div>
+    <div class="stat__value">{{ contagens.get('enviada', 0) }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">{{ icon('x-circle') }} Descartadas</div>
+    <div class="stat__value">{{ contagens.get('descartada', 0) }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__body">
+    <form method="get" class="filters">
+      <div class="field">
+        <label class="field__label" for="status">Situação</label>
+        <select class="select" id="status" name="status" onchange="this.form.submit()">
+          {% for s in ['pendente', 'enviada', 'descartada'] %}
+            <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field field--grow">
+        <label class="field__label" for="agravo">Agravo</label>
+        <select class="select" id="agravo" name="agravo" onchange="this.form.submit()">
+          <option value="">Todos</option>
+          {% for a in agravos %}
+            <option value="{{ a }}" {% if agravo == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+
+    {% if fila %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Detectado</th>
+              <th>Paciente</th>
+              <th>CID</th>
+              <th>Agravo</th>
+              <th>Situação</th>
+              <th class="actions">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for n in fila %}
+              {% set pac = pacientes.get(n.paciente_id) %}
+              <tr>
+                <td class="text-xs">{{ n.detectado_em.strftime('%d/%m/%Y %H:%M') if n.detectado_em }}</td>
+                <td>
+                  {% if pac %}
+                    <a href="{{ url_for('pacientes.obter_paciente', paciente_id=pac.id) }}">{{ pac.nome }}</a>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="mono">{{ n.cid }}</td>
+                <td>{{ n.agravo }}</td>
+                <td>
+                  {% if n.status == 'pendente' %}
+                    <span class="badge badge--amber">Pendente</span>
+                  {% elif n.status == 'enviada' %}
+                    <span class="badge badge--green">Enviada</span>
+                    {% if n.numero_sinan %}<span class="text-xs mono text-muted">#{{ n.numero_sinan }}</span>{% endif %}
+                  {% else %}
+                    <span class="badge badge--slate" title="{{ n.motivo_descarte }}">Descartada</span>
+                  {% endif %}
+                </td>
+                <td class="actions">
+                  {% if n.status == 'pendente' and pode('surveillance:write') %}
+                    <form method="post" action="{{ url_for('vigilancia.enviar', id=n.id) }}"
+                          style="display:inline-flex;gap:.25rem;align-items:center">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <input class="input" name="numero_sinan" placeholder="nº SINAN"
+                             style="width:7.5rem;padding:.25rem .5rem;font-size:.75rem" />
+                      <button class="btn btn--sm btn--primary" type="submit">{{ icon('send') }} Enviar</button>
+                    </form>
+                    <form method="post" action="{{ url_for('vigilancia.descartar', id=n.id) }}"
+                          style="display:inline" data-confirm="Descartar esta notificação? A ação fica registrada na auditoria.">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <input type="hidden" name="motivo" value="Descartada pelo serviço de vigilância" />
+                      <button class="btn btn--sm btn--ghost" type="submit">Descartar</button>
+                    </form>
+                  {% else %}
+                    <span class="text-muted text-xs">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('check-circle') }}
+        <p class="empty-state__title">Nenhuma notificação nesta situação</p>
+        <p class="empty-state__hint">
+          A fila é montada a partir dos CIDs notificáveis lançados no prontuário.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
