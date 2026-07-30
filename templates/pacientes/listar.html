@@ -4,49 +4,6 @@
 {% block page_title %}Pacientes{% endblock %}
 
 {% block content %}
-<style>
-  .toolbar{
-    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-    margin-bottom:12px;
-  }
-  .toolbar input, .toolbar select{
-    height:36px; padding:6px 10px;
-    border:1px solid #c8d7ec; border-radius:8px; background:#fff;
-    font-size:14px;
-  }
-  .toolbar .q{ min-width:260px; }
-  .btn{
-    border:0; border-radius:8px; padding:8px 12px;
-    background:#1f5ab0; color:#fff; text-decoration:none; font-weight:700; font-size:13px;
-    cursor:pointer;
-  }
-  .btn:hover{ background:#18498f; }
-  .btn-light{ background:#eef4ff; color:#18498f; border:1px solid #cddcf5; }
-
-  .table-wrap{
-    background:#fff; border:1px solid #d8e3f2; border-radius:12px; overflow:auto;
-  }
-  table{ width:100%; border-collapse:collapse; }
-  th, td{
-    padding:10px 12px; border-bottom:1px solid #edf2fa; text-align:left; vertical-align:middle;
-  }
-  th{ font-size:13px; color:#4f678a; background:#f8fbff; }
-  td{ font-size:14px; color:#102a4a; }
-
-  .muted{ color:#6b81a0; }
-  .pill{
-    display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700;
-    background:#e9f2ff; color:#1c4d93;
-  }
-  .empty{
-    padding:26px; text-align:center; color:#617a9c; background:#fff;
-    border:1px solid #d8e3f2; border-radius:12px;
-  }
-  .pagination{
-    display:flex; gap:8px; justify-content:flex-end; align-items:center;
-    margin-top:12px;
-  }
-</style>
 
 <form class="toolbar" method="get">
   <input class="q" type="text" name="q" value="{{ q or '' }}" placeholder="Nome, nome social, CPF, CNS ou mãe">

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Agendamentos{% endblock %}
+{% block page_title %}Agendamentos{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--primary btn--sm" href="{{ url_for('agendamento.novo') }}">
+    {{ icon('plus') }} Novo agendamento
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__body">
+    {% if agendamentos %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Data e hora</th><th>Paciente</th><th>Profissional</th>
+              <th>Tipo</th><th>Situação</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in agendamentos %}
+              <tr>
+                <td class="text-xs mono">
+                  {{ a.data_hora.strftime('%d/%m/%Y %H:%M') if a.data_hora else '—' }}
+                </td>
+                <td>
+                  {% if a.paciente %}{{ a.paciente.nome }}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-sm">
+                  {% if a.medico and a.medico.user %}{{ a.medico.user.nome }}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td><span class="badge badge--slate">{{ (a.tipo or 'consulta') | capitalize }}</span></td>
+                <td>
+                  {% if a.status == 'agendado' %}<span class="badge badge--blue">Agendado</span>
+                  {% elif a.status == 'realizado' %}<span class="badge badge--green">Realizado</span>
+                  {% elif a.status == 'faltou' %}<span class="badge badge--amber">Faltou</span>
+                  {% elif a.status == 'cancelado' %}
+                    <span class="badge badge--red" title="{{ a.motivo_cancel or '' }}">Cancelado</span>
+                  {% else %}<span class="badge badge--slate">{{ (a.status or '—') | capitalize }}</span>{% endif %}
+                </td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--ghost" href="{{ url_for('agendamento.editar', id=a.id) }}">
+                    {{ icon('pencil') }} Editar
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('calendar-days') }}
+        <p class="empty-state__title">Nenhum agendamento</p>
+        <p class="empty-state__hint">Use "Novo agendamento" para marcar a primeira consulta.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

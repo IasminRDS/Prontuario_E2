@@ -31,7 +31,7 @@
   </div>
   <div class="table-wrapper"><table class="tabela">
     <thead><tr><th>Item</th><th>Qtd</th><th>Lote</th><th>Vencimento</th><th>Dias restantes</th></tr></thead>
-    <tbody>{% from 'macros.html' import '' ignore missing %}
+    <tbody>
     {% for i in vencendo %}
     {% set dias = (i.validade - today).days if today is defined else 0 %}
     <tr>

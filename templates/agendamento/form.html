@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% set edicao = agendamento is not none %}
+
+{% block title %}{{ 'Editar agendamento' if edicao else 'Novo agendamento' }}{% endblock %}
+{% block page_title %}{{ 'Editar agendamento' if edicao else 'Novo agendamento' }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="btn btn--secondary btn--sm" href="{{ url_for('agendamento.index') }}">Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="card maxw-md">
+  <div class="card__body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-grid">
+        <div class="field col-8">
+          <label class="field__label" for="paciente_id">
+            Paciente <span class="field__req">*</span>
+          </label>
+          <select class="select" id="paciente_id" name="paciente_id" required>
+            <option value="">Selecione…</option>
+            {% for p in pacientes %}
+              {% set marcado = (agendamento and agendamento.paciente_id == p.id)
+                               or (paciente_sel and paciente_sel.id == p.id) %}
+              <option value="{{ p.id }}" {% if marcado %}selected{% endif %}>
+                {{ p.nome }}{% if p.cpf %} — {{ p.cpf }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field col-4">
+          <label class="field__label" for="tipo">Tipo</label>
+          <select class="select" id="tipo" name="tipo">
+            {% for t in ['consulta', 'retorno', 'exame', 'procedimento', 'vacina'] %}
+              <option value="{{ t }}"
+                {% if agendamento and agendamento.tipo == t %}selected{% endif %}>
+                {{ t | capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field col-6">
+          <label class="field__label" for="data_hora">
+            Data e hora <span class="field__req">*</span>
+          </label>
+          <input class="input" type="datetime-local" id="data_hora" name="data_hora" required
+                 value="{{ agendamento.data_hora.strftime('%Y-%m-%dT%H:%M') if edicao and agendamento.data_hora else '' }}" />
+        </div>
+
+        <div class="field col-6">
+          <label class="field__label" for="medico_id">Profissional</label>
+          <select class="select" id="medico_id" name="medico_id">
+            <option value="">Não definido</option>
+            {% for m in medicos %}
+              <option value="{{ m.id }}"
+                {% if agendamento and agendamento.medico_id == m.id %}selected{% endif %}>
+                {{ m.user.nome if m.user else 'Profissional #' ~ m.id }}
+                {%- if m.especialidade %} — {{ m.especialidade }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if edicao %}
+          <div class="field col-6">
+            <label class="field__label" for="status">Situação</label>
+            <select class="select" id="status" name="status">
+              {% for s in ['agendado', 'realizado', 'faltou', 'cancelado'] %}
+                <option value="{{ s }}" {% if agendamento.status == s %}selected{% endif %}>
+                  {{ s | capitalize }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        <div class="field col-12">
+          <label class="field__label" for="observacoes">Observações</label>
+          <textarea class="textarea" id="observacoes" name="observacoes"
+                    placeholder="Preparo, queixa inicial, orientações…">{{ agendamento.observacoes or '' if edicao else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">
+          {{ icon('check-circle') }} {{ 'Salvar alterações' if edicao else 'Agendar' }}
+        </button>
+        <a class="btn btn--ghost" href="{{ url_for('agendamento.index') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

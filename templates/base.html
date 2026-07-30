@@ -23,6 +23,12 @@
     </script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dsgov.css') }}" />
+    {#
+      Camada temporária: mapeia as classes do design antigo (btn-primary,
+      card-body, tabela…) nos tokens novos, para as telas ainda não reescritas
+      não abrirem sem estilo. Remova quando compat.css esvaziar.
+    #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/compat.css') }}" />
     {% block head %}{% endblock %}
   </head>
 

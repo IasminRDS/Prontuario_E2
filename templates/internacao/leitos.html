@@ -78,44 +78,6 @@ block page_title %}Leitos{% endblock %} {% block content %}
   </div>
 </div>
 
-<style>
-  .leitos-toolbar {
-    display: grid;
-    grid-template-columns: 1.2fr 1.2fr 1fr 0.8fr auto;
-    gap: 12px;
-    align-items: end;
-    margin-bottom: 14px;
-  }
-
-  .leitos-toolbar .campo {
-    min-width: 0;
-  }
-
-  .leitos-toolbar .campo .form-control {
-    width: 100%;
-  }
-
-  .leitos-toolbar .acoes {
-    display: flex;
-    justify-content: flex-end;
-    align-items: end;
-  }
-
-  .leitos-toolbar .acoes .btn {
-    height: 36px;
-    min-width: 110px;
-  }
-
-  @media (max-width: 1200px) {
-    .leitos-toolbar {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .leitos-toolbar .acoes {
-      justify-content: flex-start;
-    }
-  }
-</style>
 
 <script>
   (function () {
@@ -288,34 +250,3 @@ block page_title %}Leitos{% endblock %} {% block content %}
 </script>
 {% endblock %}
 
-<style>
-  .leitos-toolbar {
-    display: grid;
-    grid-template-columns: 1.2fr 1.2fr 1fr 0.8fr auto;
-    gap: 12px;
-    align-items: end;
-    margin-bottom: 14px;
-  }
-  .leitos-toolbar .campo {
-    min-width: 0;
-  }
-  .leitos-toolbar .campo .form-control {
-    width: 100%;
-  }
-  .leitos-toolbar .acoes {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .leitos-toolbar .acoes .btn {
-    height: 34px;
-    min-width: 110px;
-  }
-  @media (max-width: 1200px) {
-    .leitos-toolbar {
-      grid-template-columns: 1fr 1fr;
-    }
-    .leitos-toolbar .acoes {
-      justify-content: flex-start;
-    }
-  }
-</style>

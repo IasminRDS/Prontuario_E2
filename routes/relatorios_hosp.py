@@ -75,20 +75,18 @@ def producao():
         Internacao.status == "alta",
     ).count()
     cirurgias = Cirurgia.query.filter(
-        Cirurgia.data_agendada.between(di, df), Cirurgia.unidade_id == uid
+        Cirurgia.data_agendada.between(di, df)
     ).count()
     cir_realizadas = Cirurgia.query.filter(
         Cirurgia.data_agendada.between(di, df),
-        Cirurgia.unidade_id == uid,
         Cirurgia.status == "realizada",
     ).count()
     ps_total = AtendimentoPS.query.filter(
-        AtendimentoPS.data_entrada.between(di, df), AtendimentoPS.unidade_id == uid
+        AtendimentoPS.data_chegada.between(di, df)
     ).count()
     ps_internados = AtendimentoPS.query.filter(
-        AtendimentoPS.data_entrada.between(di, df),
-        AtendimentoPS.unidade_id == uid,
-        AtendimentoPS.desfecho == "internado",
+        AtendimentoPS.data_chegada.between(di, df),
+        AtendimentoPS.status == "internado",
     ).count()
     obitos = Internacao.query.filter(
         Internacao.data_alta.between(di, df),
@@ -143,12 +141,11 @@ def relatorio_ps():
         di = datetime.now().replace(day=1)
         df = datetime.now()
 
+    # AtendimentoPS não tem vínculo com unidade no model — o filtro territorial
+    # não é aplicável aqui.
     ats = (
-        AtendimentoPS.query.filter(
-            AtendimentoPS.data_entrada.between(di, df),
-            AtendimentoPS.unidade_id == current_user.unidade_id,
-        )
-        .order_by(AtendimentoPS.data_entrada.desc())
+        AtendimentoPS.query.filter(AtendimentoPS.data_chegada.between(di, df))
+        .order_by(AtendimentoPS.data_chegada.desc())
         .all()
     )
 
@@ -179,7 +176,7 @@ def relatorio_ps():
         for a in ats:
             w.writerow(
                 [
-                    a.data_entrada.strftime("%d/%m/%Y %H:%M"),
+                    a.data_chegada.strftime("%d/%m/%Y %H:%M"),
                     a.paciente.nome_exibicao,
                     a.classificacao,
                     a.modo_chegada,

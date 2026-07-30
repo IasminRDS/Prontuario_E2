@@ -220,7 +220,7 @@ def producao():
         Encaminhamento.unidade_origem_id == uid,
     ).count()
     total_vac = VacinaAplicada.query.filter(
-        VacinaAplicada.criado_em.between(di, df), VacinaAplicada.unidade_id == uid
+        VacinaAplicada.data_aplicacao.between(di, df)
     ).count()
     novos_pac = Paciente.query.filter(Paciente.criado_em.between(di, df)).count()
 

@@ -4,51 +4,6 @@
 {% block page_title %}Relatórios{% endblock %}
 
 {% block content %}
-<style>
-  .cards{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(220px,1fr));
-    gap:14px;
-  }
-  .report-card{
-    background:#fff;
-    border:1px solid #d8e3f2;
-    border-radius:12px;
-    padding:16px;
-    display:flex;
-    flex-direction:column;
-    min-height:170px;
-  }
-  .report-card h3{
-    margin:0 0 8px;
-    color:#11345f;
-    font-size:22px;
-  }
-  .report-card p{
-    margin:0 0 14px;
-    color:#567193;
-    line-height:1.4;
-    font-size:14px;
-  }
-  .btn{
-    margin-top:auto;
-    display:inline-block;
-    border:0;
-    border-radius:8px;
-    padding:8px 12px;
-    background:#1f5ab0;
-    color:#fff;
-    text-decoration:none;
-    font-size:13px;
-    font-weight:700;
-    width:max-content;
-  }
-  .btn:hover{ background:#18498f; }
-
-  @media (max-width:980px){
-    .cards{ grid-template-columns:1fr; }
-  }
-</style>
 
 <div class="cards">
   <article class="report-card">

@@ -148,6 +148,24 @@ def _registrar_context(app):
 
 
 def _registrar_handlers(app):
+    @app.url_build_error_handlers.append
+    def _endpoint_ausente(erro, endpoint, valores):
+        """Degrada url_for() para link morto quando o endpoint não existe.
+
+        Há telas herdadas que apontam para rotas nunca implementadas (o módulo
+        tem o template, mas não a view). Sem isto, UMA referência quebrada
+        derruba a página inteira com 500 e o restante da tela — que funciona —
+        fica inacessível.
+
+        O aviso no log é intencional: o link morto precisa aparecer para ser
+        corrigido, não ser varrido para debaixo do tapete.
+        """
+        app.logger.warning(
+            "url_for('%s') falhou: endpoint não registrado. Link renderizado como '#'.",
+            endpoint,
+        )
+        return "#"
+
     @app.errorhandler(401)
     def nao_autenticado(_e):
         return render_template("errors/403.html", codigo=401,
