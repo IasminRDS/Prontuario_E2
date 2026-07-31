@@ -270,10 +270,17 @@ def _gerar_notificacao_se_compulsorio(p):
 @prontuario_bp.get("/")
 @login_required
 def listar_prontuarios():
+    """Índice de prontuários.
+
+    Devolve HTML para o navegador e JSON para quem pede JSON (`Accept:
+    application/json` ou `?formato=json`). Antes respondia SEMPRE JSON, então o
+    item "Prontuário" do menu jogava o operador numa parede de texto cru.
+    """
     q = _query_prontuario_escopo()
 
     paciente_id = request.args.get("paciente_id", type=int)
     cid = (request.args.get("cid") or "").strip().upper()
+    termo = (request.args.get("q") or "").strip()
 
     if paciente_id:
         q = q.filter(Prontuario.paciente_id == paciente_id)
@@ -281,10 +288,38 @@ def listar_prontuarios():
         q = q.filter(
             (Prontuario.cid_principal == cid) | (Prontuario.cid_secundario == cid)
         )
+    if termo:
+        like = f"%{termo}%"
+        q = q.join(Paciente, Prontuario.paciente_id == Paciente.id).filter(
+            Paciente.nome.ilike(like)
+            | Paciente.cpf.ilike(like)
+            | Paciente.cns.ilike(like)
+        )
 
     itens = q.order_by(Prontuario.criado_em.desc()).all()
 
     auditar_aqui("prontuarios", "list")
+
+    quer_json = (
+        request.args.get("formato") == "json"
+        or request.accept_mimetypes.best == "application/json"
+    )
+    if not quer_json:
+        db.session.commit()  # persiste o evento de auditoria
+        pacientes = {}
+        ids = {p.paciente_id for p in itens}
+        if ids:
+            pacientes = {
+                x.id: x for x in Paciente.query.filter(Paciente.id.in_(ids)).all()
+            }
+        return render_template(
+            "prontuario/index.html",
+            prontuarios=itens[:200],
+            total=len(itens),
+            pacientes=pacientes,
+            termo=termo,
+            cid=cid,
+        )
 
     return (
         jsonify(

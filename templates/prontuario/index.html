@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Prontuário{% endblock %}
+{% block page_title %}Prontuários{% endblock %}
+
+{% block content %}
+<div class="audit-notice">
+  {{ icon('shield-check') }}
+  <span>
+    Cada abertura de prontuário é registrada na trilha de auditoria com seu
+    usuário, data e IP.
+  </span>
+</div>
+
+<div class="card">
+  <div class="card__header">
+    <div class="card__title">{{ total }} registro(s)</div>
+    {% if total > 200 %}
+      <span class="text-xs text-muted">mostrando os 200 mais recentes</span>
+    {% endif %}
+  </div>
+
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Paciente</label>
+        <input class="input" type="search" id="q" name="q" value="{{ termo }}"
+               placeholder="nome, CPF ou CNS" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="cid">CID-10</label>
+        <input class="input mono" id="cid" name="cid" value="{{ cid }}"
+               placeholder="ex.: A90" maxlength="10" style="width:8rem" />
+      </div>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Buscar</button>
+      {% if termo or cid %}
+        <a class="btn btn--ghost" href="{{ url_for('prontuario.listar_prontuarios') }}">Limpar</a>
+      {% endif %}
+    </form>
+
+    {% if prontuarios %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Paciente</th><th>Profissional</th>
+              <th>CID</th><th>Avaliação</th><th>Situação</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in prontuarios %}
+              {% set pac = pacientes.get(p.paciente_id) %}
+              <tr>
+                <td class="text-xs mono">
+                  {{ p.criado_em.strftime('%d/%m/%Y %H:%M') if p.criado_em else '—' }}
+                </td>
+                <td>
+                  {% if pac %}
+                    <a href="{{ url_for('pacientes.perfil', id=pac.id) }}">{{ pac.nome }}</a>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-sm">
+                  {{ p.medico.nome if p.medico else '—' }}
+                </td>
+                <td class="mono text-xs">{{ p.cid_principal or '—' }}</td>
+                <td class="text-xs truncate" style="max-width:22rem">
+                  {{ p.avaliacao or p.subjetivo or '—' }}
+                </td>
+                <td>
+                  {% if p.assinado %}
+                    <span class="badge badge--green">{{ icon('file-check') }} Assinado</span>
+                  {% else %}
+                    <span class="badge badge--amber">Em aberto</span>
+                  {% endif %}
+                </td>
+                <td class="actions">
+                  <a class="btn btn--sm btn--ghost"
+                     href="{{ url_for('prontuario.visualizar', id=p.id) }}">
+                    {{ icon('eye') }} Abrir
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        {{ icon('file-text') }}
+        <p class="empty-state__title">Nenhum prontuário encontrado</p>
+        <p class="empty-state__hint">
+          {% if termo or cid %}
+            Ajuste os filtros ou limpe a busca.
+          {% else %}
+            Os registros aparecem aqui conforme forem criados a partir da ficha do paciente.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

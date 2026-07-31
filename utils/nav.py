@@ -4,10 +4,14 @@
 Orientada ao fluxo clínico e agrupada por domínio: o operador acha a função pelo
 contexto, não numa lista plana.
 
-Os 5 primeiros grupos são idênticos aos do monorepo NestJS+Next (mesmos rótulos,
-mesma ordem, mesmos ícones, mesmas permissões). Os 2 últimos — "Apoio
-diagnóstico" e "Administração" — cobrem módulos que existem só nesta versão
-Flask; sem eles essas telas ficariam sem porta de entrada.
+Os grupos Dashboard, Atendimento, Vigilância e Regulação, Gestão e Conta são os
+mesmos do monorepo NestJS+Next (mesmos rótulos, ícones e permissões). Assistência
+hospitalar, Apoio diagnóstico, Faturamento e Administração cobrem módulos que
+existem só nesta versão Flask; sem eles essas telas ficariam sem porta de entrada.
+
+"Conta" fica no fim, e não na posição do monorepo, porque aqui há o dobro de
+grupos — empurrar o que menos se acessa para baixo deixa o fluxo clínico no
+topo, sem rolagem.
 
 Um item só aparece se (a) o endpoint estiver registrado no app E (b) o usuário
 tiver a permissão. A checagem (a) evita link morto quando um blueprint sai.
@@ -74,13 +78,6 @@ GRUPOS = (
         _i("terminologia.index", "Tabelas oficiais", "table",
            "Consulta a CID-10, RENAME, CBO, SIGTAP e CNES."),
     )),
-    Grupo("Conta", (
-        _i("conta.index", "Minha conta", "user-cog",
-           "Identificação e verificação em duas etapas (MFA)."),
-        _i("sobre.index", "Sobre o sistema", "info",
-           "Versão, recursos e conformidade do SNPE."),
-    )),
-    # --- Exclusivos desta versão Flask ------------------------------------
     Grupo("Assistência hospitalar", (
         _i("ps.painel", "Painel do PS", "activity",
            "Ciclo completo: chegada, chamada, observação e desfecho.",
@@ -96,7 +93,7 @@ GRUPOS = (
         _i("agendamento.index", "Agendamentos", "clipboard-check",
            "Marcação de consultas por profissional.", ["patient:read"]),
     )),
-    Grupo("Apoio diagnóstico e farmácia", (
+    Grupo("Apoio diagnóstico", (
         _i("exames.index", "Exames", "flask-conical",
            "Solicitação, coleta e resultado de exames.", ["exam:write"]),
         _i("exames.catalogo", "Catálogo de exames", "clipboard-check",
@@ -132,6 +129,13 @@ GRUPOS = (
            "Cópia de segurança do banco.", ["admin:full"]),
         _i("pdf.ferramentas", "Ferramentas PDF", "files",
            "Compactar, proteger e reorganizar documentos.", ["clinical:read"]),
+    )),
+    # Fica por último de propósito: é o que menos se acessa no dia a dia.
+    Grupo("Conta", (
+        _i("conta.index", "Minha conta", "user-cog",
+           "Identificação e verificação em duas etapas (MFA)."),
+        _i("sobre.index", "Sobre o sistema", "info",
+           "Versão, recursos e conformidade do SNPE."),
     )),
 )
 

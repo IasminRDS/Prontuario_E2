@@ -68,9 +68,22 @@
   'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'
 } %}
 
+{#
+  Todo ícone sai com a classe `ico`, que dá o tamanho padrão (1rem) em
+  static/css/dsgov.css.
+
+  Sem isso o <svg> não tem width/height próprios e, em qualquer contexto onde o
+  CSS não dimensione aquele seletor específico, ele estica para preencher o
+  container — chegando a 400px dentro de um flex. As regras contextuais
+  (`.navitem svg`, `.empty-state svg`…) têm especificidade maior e continuam
+  sobrescrevendo `.ico` normalmente.
+
+  `size` continua disponível para casos pontuais e vem como style inline, porque
+  atributo de apresentação perderia para o CSS de `.ico`.
+#}
 {% macro icon(name, cls='', size=None) -%}
   {%- set d = _PATHS.get(name) -%}
   {%- if d -%}
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if cls %} class="{{ cls }}"{% endif %}{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ d|safe }}</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" class="ico{% if cls %} {{ cls }}{% endif %}"{% if size %} style="width:{{ size }}px;height:{{ size }}px"{% endif %}>{{ d|safe }}</svg>
   {%- endif -%}
 {%- endmacro %}

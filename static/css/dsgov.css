@@ -175,6 +175,25 @@ code, kbd, samp, .mono {
 }
 
 /* ============================================================
+   ÍCONES
+   ============================================================
+   Todo SVG vindo do macro `icon()` carrega a classe `.ico`. O tamanho padrão
+   mora AQUI porque o SVG não traz width/height próprios: sem esta regra, ele
+   estica para preencher o container em qualquer contexto que o CSS não
+   dimensione — e um ícone de 1rem vira um de 400px dentro de um flex.
+
+   As regras contextuais mais abaixo (`.navitem svg`, `.empty-state svg`,
+   `.btn svg`…) têm especificidade maior e continuam mandando onde existem.
+   ============================================================ */
+.ico {
+  width: 1rem;
+  height: 1rem;
+  flex: none; /* nunca esticar nem encolher dentro de um flex container */
+  display: inline-block;
+  vertical-align: -0.125em;
+}
+
+/* ============================================================
    ACESSIBILIDADE (eMAG / WCAG 2.1 AA)
    ============================================================ */
 
@@ -326,6 +345,7 @@ code, kbd, samp, .mono {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.5rem 0.5rem;
   border: 0;
@@ -337,6 +357,15 @@ code, kbd, samp, .mono {
   letter-spacing: 0.06em;
   color: var(--slate-400);
   border-radius: var(--radius);
+  /* <button> vem com text-align:center do navegador. Some no título curto,
+     porque o span encolhe até o conteúdo, mas em título que quebra em duas
+     linhas a segunda saía centralizada. */
+  text-align: left;
+}
+
+.navgroup__btn > span {
+  text-align: left;
+  min-width: 0;
 }
 .navgroup__btn:hover { background: var(--slate-50); color: var(--slate-600); }
 .navgroup__chevron {
