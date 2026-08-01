@@ -15,6 +15,98 @@
    base.html.
    ========================================================================= */
 
+/* ============================================================
+   REDE DE SEGURANÇA — elementos sem classe dentro do conteúdo
+   ============================================================
+   Alguns templates herdados escrevem `<table>`, `<input>` e `<select>` crus, sem
+   classe nenhuma. Sem isto eles saem com a aparência padrão do navegador no meio
+   de uma página com design system — que foi o que gerou o visual "diferente do
+   padrão" em pacientes/listar, admin e estoque.
+
+   O escopo é `.content` (a área central) e a condição é `:not([class])`, então
+   nada que já declare classe é afetado, e a regra não vaza para a sidebar, para
+   a barra gov.br nem para os formulários já convertidos.
+   ============================================================ */
+.content table:not([class]) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  background: var(--clinic-surface);
+  border: 1px solid var(--clinic-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.content table:not([class]) thead th {
+  background: var(--slate-50);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--slate-500);
+  border-bottom: 1px solid var(--clinic-border);
+  white-space: nowrap;
+}
+.content table:not([class]) tbody td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--clinic-border);
+  color: var(--slate-700);
+  vertical-align: middle;
+}
+.content table:not([class]) tbody tr:last-child td { border-bottom: 0; }
+.content table:not([class]) tbody tr:hover { background: var(--slate-50); }
+
+.content input:not([class]):not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='submit']):not([type='button']),
+.content select:not([class]),
+.content textarea:not([class]) {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--slate-900);
+  background: var(--clinic-surface);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius);
+  outline: none;
+}
+.content input:not([class]):focus,
+.content select:not([class]):focus,
+.content textarea:not([class]):focus {
+  border-color: var(--clinic-primary);
+  box-shadow: 0 0 0 3px rgb(19 81 180 / 0.2);
+}
+.content input:not([class])::placeholder,
+.content textarea:not([class])::placeholder { color: var(--slate-400); }
+
+.content input[type='checkbox']:not([class]),
+.content input[type='radio']:not([class]) {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--clinic-primary);
+}
+
+/* Campo de busca largo das toolbars herdadas */
+.q { flex: 1; min-width: 14rem; }
+
+/* ---------------- Classes soltas dos templates herdados ---------------- */
+.campo { display: block; margin-bottom: 0.75rem; }
+.campo-tipo { font-size: 0.6875rem; color: var(--slate-400); }
+.critico { color: var(--red-600); font-weight: 600; }
+.acoes, .actions { text-align: right; white-space: nowrap; }
+.col { min-width: 0; }
+
+/* Grades de KPI por quantidade de colunas */
+.k2 { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.k3 { display: grid; gap: 0.75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.k4 { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 60rem) {
+  .k3, .k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 40rem) {
+  .k2, .k3, .k4 { grid-template-columns: 1fr; }
+}
+
 /* ---------------- Botões ---------------- */
 .btn-primary {
   background: var(--clinic-primary);

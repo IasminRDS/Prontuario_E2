@@ -1,79 +1,183 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 
 {% block title %}Pacientes{% endblock %}
 {% block page_title %}Pacientes{% endblock %}
 
+{% block topbar_actions %}
+  {% if 'pacientes.novo' in available_endpoints and pode('patient:create') %}
+    <a class="btn btn--primary btn--sm" href="{{ url_for('pacientes.novo') }}">
+      {{ icon('plus') }} Novo paciente
+    </a>
+  {% endif %}
+  {% if 'pacientes.qrscan' in available_endpoints %}
+    <a class="btn btn--secondary btn--sm" href="{{ url_for('pacientes.qrscan') }}">
+      {{ icon('qr-code') }} Ler QR Code
+    </a>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
+<div class="card">
+  <div class="card__header">
+    <div class="card__title">
+      {% if pacientes and pacientes.total is defined %}
+        {{ pacientes.total }} paciente(s)
+      {% else %}
+        Busca de pacientes
+      {% endif %}
+    </div>
+  </div>
 
-<form class="toolbar" method="get">
-  <input class="q" type="text" name="q" value="{{ q or '' }}" placeholder="Nome, nome social, CPF, CNS ou mãe">
+  <div class="card__body">
+    <form method="get" class="filters" role="search">
+      <div class="field field--grow">
+        <label class="field__label" for="q">Buscar</label>
+        <input class="input" type="search" id="q" name="q" value="{{ q or '' }}"
+               placeholder="nome, nome social, CPF, CNS ou nome da mãe"
+               autocomplete="off" />
+      </div>
 
-  <select name="sexo">
-    <option value="">Sexo (todos)</option>
-    <option value="F" {% if filtro_sexo=='F' %}selected{% endif %}>Feminino</option>
-    <option value="M" {% if filtro_sexo=='M' %}selected{% endif %}>Masculino</option>
-  </select>
+      <div class="field">
+        <label class="field__label" for="sexo">Sexo</label>
+        <select class="select" id="sexo" name="sexo">
+          <option value="">Todos</option>
+          <option value="F" {% if filtro_sexo == 'F' %}selected{% endif %}>Feminino</option>
+          <option value="M" {% if filtro_sexo == 'M' %}selected{% endif %}>Masculino</option>
+        </select>
+      </div>
 
-  <input type="number" min="0" name="idade_min" value="{{ filtro_idade_min or '' }}" placeholder="Idade mín.">
-  <input type="number" min="0" name="idade_max" value="{{ filtro_idade_max or '' }}" placeholder="Idade máx.">
-  <input type="text" name="municipio" value="{{ filtro_municipio or '' }}" placeholder="Município">
+      <div class="field">
+        <label class="field__label" for="idade_min">Idade mín.</label>
+        <input class="input" type="number" id="idade_min" name="idade_min" min="0" max="130"
+               value="{{ filtro_idade_min or '' }}" style="width:6rem" />
+      </div>
 
-  <select name="tem_cns">
-    <option value="">CNS (todos)</option>
-    <option value="1" {% if filtro_tem_cns=='1' %}selected{% endif %}>Com CNS</option>
-    <option value="0" {% if filtro_tem_cns=='0' %}selected{% endif %}>Sem CNS</option>
-  </select>
+      <div class="field">
+        <label class="field__label" for="idade_max">Idade máx.</label>
+        <input class="input" type="number" id="idade_max" name="idade_max" min="0" max="130"
+               value="{{ filtro_idade_max or '' }}" style="width:6rem" />
+      </div>
 
-  <button class="btn" type="submit">Filtrar</button>
-  <a class="btn btn-light" href="{{ url_for('pacientes.listar_pacientes') }}">Limpar</a>
+      <div class="field">
+        <label class="field__label" for="municipio">Município</label>
+        <input class="input" type="text" id="municipio" name="municipio"
+               value="{{ filtro_municipio or '' }}" style="width:10rem" />
+      </div>
 
-  {% if 'pacientes.novo' in available_endpoints %}
-    <a class="btn" href="{{ url_for('pacientes.novo') }}" style="margin-left:auto;">+ Novo paciente</a>
-  {% endif %}
-</form>
+      <div class="field">
+        <label class="field__label" for="tem_cns">CNS</label>
+        <select class="select" id="tem_cns" name="tem_cns">
+          <option value="">Todos</option>
+          <option value="1" {% if filtro_tem_cns == '1' %}selected{% endif %}>Com CNS</option>
+          <option value="0" {% if filtro_tem_cns == '0' %}selected{% endif %}>Sem CNS</option>
+        </select>
+      </div>
 
-{% if pacientes and pacientes.items and pacientes.items|length > 0 %}
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>CPF</th>
-        <th>CNS</th>
-        <th>Nascimento</th>
-        <th>Idade</th>
-        <th>Sexo</th>
-        <th>Município/UF</th>
-        <th>Telefone</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in pacientes.items %}
-      <tr>
-        <td><strong>{{ p.nome_exibicao or p.nome }}</strong></td>
-        <td>{{ p.cpf or '-' }}</td>
-        <td>{{ p.cns or '-' }}</td>
-        <td>{% if p.data_nascimento %}{{ p.data_nascimento.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
-        <td>{{ p.idade if p.idade is not none else '-' }}</td>
-        <td>{{ p.sexo or '-' }}</td>
-        <td>{{ p.municipio or '-' }}/{{ p.uf or '-' }}</td>
-        <td>{{ p.telefone or '-' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      <button class="btn btn--primary" type="submit">{{ icon('search') }} Filtrar</button>
+      {% if q or filtro_sexo or filtro_idade_min or filtro_idade_max or filtro_municipio or filtro_tem_cns %}
+        <a class="btn btn--ghost" href="{{ url_for('pacientes.listar_pacientes') }}">Limpar</a>
+      {% endif %}
+    </form>
+
+    {% if pacientes and pacientes.items %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>CNS</th>
+              <th>Nascimento</th>
+              <th class="num">Idade</th>
+              <th>Sexo</th>
+              <th>Município/UF</th>
+              <th>Telefone</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pacientes.items %}
+              <tr>
+                <td>
+                  {% if 'pacientes.perfil' in available_endpoints %}
+                    <a href="{{ url_for('pacientes.perfil', id=p.id) }}" class="text-strong">
+                      {{ p.nome_exibicao or p.nome }}
+                    </a>
+                  {% else %}
+                    <span class="text-strong">{{ p.nome_exibicao or p.nome }}</span>
+                  {% endif %}
+                  {% if p.nome_social %}
+                    <div class="text-xs text-muted">registro: {{ p.nome }}</div>
+                  {% endif %}
+                </td>
+                <td class="mono text-xs">{{ p.cpf or '—' }}</td>
+                <td class="mono text-xs">
+                  {% if p.cns %}
+                    {{ p.cns }}
+                  {% else %}
+                    <span class="badge badge--amber">sem CNS</span>
+                  {% endif %}
+                </td>
+                <td class="text-xs">
+                  {{ p.data_nascimento.strftime('%d/%m/%Y') if p.data_nascimento else '—' }}
+                </td>
+                <td class="num">{{ p.idade if p.idade is not none else '—' }}</td>
+                <td>{{ p.sexo or '—' }}</td>
+                <td class="text-xs">
+                  {{ p.municipio or '—' }}{% if p.uf %}/{{ p.uf }}{% endif %}
+                </td>
+                <td class="mono text-xs">{{ p.telefone or '—' }}</td>
+                <td class="actions">
+                  {% if 'pacientes.perfil' in available_endpoints %}
+                    <a class="btn btn--sm btn--ghost"
+                       href="{{ url_for('pacientes.perfil', id=p.id) }}">
+                      {{ icon('eye') }} Abrir
+                    </a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if pacientes.pages and pacientes.pages > 1 %}
+        {% set argumentos = {'q': q, 'sexo': filtro_sexo, 'idade_min': filtro_idade_min,
+                             'idade_max': filtro_idade_max, 'municipio': filtro_municipio,
+                             'tem_cns': filtro_tem_cns} %}
+        <div class="pagination">
+          <span>
+            Página {{ pacientes.page }} de {{ pacientes.pages }} —
+            {{ pacientes.total }} paciente(s)
+          </span>
+          <div class="pagination__pages">
+            {% if pacientes.has_prev %}
+              <a href="{{ url_for('pacientes.listar_pacientes', page=pacientes.prev_num, **argumentos) }}">Anterior</a>
+            {% else %}
+              <span class="is-disabled">Anterior</span>
+            {% endif %}
+            {% if pacientes.has_next %}
+              <a href="{{ url_for('pacientes.listar_pacientes', page=pacientes.next_num, **argumentos) }}">Próxima</a>
+            {% else %}
+              <span class="is-disabled">Próxima</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        {{ icon('users') }}
+        <p class="empty-state__title">Nenhum paciente encontrado</p>
+        <p class="empty-state__hint">
+          {% if q or filtro_sexo or filtro_municipio %}
+            Ajuste os filtros ou limpe a busca.
+          {% else %}
+            Cadastre o primeiro paciente para começar.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+  </div>
 </div>
-
-<div class="pagination">
-  {% if pacientes.has_prev %}
-    <a class="btn btn-light" href="{{ url_for('pacientes.listar_pacientes', page=pacientes.prev_num, q=q, sexo=filtro_sexo, idade_min=filtro_idade_min, idade_max=filtro_idade_max, municipio=filtro_municipio, tem_cns=filtro_tem_cns) }}">← Anterior</a>
-  {% endif %}
-  <span class="muted">Página {{ pacientes.page }} de {{ pacientes.pages or 1 }}</span>
-  {% if pacientes.has_next %}
-    <a class="btn btn-light" href="{{ url_for('pacientes.listar_pacientes', page=pacientes.next_num, q=q, sexo=filtro_sexo, idade_min=filtro_idade_min, idade_max=filtro_idade_max, municipio=filtro_municipio, tem_cns=filtro_tem_cns) }}">Próxima →</a>
-  {% endif %}
-</div>
-{% else %}
-  <div class="empty">Nenhum paciente encontrado.</div>
-{% endif %}
 {% endblock %}
