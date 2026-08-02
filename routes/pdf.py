@@ -12,6 +12,7 @@ from services.pdf_service import gerar_prontuario, gerar_receituario, gerar_ates
 from services.pdf_encaminhamento import gerar_encaminhamento
 from services.pdf_manager import PDFManager
 from utils.audit import registrar
+from utils.rbac import requer_permissao
 
 pdf_bp = Blueprint('pdf', __name__, url_prefix='/pdf')
 
@@ -45,6 +46,7 @@ def receituario(id):
 
 @pdf_bp.route('/atestado/<int:paciente_id>', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("clinical:read")
 def atestado(paciente_id):
     paciente = Paciente.query.get_or_404(paciente_id)
     medico   = Medico.query.filter_by(user_id=current_user.id).first()
@@ -124,6 +126,7 @@ def ferramentas():
 
 @pdf_bp.route('/processar', methods=['POST'])
 @login_required
+@requer_permissao("clinical:read")
 def processar_pdf():
     arquivo = request.files.get('documento')
     acao = request.form.get('acao')
@@ -168,6 +171,7 @@ def processar_pdf():
 
 @pdf_bp.route('/reorganizar', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("clinical:read")
 def reorganizar():
     if request.method == 'GET':
         return render_template('pdf/reorganizar.html')

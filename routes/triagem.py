@@ -6,6 +6,7 @@ from models.paciente import Paciente
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from datetime import datetime, date
+from utils.rbac import requer_permissao
 
 triagem_bp = Blueprint("triagem", __name__, url_prefix="/triagem")
 
@@ -46,6 +47,7 @@ def index():
 @triagem_bp.route("/nova", methods=["GET", "POST"])
 @triagem_bp.route("/nova/<int:paciente_id>", methods=["GET", "POST"])
 @login_required
+@requer_permissao("triage:write")
 def nova(paciente_id=None):
     pacientes = Paciente.query.filter_by(ativo=True).order_by(Paciente.nome).all()
 
@@ -140,6 +142,7 @@ def visualizar(id):
 
 @triagem_bp.route("/<int:id>/status", methods=["POST"])
 @login_required
+@requer_permissao("triage:write")
 def atualizar_status(id):
     t = Triagem.query.get_or_404(id)
     novo = request.form.get("status")

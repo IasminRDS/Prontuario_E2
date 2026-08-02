@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -43,6 +44,17 @@ class Config:
     SECRET_KEY = os.environ["SECRET_KEY"]
     WTF_CSRF_ENABLED = _to_bool(os.getenv("WTF_CSRF_ENABLED"), True)
     
+    # Tamanho máximo de corpo de requisição. Sem isto, /pdf/processar e
+    # /importacao/csv aceitam arquivo de qualquer tamanho e viram vetor de
+    # negação de serviço por consumo de disco e memória.
+    MAX_CONTENT_LENGTH = _to_int(os.getenv("MAX_UPLOAD_MB"), 16) * 1024 * 1024
+
+    # Sessão de sistema clínico não deve durar um mês. 12 horas cobre o turno.
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        hours=_to_int(os.getenv("SESSION_HOURS"), 12)
+    )
+    SESSION_REFRESH_EACH_REQUEST = True
+
     # Segurança de Cookies
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = False

@@ -4,6 +4,7 @@ from sqlalchemy import or_
 
 from database.db import db
 from models.catalogo_vacina import CatalogoVacina
+from utils.rbac import requer_permissao
 
 catalogo_vacinas_bp = Blueprint("catalogo_vacinas", __name__, url_prefix="/catalogo-vacinas")
 
@@ -48,6 +49,7 @@ def index():
 
 @catalogo_vacinas_bp.post("/novo")
 @login_required
+@requer_permissao("clinical:read")
 def novo():
     nome = (request.form.get("nome") or "").strip()
     codigo = (request.form.get("codigo") or "").strip().upper()

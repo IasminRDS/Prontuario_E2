@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, flash, redirect, url_for
 from flask_login import login_required
 import os
 import shutil
+from utils.rbac import requer_permissao
 
 backup_bp = Blueprint("backup", __name__, url_prefix="/backup")
 
@@ -13,6 +14,7 @@ def index():
 
 @backup_bp.post("/gerar")
 @login_required
+@requer_permissao("admin:full")
 def gerar():
     db_path = "prontuario.db"
     if not os.path.exists(db_path):

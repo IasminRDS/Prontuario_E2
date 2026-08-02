@@ -16,10 +16,12 @@ from flask import (
     Blueprint, current_app, flash, redirect, render_template, request, session, url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from extensions import db
 from models.user import User
 from utils.audit import registrar
+from utils.seguranca_http import limitar, limpar_tentativas
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -31,6 +33,20 @@ VALIDADE_DESAFIO = timedelta(minutes=5)
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
+
+# Hash descartável, com o mesmo custo dos hashes reais. Gerado uma vez no
+# import para não pesar a cada requisição.
+_HASH_FALSO = generate_password_hash("senha-que-nao-existe-em-conta-nenhuma")
+
+
+def _consumir_tempo_de_hash(senha):
+    """Gasta o mesmo tempo de uma verificação real e devolve False.
+
+    Equaliza o tempo de resposta entre e-mail inexistente e senha errada.
+    """
+    check_password_hash(_HASH_FALSO, senha or "")
+    return False
+
 
 def _destino_seguro(target):
     """Impede open redirect: só aceita destino no mesmo host."""
@@ -45,6 +61,9 @@ def _destino_seguro(target):
 
 def _concluir_login(user, proximo=None):
     login_user(user, remember=True)
+    # Sucesso zera a janela: quem errou a senha e acertou não pode ser
+    # bloqueado no meio do expediente pelas tentativas anteriores.
+    limpar_tentativas(user.email.lower())
     user.ultimo_acesso = datetime.utcnow()
     registrar("users", user.id, "login", f"Login efetuado ({user.email})")
     db.session.commit()
@@ -89,6 +108,7 @@ def login():
 
 
 @auth_bp.post("/login")
+@limitar(maximo=8, janela_segundos=300, sufixo_form="email")
 def login_post():
     proximo = request.form.get("next") or request.args.get("next")
     identidade = (request.form.get("email") or "").strip().lower()
@@ -100,12 +120,29 @@ def login_post():
 
     user = User.query.filter(User.email == identidade).first()
 
+    # A verificação de hash SEMPRE roda, mesmo sem usuário. Ela é lenta de
+    # propósito (~200 ms), então retornar cedo quando o e-mail não existe
+    # deixava a resposta ~100x mais rápida — dava para enumerar quem tem conta
+    # só cronometrando, apesar da mensagem ser a mesma.
+    senha_ok = (
+        user.check_password(senha) if user else _consumir_tempo_de_hash(senha)
+    )
+
     # Mensagem única para usuário inexistente, senha errada e conta inativa —
     # não entregamos a um atacante qual e-mail existe na base.
-    if not user or not user.ativo or not user.check_password(senha):
-        if user:
-            registrar("users", user.id, "login_falha",
-                      f"Tentativa de login rejeitada ({identidade})", commit=True)
+    if not user or not user.ativo or not senha_ok:
+        # Registra SEMPRE, inclusive para e-mail inexistente. Dois motivos: a
+        # escrita no banco custa tempo, e fazê-la só quando o usuário existe
+        # reabriria o canal de tempo que a linha acima fecha; e uma rajada de
+        # tentativas contra e-mails que não existem é exatamente o rastro de
+        # uma enumeração em curso — quem monitora precisa ver isso.
+        registrar(
+            "users",
+            user.id if user else None,
+            "login_falha",
+            f"Tentativa de login rejeitada ({identidade})",
+            commit=True,
+        )
         flash("Credenciais inválidas ou usuário inativo.", "danger")
         return redirect(url_for("auth.login", next=proximo))
 
@@ -125,6 +162,7 @@ def login_post():
 # --------------------------------------------------------------------------
 
 @auth_bp.post("/mfa/verify")
+@limitar(maximo=6, janela_segundos=300)
 def mfa_verify():
     desafio = _desafio_valido()
     if not desafio:

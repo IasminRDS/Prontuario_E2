@@ -105,6 +105,9 @@ def create_app():
     for caminho in BLUEPRINTS:
         app.register_blueprint(_importar(caminho))
 
+    from utils.seguranca_http import registrar_cabecalhos
+    registrar_cabecalhos(app)
+
     _registrar_context(app)
     _registrar_handlers(app)
     _registrar_cli(app)
@@ -180,6 +183,17 @@ def _registrar_handlers(app):
     def sem_permissao(_e):
         return render_template("errors/403.html", codigo=403,
                                mensagem="Seu perfil não tem permissão para esta ação."), 403
+
+    @app.errorhandler(429)
+    def excesso_de_tentativas(e):
+        return render_template("errors/403.html", codigo=429,
+                               mensagem=getattr(e, "description",
+                                                "Muitas tentativas. Aguarde e tente de novo.")), 429
+
+    @app.errorhandler(413)
+    def arquivo_grande(_e):
+        return render_template("errors/403.html", codigo=413,
+                               mensagem="Arquivo maior que o limite permitido."), 413
 
     @app.errorhandler(404)
     def nao_encontrado(_e):

@@ -7,6 +7,7 @@ from models.medico import Medico
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from datetime import datetime, date, timedelta
+from utils.rbac import requer_permissao
 
 agendamento_bp = Blueprint('agendamento', __name__, url_prefix='/agendamento')
 
@@ -54,6 +55,7 @@ def index():
 @agendamento_bp.route('/novo', methods=['GET', 'POST'])
 @agendamento_bp.route('/novo/<int:paciente_id>', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("patient:read")
 def novo(paciente_id=None):
     pacientes = Paciente.query.filter_by(ativo=True).order_by(Paciente.nome).all()
     medicos   = Medico.query.all()
@@ -94,6 +96,7 @@ def novo(paciente_id=None):
 
 @agendamento_bp.route('/<int:id>/status', methods=['POST'])
 @login_required
+@requer_permissao("patient:read")
 def atualizar_status(id):
     ag          = Agendamento.query.get_or_404(id)
     novo_status = request.form.get('status')
@@ -113,6 +116,7 @@ def atualizar_status(id):
 
 @agendamento_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("patient:read")
 def editar(id):
     ag        = Agendamento.query.get_or_404(id)
     pacientes = Paciente.query.filter_by(ativo=True).order_by(Paciente.nome).all()

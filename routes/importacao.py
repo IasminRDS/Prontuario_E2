@@ -59,6 +59,7 @@ def modelo_csv():
 
 @importacao_bp.post("/csv")
 @login_required
+@requer_permissao("patient:create")
 def csv_importar():
     arquivo = request.files.get("arquivo")
     if not arquivo or not arquivo.filename.lower().endswith(".csv"):

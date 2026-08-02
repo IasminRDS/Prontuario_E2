@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
+from utils.rbac import requer_permissao
 
 pronto_socorro_bp = Blueprint("pronto_socorro", __name__, url_prefix="/pronto-socorro")
 
@@ -18,6 +19,7 @@ def index():
 
 @pronto_socorro_bp.post("/novo")
 @login_required
+@requer_permissao("emergency:write")
 def novo():
     nome = (request.form.get("nome") or "").strip()
     motivo = (request.form.get("motivo") or "").strip()
@@ -44,6 +46,7 @@ def novo():
 
 @pronto_socorro_bp.post("/chamar/<int:item_id>")
 @login_required
+@requer_permissao("emergency:write")
 def chamar(item_id):
     for item in FILA_PS:
         if item["id"] == item_id:
@@ -55,6 +58,7 @@ def chamar(item_id):
 
 @pronto_socorro_bp.post("/finalizar/<int:item_id>")
 @login_required
+@requer_permissao("emergency:write")
 def finalizar(item_id):
     for item in FILA_PS:
         if item["id"] == item_id:

@@ -8,6 +8,7 @@ from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from utils.security import medico_requerido
 from datetime import datetime
+from utils.rbac import requer_permissao
 
 medicamentos_bp = Blueprint('medicamentos', __name__, url_prefix='/medicamentos')
 
@@ -66,6 +67,7 @@ def lista_paciente(paciente_id):
                        methods=['GET', 'POST'])
 @login_required
 @medico_requerido
+@requer_permissao("prescription:create")
 def prescrever(paciente_id, prontuario_id=None):
     paciente = Paciente.query.get_or_404(paciente_id)
     medico   = Medico.query.filter_by(user_id=current_user.id).first()
@@ -166,6 +168,7 @@ def catalogo():
 
 @medicamentos_bp.route('/catalogo/novo', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("prescription:create")
 def novo_medicamento():
     if request.method == 'POST':
         try:

@@ -4,6 +4,7 @@ from sqlalchemy import or_
 
 from database.db import db
 from models.unidade_saude import UnidadeSaude
+from utils.rbac import requer_permissao
 
 unidades_bp = Blueprint("unidades", __name__, url_prefix="/unidades")
 
@@ -58,6 +59,7 @@ def index():
 
 @unidades_bp.post("/novo")
 @login_required
+@requer_permissao("admin:full")
 def novo():
     nome = (request.form.get("nome") or "").strip()
     tipo = (request.form.get("tipo") or "").strip()

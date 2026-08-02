@@ -397,6 +397,7 @@ def obter_prontuario(prontuario_id):
 @prontuario_bp.post("/")
 @login_required
 @audit_log(acao_default="create", tabela_default="prontuarios")
+@requer_permissao("clinical:write")
 def criar_prontuario():
     data = request.get_json(silent=True) or {}
 
@@ -464,6 +465,7 @@ def criar_prontuario():
 @prontuario_bp.put("/<int:prontuario_id>")
 @login_required
 @audit_log(acao_default="update", tabela_default="prontuarios")
+@requer_permissao("clinical:write")
 def atualizar_prontuario(prontuario_id):
     p = Prontuario.query.get_or_404(prontuario_id)
 
@@ -515,6 +517,7 @@ def atualizar_prontuario(prontuario_id):
 @prontuario_bp.post("/<int:prontuario_id>/assinar")
 @login_required
 @audit_log(acao_default="sign", tabela_default="prontuarios")
+@requer_permissao("clinical:write")
 def assinar_prontuario(prontuario_id):
     p = Prontuario.query.get_or_404(prontuario_id)
 
@@ -537,6 +540,7 @@ def assinar_prontuario(prontuario_id):
 
 @prontuario_bp.delete("/<int:prontuario_id>")
 @login_required
+@requer_permissao("admin:full")
 @audit_log(acao_default="delete", tabela_default="prontuarios")
 def excluir_prontuario(prontuario_id):
     if current_user.perfil != "admin":

@@ -6,6 +6,7 @@ from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from utils.security import admin_requerido
 from datetime import datetime, date
+from utils.rbac import requer_permissao
 
 estoque_bp = Blueprint('estoque', __name__, url_prefix='/estoque')
 
@@ -31,6 +32,7 @@ def index():
 
 @estoque_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("clinical:read")
 def novo():
     if request.method == 'POST':
         try:
@@ -147,6 +149,7 @@ def editar(item_id):
 
 @estoque_bp.route('/<int:id>/movimentar', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("clinical:read")
 def movimentar(id):
     item = ItemEstoque.query.get_or_404(id)
     if request.method == 'POST':

@@ -42,6 +42,15 @@ def novo_usuario():
             return render_template(
                 "admin/usuario_form.html", usuario=None, unidades=unidades
             )
+        senha = (request.form.get("senha") or "").strip()
+        if len(senha) < 8:
+            # Sem senha padrão fixa: 'Mudar@123' em todo cadastro é uma
+            # credencial conhecida por qualquer um que leia o repositório.
+            flash("Defina uma senha inicial de ao menos 8 caracteres.", "warning")
+            return render_template(
+                "admin/usuario_form.html", usuario=None, unidades=unidades
+            )
+
         user = User(
             nome=request.form.get("nome", "").strip(),
             email=email,
@@ -49,7 +58,7 @@ def novo_usuario():
             unidade_id=request.form.get("unidade_id") or None,
             ativo=True,
         )
-        user.set_password(request.form.get("senha", "Mudar@123"))
+        user.set_password(senha)
         db.session.add(user)
         db.session.flush()
         auditar_aqui("users", "create")
@@ -98,6 +107,7 @@ def toggle_usuario(id):
 
 @admin_bp.post("/usuarios/<int:id>/ativar")
 @login_required
+@admin_requerido
 def ativar_usuario(id):
     """Reativa a conta. Explícito em vez de toggle: o clique diz o que faz."""
     user = User.query.get_or_404(id)
@@ -114,6 +124,7 @@ def ativar_usuario(id):
 
 @admin_bp.post("/usuarios/<int:id>/desativar")
 @login_required
+@admin_requerido
 def desativar_usuario(id):
     """Desativa a conta. Nunca a própria — evita o admin se trancar fora."""
     user = User.query.get_or_404(id)

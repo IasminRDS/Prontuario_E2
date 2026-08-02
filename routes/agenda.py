@@ -4,6 +4,7 @@ from sqlalchemy import and_
 
 from database.db import db
 from models.agenda_evento import AgendaEvento  # crie este model (abaixo)
+from utils.rbac import requer_permissao
 
 agenda_bp = Blueprint("agenda", __name__, url_prefix="/agenda")
 
@@ -51,6 +52,7 @@ def api_listar_eventos():
 
 @agenda_bp.route("/api/eventos", methods=["POST"])
 @login_required
+@requer_permissao("patient:read")
 def api_criar_evento():
     data = request.get_json(silent=True) or request.form
 
@@ -100,6 +102,7 @@ def api_criar_evento():
 
 @agenda_bp.route("/api/eventos/<int:evento_id>/status", methods=["POST"])
 @login_required
+@requer_permissao("patient:read")
 def api_status_evento(evento_id):
     data = request.get_json(silent=True) or request.form
     status = (data.get("status") or "").strip()

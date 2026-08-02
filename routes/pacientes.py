@@ -439,6 +439,7 @@ def obter_paciente(paciente_id):
 
 @pacientes_bp.post("/")
 @login_required
+@requer_permissao("patient:create")
 def criar_paciente():
     data = request.get_json(silent=True) or {}
 
@@ -519,6 +520,7 @@ def criar_paciente():
 
 @pacientes_bp.put("/<int:paciente_id>")
 @login_required
+@requer_permissao("patient:update")
 def atualizar_paciente(paciente_id):
     p = Paciente.query.get_or_404(paciente_id)
 
@@ -580,6 +582,7 @@ def atualizar_paciente(paciente_id):
 
 @pacientes_bp.delete("/<int:paciente_id>")
 @login_required
+@requer_permissao("admin:full")
 def desativar_paciente(paciente_id):
     p = Paciente.query.get_or_404(paciente_id)
 

@@ -9,6 +9,7 @@ from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from utils.security import medico_requerido
 from datetime import datetime, date
+from utils.rbac import requer_permissao
 
 cirurgia_bp = Blueprint('cirurgia', __name__, url_prefix='/cirurgia')
 
@@ -44,6 +45,7 @@ def painel():
 @cirurgia_bp.route('/nova/<int:paciente_id>', methods=['GET', 'POST'])
 @login_required
 @medico_requerido
+@requer_permissao("surgery:write")
 def nova(paciente_id=None):
     pacientes = Paciente.query.filter_by(ativo=True).order_by(Paciente.nome).all()
     medicos   = Medico.query.all()
@@ -103,6 +105,7 @@ def visualizar(id):
 
 @cirurgia_bp.route('/<int:id>/iniciar', methods=['POST'])
 @login_required
+@requer_permissao("surgery:write")
 def iniciar(id):
     cir = Cirurgia.query.get_or_404(id)
     cir.status     = 'em_andamento'
@@ -118,6 +121,7 @@ def iniciar(id):
 @cirurgia_bp.route('/<int:id>/finalizar', methods=['GET', 'POST'])
 @login_required
 @medico_requerido
+@requer_permissao("surgery:write")
 def finalizar(id):
     cir = Cirurgia.query.get_or_404(id)
 
@@ -145,6 +149,7 @@ def finalizar(id):
 
 @cirurgia_bp.route('/<int:id>/cancelar', methods=['POST'])
 @login_required
+@requer_permissao("surgery:write")
 def cancelar(id):
     cir = Cirurgia.query.get_or_404(id)
     motivo = request.form.get('motivo', '').strip()
