@@ -43,3 +43,18 @@ class Agendamento(db.Model):
     @property
     def status_label(self):
         return self.STATUS_LABELS.get(self.status, (self.status or "—", "cinza"))
+
+    # A API de horários (routes/agendamento.py) devolve `a.tipo_label` no JSON.
+    # A propriedade não existia: a rota estourava assim que houvesse um
+    # agendamento no dia consultado — com a agenda vazia, ninguém percebia.
+    TIPO_LABELS = {
+        "consulta": "Consulta",
+        "retorno": "Retorno",
+        "exame": "Exame",
+        "procedimento": "Procedimento",
+        "vacina": "Vacina",
+    }
+
+    @property
+    def tipo_label(self):
+        return self.TIPO_LABELS.get(self.tipo, (self.tipo or "—").capitalize())

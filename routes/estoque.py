@@ -68,8 +68,11 @@ def novo():
             flash(f'Erro: {e}', 'danger')
     return render_template('estoque/form.html')
 
+# Mesma permissão que `novo` e `movimentar` deste módulo — era a única escrita
+# de estoque sem nenhuma.
 @estoque_bp.route('/<int:item_id>/editar', methods=['GET', 'POST'])
 @login_required
+@requer_permissao("clinical:read")
 def editar(item_id):
     """Edita o cadastro do item.
 

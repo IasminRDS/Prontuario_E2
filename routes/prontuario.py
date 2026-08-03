@@ -269,8 +269,13 @@ def _gerar_notificacao_se_compulsorio(p):
 
 @prontuario_bp.get("/")
 @login_required
+@requer_permissao("clinical:read")
 def listar_prontuarios():
     """Índice de prontuários.
+
+    A listagem tinha só `@login_required`: qualquer sessão autenticada — a
+    recepção, inclusive — via o índice clínico inteiro. Prontuário exige
+    `clinical:read`, que a recepção não tem.
 
     Devolve HTML para o navegador e JSON para quem pede JSON (`Accept:
     application/json` ou `?formato=json`). Antes respondia SEMPRE JSON, então o

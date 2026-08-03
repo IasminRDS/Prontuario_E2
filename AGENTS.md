@@ -39,3 +39,26 @@ pip install -r requirements.txt
 flask db upgrade
 python app.py
 ```
+
+## Testes
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+A suíte **não toca o banco de desenvolvimento**: em PostgreSQL cria um schema
+próprio (`teste_automatizado`) e o destrói ao final, com o `search_path` preso a
+ele; em SQLite usa um arquivo temporário. Para apontar outro banco, use
+`TEST_DATABASE_URL`.
+
+Dois testes seguram a maior parte dos regressos deste projeto:
+`test_integridade_rotas.py` renderiza **toda** rota GET com dado semeado — é o
+que pega template lendo atributo inexistente, formulário sem CSRF e link para
+endpoint que não existe; e `test_auditoria_estatica.py` garante que rota nova
+nasce com `@login_required` e, se escreve, com RBAC. Rota de autosserviço é
+exceção e precisa entrar explicitamente na lista `AUTOSSERVICO`.
+
+O CI (`.github/workflows/ci.yml`) roda a suíte nos **dois** bancos e aplica as
+migrations num banco vazio — o `pytest` monta o schema com `create_all`, então
+sem esse passo a migration não seria exercitada.

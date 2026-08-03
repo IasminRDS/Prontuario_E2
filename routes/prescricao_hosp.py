@@ -7,6 +7,7 @@ from models.medico import Medico
 from models.medicamento import Medicamento
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
+from utils.rbac import requer_permissao
 from utils.security import medico_requerido
 from datetime import datetime, timedelta
 
@@ -121,8 +122,11 @@ def visualizar(id):
     return render_template('prescricao_hosp/visualizar.html', pres=pres)
 
 
+# Checagem de medicação é ato de enfermagem, e vira registro no prontuário:
+# exige a mesma permissão que a farmácia usa para movimentar administração.
 @pres_hosp_bp.route('/item/<int:item_id>/administrar', methods=['POST'])
 @login_required
+@requer_permissao("med-admin:write")
 def administrar(item_id):
     item   = ItemPrescricaoHosp.query.get_or_404(item_id)
     status = request.form.get('status', 'administrado')

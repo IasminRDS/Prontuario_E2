@@ -33,8 +33,11 @@ def _seed_if_empty():
     db.session.commit()
 
 
+# Cadastro de estabelecimentos é administração da rede, não tela de operação:
+# só tinha `@login_required` e qualquer sessão autenticada listava tudo.
 @unidades_bp.get("/")
 @login_required
+@requer_permissao("hospital:manage")
 def index():
     _seed_if_empty()
     q = (request.args.get("q") or "").strip()

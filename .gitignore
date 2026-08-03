@@ -22,6 +22,11 @@ instance/
 backups/
 *.dump
 
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Editor
 .vscode/
 .idea/
