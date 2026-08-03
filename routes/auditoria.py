@@ -10,6 +10,7 @@ from flask import Blueprint, render_template, request
 from flask_login import login_required
 from sqlalchemy import or_
 
+from extensions import db
 from models.audit_log import AuditLog
 from models.user import User
 from utils.rbac import requer_permissao
@@ -105,4 +106,7 @@ def _distintos(coluna):
             v[0] for v in AuditLog.query.with_entities(coluna).distinct().all() if v[0]
         )
     except Exception:
+        # Sem o rollback, esta falha aborta a transação em PostgreSQL e derruba
+        # também a listagem de logs que vem logo depois.
+        db.session.rollback()
         return []

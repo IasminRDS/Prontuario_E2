@@ -1,185 +1,173 @@
 {% extends "base.html" %}
-{% block title %}Internação #{{ intern.id }}{% endblock %}
-{% block page_title %}Internação #{{ intern.id }}{% endblock %}
+{% block title %}Prescrição hospitalar #{{ pres.id }}{% endblock %}
+{% block page_title %}Prescrição hospitalar #{{ pres.id }}{% endblock %}
+
+{% set CORES = {'azul': 'blue', 'amarelo': 'amber', 'verde': 'green',
+                'vermelho': 'red', 'cinza': 'slate'} %}
+{% set slabel, scor = pres.status_label %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('internacao.painel') }}" class="btn btn-secondary">Painel</a>
-  {% if intern.status == 'ativa' %}
-  <a href="{{ url_for('internacao.nova_evolucao', id=intern.id) }}" class="btn btn-secondary">+ Evolução</a>
-  <a href="{{ url_for('pres_hosp.nova', internacao_id=intern.id) }}" class="btn btn-secondary">+ Prescrição</a>
-  <a href="{{ url_for('cirurgia.nova', paciente_id=intern.paciente_id) }}" class="btn btn-secondary">+ Cirurgia</a>
-  <a href="{{ url_for('internacao.alta', id=intern.id) }}" class="btn btn-primary">Dar Alta</a>
+  {% if pres.internacao_id %}
+  <a href="{{ url_for('pres_hosp.lista', internacao_id=pres.internacao_id) }}"
+     class="btn btn--secondary">Prescrições da internação</a>
   {% endif %}
 {% endblock %}
 
 {% block content %}
 
-{% set slabel, scor = intern.status_label %}
+<div class="stack">
 
-<!-- Cabeçalho do paciente -->
-<div class="card mb-20" style="border-left:6px solid {% if intern.status=='ativa' %}var(--sus-verde){% else %}var(--sus-azul){% endif %}">
-  <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px">
-    <div>
-      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cinza-500)">Paciente</div>
-      <a href="{{ url_for('pacientes.perfil', id=intern.paciente_id) }}"
-         style="font-weight:700;font-size:1rem;color:var(--cinza-900)">
-        {{ intern.paciente.nome_exibicao }}
-      </a>
-      <div style="font-size:.8rem;color:var(--cinza-400)">{{ intern.paciente.idade }} anos</div>
-    </div>
-    <div>
-      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cinza-500)">Leito / Setor</div>
-      <div style="font-weight:700;font-size:1.1rem;font-family:var(--fonte-mono)">{{ intern.leito.numero }}</div>
-      <div style="font-size:.82rem;color:var(--cinza-500)">{{ intern.leito.setor.nome }}</div>
-    </div>
-    <div>
-      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cinza-500)">Entrada / Dias</div>
-      <div style="font-weight:600">{{ intern.data_entrada.strftime('%d/%m/%Y') }}</div>
-      <div style="font-size:.82rem;color:var(--cinza-400)">{{ intern.dias_internado }} dias internado</div>
-    </div>
-    <div>
-      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cinza-500)">Status</div>
-      <span class="badge badge-{{ scor }}" style="font-size:.85rem;padding:4px 12px">{{ slabel }}</span>
-      {% if intern.cid_principal %}
-      <div style="margin-top:6px"><span class="badge badge-cinza font-mono">{{ intern.cid_principal }}</span></div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-  <!-- Motivo -->
-  <div class="card">
-    <div class="card-header"><h3>Motivo da Internação</h3></div>
-    <div class="card-body">
-      {% if intern.hipotese_diag %}
-      <div style="font-weight:600;margin-bottom:8px">{{ intern.hipotese_diag }}</div>
-      {% endif %}
-      <div style="font-size:.9rem;line-height:1.7;white-space:pre-wrap">{{ intern.motivo }}</div>
-    </div>
-  </div>
-  <!-- Prescrição ativa -->
-  <div class="card">
-    <div class="card-header">
-      <h3>Prescrição Ativa</h3>
-      {% if intern.status == 'ativa' %}
-      <a href="{{ url_for('pres_hosp.nova', internacao_id=intern.id) }}"
-         class="btn btn-sm btn-primary ms-auto">Nova prescrição</a>
-      {% endif %}
-    </div>
-    <div class="card-body" style="padding:0">
-      {% set pres_ativa = namespace(p=None) %}
-      {% for p in prescricoes %}
-        {% if p.status == 'ativa' %}{% set pres_ativa.p = p %}{% endif %}
-      {% endfor %}
-      {% if pres_ativa.p %}
-        {% if pres_ativa.p.dieta %}
-        <div style="padding:10px 16px;border-bottom:1px solid var(--cinza-100);font-size:.85rem">
-          <strong>Dieta:</strong> {{ pres_ativa.p.dieta }}
-        </div>
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Dados da prescrição</h3>
+      <div class="row">
+        {% if pres.assinada %}
+        <span class="badge badge--green">Assinada</span>
+        {% else %}
+        <span class="badge badge--amber">Não assinada</span>
         {% endif %}
-        {% for item in pres_ativa.p.itens[:5] %}
-        <div style="padding:8px 16px;border-bottom:1px solid var(--cinza-100);font-size:.84rem;
-                    display:flex;justify-content:space-between">
-          <span class="fw-500">{{ item.nome_exibicao }}</span>
-          <span style="color:var(--cinza-500)">{{ item.dose or '' }} {{ item.via or '' }}</span>
-        </div>
-        {% endfor %}
-        <div style="padding:10px 16px">
-          <a href="{{ url_for('pres_hosp.visualizar', id=pres_ativa.p.id) }}"
-             class="btn btn-sm btn-secondary">Ver prescrição completa</a>
-        </div>
-      {% else %}
-        <div style="padding:24px;text-align:center;color:var(--cinza-400);font-size:.85rem">
-          Nenhuma prescrição ativa.
-        </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<!-- Evoluções -->
-<div class="card mb-20">
-  <div class="card-header">
-    <h3>Evoluções</h3>
-    <span style="font-size:.8rem;color:var(--cinza-400);margin-left:8px">{{ evolucoes|length }}</span>
-    {% if intern.status == 'ativa' %}
-    <a href="{{ url_for('internacao.nova_evolucao', id=intern.id) }}"
-       class="btn btn-sm btn-primary ms-auto">+ Evolução</a>
-    {% endif %}
-  </div>
-  {% if evolucoes %}
-  <div style="padding:0">
-    {% for ev in evolucoes %}
-    <div style="padding:14px 20px;border-bottom:1px solid var(--cinza-100)">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <span class="badge badge-azul">{{ ev.tipo|capitalize }}</span>
-        <span class="font-mono" style="font-size:.8rem;color:var(--cinza-400)">
-          {{ ev.criado_em.strftime('%d/%m/%Y %H:%M') }}
-        </span>
-        <span style="font-size:.82rem;color:var(--cinza-600)">
-          {{ ev.profissional.nome if ev.profissional else '—' }}
-        </span>
-        <!-- Sinais vitais resumidos -->
-        {% if ev.pressao_arterial %}
-          <span class="badge badge-cinza font-mono">PA {{ ev.pressao_arterial }}</span>
-        {% endif %}
-        {% if ev.temperatura %}
-          <span class="badge badge-cinza font-mono">{{ '%.1f'|format(ev.temperatura) }}°C</span>
-        {% endif %}
-        {% if ev.saturacao_o2 %}
-          <span class="badge badge-cinza font-mono">SpO₂ {{ ev.saturacao_o2|int }}%</span>
-        {% endif %}
+        <span class="badge badge--{{ CORES.get(scor, 'slate') }}">{{ slabel }}</span>
       </div>
-      {% if ev.avaliacao %}
-      <div style="font-size:.875rem;line-height:1.6;white-space:pre-wrap">{{ ev.avaliacao }}</div>
-      {% endif %}
-      {% if ev.plano %}
-      <div style="font-size:.84rem;color:var(--cinza-600);margin-top:6px;
-                  padding:8px 12px;background:var(--cinza-50);border-radius:var(--raio)">
-        <strong>Plano:</strong> {{ ev.plano }}
+    </div>
+    <div class="card__body">
+      <div class="grid-3">
+        <div>
+          <div class="text-xs text-muted">Paciente</div>
+          {% if pres.paciente %}
+          <a href="{{ url_for('pacientes.perfil', id=pres.paciente_id) }}" class="text-strong">
+            {{ pres.paciente.nome_exibicao }}
+          </a>
+          {% else %}
+          <div class="text-muted">—</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="text-xs text-muted">Prescritor</div>
+          <div class="text-strong">{{ pres.medico.nome if pres.medico else '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted">Prescrita em</div>
+          <div>{{ pres.data_prescricao.strftime('%d/%m/%Y %H:%M') if pres.data_prescricao else '—' }}</div>
+          <div class="text-xs text-muted">
+            {% if pres.validade_ate %}
+              válida até {{ pres.validade_ate.strftime('%d/%m %H:%M') }}
+            {% else %}
+              validade {{ pres.validade_horas or 24 }}h
+            {% endif %}
+          </div>
+        </div>
       </div>
+      {% if pres.assinada %}
+      <p class="audit-notice text-xs">
+        Assinada em {{ pres.assinada_em.strftime('%d/%m/%Y às %H:%M') }}
+        {% if pres.assinante %}por {{ pres.assinante.nome }}{% endif %}
+      </p>
       {% endif %}
     </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="card-body" style="text-align:center;color:var(--cinza-400);padding:32px">
-    Nenhuma evolução registrada ainda.
-  </div>
+  </section>
+
+  {% if pres.dieta or pres.decubito or pres.sinais_vitais %}
+  <section class="card">
+    <div class="card__header"><h3 class="card__title">Cuidados</h3></div>
+    <div class="card__body">
+      <div class="grid-3">
+        <div>
+          <div class="text-xs text-muted">Dieta</div>
+          <div class="text-sm">{{ pres.dieta or '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted">Decúbito e mobilização</div>
+          <div class="text-sm">{{ pres.decubito or '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted">Sinais vitais</div>
+          <div class="text-sm">{{ pres.sinais_vitais or '—' }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
   {% endif %}
-</div>
 
-<!-- Cirurgias -->
-{% if cirurgias %}
-<div class="card">
-  <div class="card-header"><h3>Cirurgias</h3></div>
-  <div class="table-wrapper">
-    <table class="tabela">
-      <thead>
-        <tr><th>Procedimento</th><th>Caráter</th><th>Data agendada</th><th>Cirurgião</th><th>Status</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for c in cirurgias %}
-        {% set slbl, scor = c.status_label %}
-        {% set clbl, ccor = c.carater_label %}
-        <tr>
-          <td class="fw-500">{{ c.procedimento }}</td>
-          <td><span class="badge badge-{{ ccor }}">{{ clbl }}</span></td>
-          <td class="font-mono" style="font-size:.8rem">
-            {{ c.data_agendada.strftime('%d/%m/%Y %H:%M') if c.data_agendada else '—' }}
-          </td>
-          <td style="font-size:.84rem">{{ c.cirurgiao.nome if c.cirurgiao else '—' }}</td>
-          <td><span class="badge badge-{{ scor }}">{{ slbl }}</span></td>
-          <td>
-            <a href="{{ url_for('cirurgia.visualizar', id=c.id) }}" class="btn btn-sm btn-secondary">Ver</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Itens</h3>
+      <span class="badge badge--slate">{{ pres.itens|length }}</span>
+    </div>
+    <div class="card__body">
+      {% if pres.itens %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Medicamento</th>
+              <th>Dose</th>
+              <th>Via</th>
+              <th>Frequência</th>
+              <th>Checagens</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in pres.itens %}
+            <tr>
+              <td class="text-strong">
+                {{ item.nome_exibicao }}
+                {% if item.concentracao %}
+                <div class="text-xs text-muted">{{ item.concentracao }}</div>
+                {% endif %}
+              </td>
+              <td>{{ item.dose or '—' }}</td>
+              <td>{{ item.via or '—' }}</td>
+              <td>
+                {{ item.frequencia or '—' }}
+                {% if item.horarios %}
+                <div class="text-xs text-muted">{{ item.horarios }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% for adm in item.administracoes %}
+                  {% set albel, acor = adm.status_label %}
+                  <span class="badge badge--{{ CORES.get(acor, 'slate') }}">{{ albel }}</span>
+                {% else %}
+                  <span class="text-muted text-xs">nenhuma</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% if pres.status == 'ativa' %}
+                <form method="post" action="{{ url_for('pres_hosp.administrar', item_id=item.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button class="btn btn--sm btn--secondary">Checar</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% set detalhe = [] %}
+            {% if item.diluicao %}{% set _ = detalhe.append('Diluição: ' ~ item.diluicao) %}{% endif %}
+            {% if item.velocidade %}{% set _ = detalhe.append('Velocidade: ' ~ item.velocidade) %}{% endif %}
+            {% if item.duracao %}{% set _ = detalhe.append('Duração: ' ~ item.duracao) %}{% endif %}
+            {% if item.instrucoes %}{% set _ = detalhe.append(item.instrucoes) %}{% endif %}
+            {% if detalhe %}
+            <tr>
+              <td colspan="6" class="text-xs text-muted">{{ detalhe|join(' · ') }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty-state">Nenhum item nesta prescrição.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if pres.observacoes %}
+  <section class="card">
+    <div class="card__header"><h3 class="card__title">Observações</h3></div>
+    <div class="card__body"><p class="text-sm">{{ pres.observacoes }}</p></div>
+  </section>
+  {% endif %}
+
 </div>
-{% endif %}
 
 {% endblock %}

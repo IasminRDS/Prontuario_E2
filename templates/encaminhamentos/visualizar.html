@@ -95,6 +95,7 @@
       <div class="card-header"><h3>Atualizar Status</h3></div>
       <div class="card-body">
         <form method="POST" action="{{ url_for('encaminhamentos.atualizar_status', id=enc.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="form-group" style="margin-bottom:12px">
             <label class="form-label">Novo status</label>
             <select name="status" class="form-control">

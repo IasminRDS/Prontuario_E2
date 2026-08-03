@@ -412,7 +412,7 @@ def gerar_receituario(prontuario, paciente, medico, unidade):
     story.append(Spacer(1, 2 * cm))
     story.append(
         HRFlowable(
-            width="8*cm",
+            width=8 * cm,
             thickness=0.5,
             color=CINZA_BORDA,
             hAlign="CENTER",
@@ -527,7 +527,7 @@ def gerar_atestado(paciente, medico, unidade, dias, cid=None, observacao=None):
 
     story.append(
         HRFlowable(
-            width="8*cm",
+            width=8 * cm,
             thickness=0.5,
             color=CINZA_BORDA,
             hAlign="CENTER",

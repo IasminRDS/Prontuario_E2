@@ -71,6 +71,7 @@
                  class="btn btn-sm btn-primary">Resultado</a>
               <form method="POST" action="{{ url_for('exames.cancelar', id=e.id) }}"
                     onsubmit="return confirm('Cancelar exame?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit" class="btn btn-sm btn-secondary">Cancelar</button>
               </form>
             </div>

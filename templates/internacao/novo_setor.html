@@ -5,6 +5,7 @@ page_title %}Novo Setor{% endblock %} {% block content %}
     <h3 style="margin-top: 0">Cadastrar Setor</h3>
 
     <form method="post" action="{{ url_for('internacao.novo_setor') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <div style="margin-bottom: 12px">
         <label for="nome" class="form-label">Nome do Setor</label>
         <input

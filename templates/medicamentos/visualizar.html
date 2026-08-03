@@ -1,131 +1,107 @@
 {% extends "base.html" %}
-{% block title %}Triagem #{{ triagem.id }}{% endblock %}
-{% block page_title %}Triagem #{{ triagem.id }}{% endblock %}
+{% block title %}Prescrição #{{ pres.id }}{% endblock %}
+{% block page_title %}Prescrição #{{ pres.id }}{% endblock %}
+
+{% set CORES = {'azul': 'blue', 'amarelo': 'amber', 'verde': 'green',
+                'vermelho': 'red', 'cinza': 'slate'} %}
+{% set slabel, scor = pres.status_label %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('triagem.index') }}" class="btn btn-secondary">
-    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-    </svg>
-    Fila
-  </a>
-  <a href="{{ url_for('prontuario.novo', paciente_id=triagem.paciente_id) }}"
-     class="btn btn-primary">Iniciar Atendimento</a>
+  <a href="{{ url_for('medicamentos.lista_paciente', paciente_id=pres.paciente_id) }}"
+     class="btn btn--secondary">Prescrições do paciente</a>
 {% endblock %}
 
 {% block content %}
 
-{% set label_cor, hex_cor, tempo = triagem.cor_info %}
+<div class="stack">
 
-<div class="card mb-24" style="border-left:6px solid {{ hex_cor }}">
-  <div class="card-body" style="display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center">
-    <div style="width:64px;height:64px;background:{{ hex_cor }};border-radius:50%;
-                display:flex;align-items:center;justify-content:center">
-      <span style="color:white;font-weight:700;font-size:.8rem;text-align:center;line-height:1.2">
-        {{ label_cor }}
-      </span>
-    </div>
-    <div>
-      <div style="font-size:1.1rem;font-weight:700">{{ triagem.paciente.nome_exibicao }}</div>
-      <div style="font-size:.85rem;color:var(--cinza-500)">
-        {{ triagem.paciente.idade }} anos ·
-        {{ triagem.criado_em.strftime('%d/%m/%Y %H:%M') }} ·
-        Realizado por {{ triagem.responsavel.nome if triagem.responsavel else '—' }}
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Dados da prescrição</h3>
+      <div class="row">
+        <span class="badge badge--slate">{{ pres.tipo|capitalize }}</span>
+        <span class="badge badge--{{ CORES.get(scor, 'slate') }}">{{ slabel }}</span>
       </div>
-      {% if triagem.queixa_principal %}
-        <div style="margin-top:6px;font-size:.9rem;color:var(--cinza-800)">
-          <strong>Queixa:</strong> {{ triagem.queixa_principal }}
+    </div>
+    <div class="card__body">
+      <div class="grid-3">
+        <div>
+          <div class="text-xs text-muted">Paciente</div>
+          {% if pres.paciente %}
+          <a href="{{ url_for('pacientes.perfil', id=pres.paciente_id) }}" class="text-strong">
+            {{ pres.paciente.nome_exibicao }}
+          </a>
+          <div class="text-xs text-muted">{{ pres.paciente.idade }} anos</div>
+          {% else %}
+          <div class="text-muted">—</div>
+          {% endif %}
         </div>
-      {% endif %}
+        <div>
+          <div class="text-xs text-muted">Prescritor</div>
+          <div class="text-strong">{{ pres.medico.nome if pres.medico else '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted">Emitida em</div>
+          <div>{{ pres.criado_em.strftime('%d/%m/%Y %H:%M') if pres.criado_em else '—' }}</div>
+          {% if pres.validade_dias %}
+          <div class="text-xs text-muted">validade {{ pres.validade_dias }} dia(s)</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:.72rem;color:var(--cinza-400)">Tempo alvo</div>
-      <div style="font-size:1.4rem;font-weight:700;color:{{ hex_cor }}">{{ tempo }}</div>
-    </div>
-  </div>
-</div>
+  </section>
 
-<!-- Sinais vitais -->
-<div class="card mb-24">
-  <div class="card-header"><h3>Sinais Vitais</h3></div>
-  <div class="card-body">
-    <div class="vitais-grid">
-      {% if triagem.pressao_arterial %}
-      <div class="vital-item">
-        <div class="vital-label">PA</div>
-        <div class="vital-value">{{ triagem.pressao_arterial }}</div>
-        <div class="vital-unit">mmHg</div>
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Medicamentos</h3>
+      <span class="badge badge--slate">{{ pres.itens|length }}</span>
+    </div>
+    <div class="card__body">
+      {% if pres.itens %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Medicamento</th>
+              <th>Dose</th>
+              <th>Via</th>
+              <th>Frequência</th>
+              <th>Duração</th>
+              <th>Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in pres.itens %}
+            <tr>
+              <td class="text-strong">{{ item.nome_exibicao }}</td>
+              <td>{{ item.dose or '—' }}</td>
+              <td>{{ item.via or '—' }}</td>
+              <td>{{ item.frequencia or '—' }}</td>
+              <td>{{ item.duracao or '—' }}</td>
+              <td>{{ item.quantidade or '—' }}</td>
+            </tr>
+            {% if item.instrucoes %}
+            <tr>
+              <td colspan="6" class="text-xs text-muted">{{ item.instrucoes }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      {% endif %}
-      {% if triagem.temperatura %}
-      <div class="vital-item">
-        <div class="vital-label">Temp.</div>
-        <div class="vital-value">{{ '%.1f'|format(triagem.temperatura) }}</div>
-        <div class="vital-unit">°C</div>
-      </div>
-      {% endif %}
-      {% if triagem.frequencia_cardiaca %}
-      <div class="vital-item">
-        <div class="vital-label">FC</div>
-        <div class="vital-value">{{ triagem.frequencia_cardiaca }}</div>
-        <div class="vital-unit">bpm</div>
-      </div>
-      {% endif %}
-      {% if triagem.frequencia_respiratoria %}
-      <div class="vital-item">
-        <div class="vital-label">FR</div>
-        <div class="vital-value">{{ triagem.frequencia_respiratoria }}</div>
-        <div class="vital-unit">irpm</div>
-      </div>
-      {% endif %}
-      {% if triagem.saturacao_o2 %}
-      <div class="vital-item">
-        <div class="vital-label">SpO₂</div>
-        <div class="vital-value">{{ triagem.saturacao_o2|int }}</div>
-        <div class="vital-unit">%</div>
-      </div>
-      {% endif %}
-      {% if triagem.glicemia %}
-      <div class="vital-item">
-        <div class="vital-label">Glicemia</div>
-        <div class="vital-value">{{ triagem.glicemia|int }}</div>
-        <div class="vital-unit">mg/dL</div>
-      </div>
-      {% endif %}
-      {% if triagem.dor_escala is not none %}
-      <div class="vital-item" style="border-color:{% if triagem.dor_escala >= 8 %}var(--sus-vermelho){% elif triagem.dor_escala >= 5 %}var(--sus-amarelo){% else %}var(--cinza-200){% endif %}">
-        <div class="vital-label">Dor</div>
-        <div class="vital-value">{{ triagem.dor_escala }}</div>
-        <div class="vital-unit">/10</div>
-      </div>
+      {% else %}
+      <p class="empty-state">Nenhum medicamento nesta prescrição.</p>
       {% endif %}
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- Discriminadores -->
-{% if discriminadores %}
-<div class="card mb-24">
-  <div class="card-header"><h3>Discriminadores Ativados</h3></div>
-  <div class="card-body">
-    <div style="display:flex;flex-wrap:wrap;gap:8px">
-      {% for d in discriminadores %}
-        <span class="badge badge-vermelho" style="font-size:.8rem;padding:4px 12px">
-          {{ d }}
-        </span>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-{% endif %}
+  {% if pres.observacoes %}
+  <section class="card">
+    <div class="card__header"><h3 class="card__title">Observações</h3></div>
+    <div class="card__body"><p class="text-sm">{{ pres.observacoes }}</p></div>
+  </section>
+  {% endif %}
 
-{% if triagem.observacoes %}
-<div class="card">
-  <div class="card-header"><h3>Observações</h3></div>
-  <div class="card-body">
-    <p style="font-size:.9rem;line-height:1.7">{{ triagem.observacoes }}</p>
-  </div>
 </div>
-{% endif %}
 
 {% endblock %}

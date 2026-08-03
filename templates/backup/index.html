@@ -2,12 +2,67 @@
 {% block title %}Backup{% endblock %}
 {% block page_title %}Backup{% endblock %}
 {% block content %}
-<div class="card" style="max-width:900px;margin:0 auto;">
-  <div class="card-body">
-    <p class="text-muted">Gerar cópia de segurança do banco atual.</p>
-    <form method="post" action="{{ url_for('backup.gerar') }}">
-      <button class="btn btn-primary">Gerar backup agora</button>
-    </form>
-  </div>
+
+<div class="maxw-lg stack">
+
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Gerar cópia de segurança</h3>
+      <span class="badge badge--blue">{{ dialeto }}</span>
+    </div>
+    <div class="card__body stack--sm">
+      <p class="text-muted text-sm">
+        {% if dialeto == 'sqlite' %}
+          Cópia consistente do arquivo <strong>{{ banco }}</strong>, feita pela API
+          de backup do próprio SQLite.
+        {% elif dialeto.startswith('postgresql') %}
+          Dump do banco <strong>{{ banco }}</strong> via <code>pg_dump</code>, em
+          formato custom — restaurável com <code>pg_restore</code>.
+        {% else %}
+          Backup automático não implementado para este banco.
+        {% endif %}
+      </p>
+      <p class="text-muted text-xs">Os arquivos ficam em <code>{{ pasta }}</code>.</p>
+      <form method="post" action="{{ url_for('backup.gerar') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn--primary">Gerar backup agora</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Backups existentes</h3>
+      <span class="badge badge--slate">{{ backups|length }}</span>
+    </div>
+    <div class="card__body">
+      {% if backups %}
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Gerado em</th>
+              <th class="text-right">Tamanho</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in backups %}
+            <tr>
+              <td class="truncate">{{ b.nome }}</td>
+              <td>{{ b.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td class="text-right">{{ (b.bytes / 1024) | round | int }} KB</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty-state">Nenhum backup gerado ainda.</p>
+      {% endif %}
+    </div>
+  </section>
+
 </div>
+
 {% endblock %}

@@ -41,11 +41,23 @@ class Prescricao(db.Model):
     # Relacionamento com os Itens da Prescrição
     itens = db.relationship('ItemPrescricao', backref='prescricao', lazy=True, cascade="all, delete-orphan")
 
+    # As chaves estrangeiras existiam, mas sem relação declarada: a tela da
+    # prescrição não tinha como dizer de quem ela é. Mesmo padrão dos demais
+    # agregados (Cirurgia, Internacao, Encaminhamento).
+    paciente = db.relationship('Paciente', backref='prescricoes')
+    medico = db.relationship('Medico', backref='prescricoes')
+
+    # (texto, cor), como nos demais agregados. As chaves não mudaram, então o
+    # `novo in Prescricao.STATUS_LABELS` de routes/medicamentos.py segue valendo.
     STATUS_LABELS = {
-        'ativa': 'Ativa',
-        'suspensa': 'Suspensa',
-        'concluida': 'Concluída'
+        'ativa': ('Ativa', 'verde'),
+        'suspensa': ('Suspensa', 'amarelo'),
+        'concluida': ('Concluída', 'azul'),
     }
+
+    @property
+    def status_label(self):
+        return self.STATUS_LABELS.get(self.status, (self.status or '—', 'cinza'))
 
     def __repr__(self):
         return f'<Prescricao {self.id} Paciente {self.paciente_id}>'
@@ -65,6 +77,18 @@ class ItemPrescricao(db.Model):
     duracao = db.Column(db.String(100), nullable=True)
     quantidade = db.Column(db.String(50), nullable=True)
     instrucoes = db.Column(db.Text, nullable=True)
+
+    @property
+    def nome_exibicao(self):
+        """Nome do item para a tela: o do catálogo, ou o que o médico digitou.
+
+        Os templates já chamavam `item.nome_exibicao`; a propriedade não existia
+        e o Jinja renderizava vazio — a linha da prescrição aparecia sem o nome
+        do medicamento, sem erro nenhum.
+        """
+        if self.medicamento_referencia:
+            return self.medicamento_referencia.nome_generico
+        return self.nome_livre or '—'
 
     def __repr__(self):
         nome = self.nome_livre if self.nome_livre else f'MedID {self.medicamento_id}'

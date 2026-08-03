@@ -6,6 +6,7 @@
 
     <div class="card shadow-sm p-4">
         <form action="{{ url_for('pdf.processar_pdf') }}" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             
             <div class="mb-3">
                 <label class="form-label fw-bold">1. Selecione o arquivo PDF</label>

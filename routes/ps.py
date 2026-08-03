@@ -182,6 +182,11 @@ def visualizar(id):
         classificacao=_classificacao(ps),
         desfechos=DESFECHOS,
         proximos=TRANSICOES.get(ps.status, ()),
+        # A tela não deve repetir a lista de estados: ela derivava de nomes que
+        # não existem mais ('aguardando_triagem', 'evasao') e por isso escondia
+        # a ação principal. A máquina de estados aqui é a única fonte.
+        desfechos_possiveis=[s for s in TRANSICOES.get(ps.status, ())
+                             if s in DESFECHOS],
     )
 
 

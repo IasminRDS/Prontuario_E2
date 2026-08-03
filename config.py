@@ -69,14 +69,22 @@ class Config:
 
     # As opções de pool valem só para bancos em rede. O pool do SQLite não
     # aceita pool_size/max_overflow — passá-las levanta TypeError na engine.
+    #
+    # O teto de conexões é POR WORKER, não por aplicação: o Procfile sobe 2
+    # workers de gunicorn e cada um abre seu próprio pool. Com os 20+40 que
+    # estavam aqui, dois workers pediam 120 conexões contra as 97 úteis de um
+    # Postgres padrão (`max_connections` 100 menos 3 reservadas ao superusuário)
+    # — sob carga isso vira `FATAL: sorry, too many clients already`. 5+15 deixa
+    # 30 para dois workers, com folga. Suba pelas env vars, conferindo antes que
+    # (pool_size + max_overflow) × workers caiba no `max_connections` do servidor.
     SQLALCHEMY_ENGINE_OPTIONS = (
         {"pool_pre_ping": True}
         if SQLALCHEMY_DATABASE_URI.startswith("sqlite")
         else {
             "pool_pre_ping": True,
             "pool_recycle": _to_int(os.getenv("DB_POOL_RECYCLE"), 1800),
-            "pool_size": _to_int(os.getenv("DB_POOL_SIZE"), 20),
-            "max_overflow": _to_int(os.getenv("DB_MAX_OVERFLOW"), 40),
+            "pool_size": _to_int(os.getenv("DB_POOL_SIZE"), 5),
+            "max_overflow": _to_int(os.getenv("DB_MAX_OVERFLOW"), 15),
         }
     )
 

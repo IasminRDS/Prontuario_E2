@@ -9,12 +9,18 @@ __pycache__/
 # Ambiente e segredos
 .env
 .env.*
+# O modelo não tem segredo e precisa ser versionado — é dele que se copia o .env.
+!.env.example
 
 # Banco de dados local
 instance/
 *.db
 *.sqlite
 *.sqlite3
+
+# Cópias de segurança geradas pela tela /backup
+backups/
+*.dump
 
 # Editor
 .vscode/

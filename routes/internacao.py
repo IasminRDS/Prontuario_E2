@@ -40,11 +40,15 @@ def leitos():
     try:
         unidades = Unidade.query.order_by(Unidade.nome.asc()).all()
     except Exception:
+        # O rollback é o que permite a próxima consulta rodar: em PostgreSQL a
+        # transação fica abortada e os `setores` abaixo falhariam junto.
+        db.session.rollback()
         unidades = []
 
     try:
         setores = Setor.query.order_by(Setor.nome.asc()).all()
     except Exception:
+        db.session.rollback()
         setores = []
 
     return render_template("internacao/leitos.html", setores=setores, unidades=unidades)

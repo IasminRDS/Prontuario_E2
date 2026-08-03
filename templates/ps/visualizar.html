@@ -16,24 +16,28 @@
     </div>{% endmacro %}
     {{ info('Paciente', ps.paciente.nome_exibicao) }}
     {{ info('Classificação', label) }}
-    {{ info('Entrada', ps.data_entrada.strftime('%H:%M')) }}
+    {{ info('Entrada', ps.data_chegada.strftime('%H:%M')) }}
     {{ info('Espera', ps.tempo_espera_min|string + ' min') }}
-    {{ info('Queixa', ps.queixa_principal) }}
-    {{ info('Modo chegada', ps.modo_chegada.replace('_',' ')|capitalize) }}
+    {{ info('Queixa', ps.motivo_consulta) }}
     <div><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cinza-400)">Status</div>
     <span class="badge badge-{{ scor }}">{{ slabel }}</span></div>
     {{ info('Médico', ps.medico.nome if ps.medico else '—') }}
   </div>
 </div>
 
-{% if ps.status not in ('alta','internado','transferido','obito','evasao') %}
+{# Quem decide o que ainda pode ser feito é a máquina de estados da rota, que
+   manda `proximos`. As listas de status que estavam aqui usavam nomes que não
+   existem ('aguardando_triagem', 'evasao'), então o cartão de chamar o paciente
+   nunca aparecia e o de desfecho oferecia uma opção sempre recusada. #}
+{% if proximos %}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
 
   <!-- Chamar para atendimento -->
-  {% if ps.status in ('aguardando_triagem','triagem_realizada','aguardando_atendimento') %}
+  {% if 'em_atendimento' in proximos %}
   <div class="card">
     <div class="card-header"><h3>Chamar para Atendimento</h3></div>
     <form method="POST" action="{{ url_for('ps.chamar', id=ps.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">Médico responsável</label>
@@ -47,26 +51,47 @@
       </div>
       <div class="card-footer" style="display:flex;gap:10px">
         <button type="submit" class="btn btn-primary">Chamar Paciente</button>
-        <form method="POST" action="{{ url_for('ps.colocar_observacao', id=ps.id) }}" style="display:inline">
-          <button type="submit" class="btn btn-secondary">Observação</button>
-        </form>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# Observação é ação própria, não um botão extra no cartão de chamar: ela só
+     é alcançável a partir de 'em_atendimento', exatamente quando aquele cartão
+     já não é exibido. Aninhada lá, nunca podia aparecer. #}
+  {% if 'em_observacao' in proximos %}
+  <div class="card">
+    <div class="card-header"><h3>Manter em Observação</h3></div>
+    <form method="POST" action="{{ url_for('ps.colocar_observacao', id=ps.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="card-body">
+        <p class="text-muted text-sm">
+          O paciente permanece no pronto-socorro sob observação até que se
+          registre o desfecho.
+        </p>
+      </div>
+      <div class="card-footer" style="display:flex;justify-content:flex-end">
+        <button type="submit" class="btn btn-secondary">Colocar em observação</button>
       </div>
     </form>
   </div>
   {% endif %}
 
   <!-- Registrar desfecho -->
+  {% if desfechos_possiveis %}
   <div class="card">
     <div class="card-header"><h3>Registrar Desfecho</h3></div>
     <form method="POST" action="{{ url_for('ps.desfecho', id=ps.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <div class="card-body">
         <div class="form-grid form-grid-2">
           <div class="form-group">
             <label class="form-label">Desfecho</label>
             <select name="desfecho" class="form-control">
-              {% for val, lbl in [('alta','Alta'),('internado','Internação'),
-                ('transferido','Transferência'),('obito','Óbito'),('evasao','Evasão')] %}
-              <option value="{{ val }}">{{ lbl }}</option>
+              {# Só os desfechos alcançáveis a partir do estado atual, e com o
+                 rótulo vindo do model — nada de lista paralela aqui. #}
+              {% for val in desfechos_possiveis %}
+              <option value="{{ val }}">{{ ps.STATUS.get(val, (val, ''))[0] }}</option>
               {% endfor %}
             </select>
           </div>
@@ -90,17 +115,18 @@
       </div>
     </form>
   </div>
+  {% endif %}
 </div>
 {% else %}
-{% if ps.conduta or ps.hipotese_diag %}
+{% if ps.conduta or ps.diagnostico_preliminar %}
 <div class="card">
   <div class="card-header"><h3>Atendimento Realizado</h3></div>
   <div class="card-body">
-    {% if ps.hipotese_diag %}<p><strong>Diagnóstico:</strong> {{ ps.hipotese_diag }}</p>{% endif %}
+    {% if ps.diagnostico_preliminar %}<p><strong>Diagnóstico:</strong> {{ ps.diagnostico_preliminar }}</p>{% endif %}
     {% if ps.conduta %}<p><strong>Conduta:</strong> {{ ps.conduta }}</p>{% endif %}
     <p style="font-size:.8rem;color:var(--cinza-400)">
       Desfecho: <strong>{{ ps.desfecho }}</strong>
-      {% if ps.data_desfecho %}· {{ ps.data_desfecho.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+      {% if ps.data_liberacao %}· {{ ps.data_liberacao.strftime('%d/%m/%Y %H:%M') }}{% endif %}
       {% if ps.tempo_total_min %}· Tempo total: {{ ps.tempo_total_min }} min{% endif %}
     </p>
   </div>

@@ -39,7 +39,7 @@
     <tbody>
       {% for a in ats %}{% set label, hex_cor, _ = a.cor_info %}
       <tr>
-        <td class="font-mono" style="font-size:.8rem">{{ a.data_entrada.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="font-mono" style="font-size:.8rem">{{ a.data_chegada.strftime('%d/%m/%Y %H:%M') }}</td>
         <td><a href="{{ url_for('pacientes.perfil', id=a.paciente_id) }}" class="fw-500">{{ a.paciente.nome_exibicao }}</a></td>
         <td><span style="display:inline-flex;align-items:center;gap:4px">
           <span style="width:8px;height:8px;border-radius:50%;background:{{ hex_cor }}"></span>

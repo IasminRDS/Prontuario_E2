@@ -6,6 +6,7 @@
   <div class="card">
     <div class="card-body">
       <form method="post" action="{{ url_for('catalogo_vacinas.novo') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="form-control" name="codigo" placeholder="Código (VAC001)">
         <input class="form-control" name="nome" placeholder="Nome da vacina" style="min-width:220px;">
         <input class="form-control" name="doses" placeholder="Esquema de doses" style="min-width:180px;">

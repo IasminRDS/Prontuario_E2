@@ -74,6 +74,7 @@
               {% if e.status != 'realizado' and e.status != 'cancelado' %}
               <form method="POST" action="{{ url_for('encaminhamentos.atualizar_status', id=e.id) }}"
                     style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <select name="status" class="form-control"
                         style="padding:4px 8px;font-size:.78rem;height:auto"
                         onchange="this.form.submit()">

@@ -6,6 +6,7 @@
   <div class="card">
     <div class="card-body">
       <form method="post" action="{{ url_for('exames.novo') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="form-control" name="paciente" placeholder="Paciente" style="min-width:220px;">
         <input class="form-control" name="exame" placeholder="Exame" style="min-width:220px;">
         <select class="form-control" name="prioridade">
@@ -34,6 +35,7 @@
             <td>{{ e.status }}</td>
             <td>
               <form method="post" action="{{ url_for('exames.alterar_status', exame_id=e.id) }}" style="display:flex;gap:6px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <select class="form-control" name="status">
                   <option {% if e.status=='Pendente' %}selected{% endif %}>Pendente</option>
                   <option {% if e.status=='Coletado' %}selected{% endif %}>Coletado</option>

@@ -1,151 +1,178 @@
 {% extends "base.html" %}
-{% block title %}Nova Internação{% endblock %}
-{% block page_title %}Registrar Internação{% endblock %}
+{% block title %}Nova prescrição hospitalar{% endblock %}
+{% block page_title %}Nova prescrição — Internação #{{ intern.id }}{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('internacao.painel') }}" class="btn btn-secondary">Voltar</a>
+  <a href="{{ url_for('pres_hosp.lista', internacao_id=intern.id) }}"
+     class="btn btn--secondary">Prescrições da internação</a>
 {% endblock %}
 
 {% block content %}
-<div style="max-width:720px">
-<form method="POST">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="card mb-20">
-    <div class="card-header"><h3>Dados da Internação</h3></div>
-    <div class="card-body">
-      <div class="form-grid form-grid-2">
 
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Paciente <span class="obrigatorio">*</span></label>
-          <div class="search-bar" style="width:100%;margin-bottom:6px">
-            <svg class="ico" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" id="busca-pac" placeholder="Nome, CNS ou CPF..."
-                   autocomplete="off"
-                   value="{{ paciente_sel.nome_exibicao if paciente_sel else '' }}">
+<form method="POST" class="stack maxw-lg">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Paciente</h3>
+      <span class="badge badge--slate">Leito {{ intern.leito.numero if intern.leito else '—' }}</span>
+    </div>
+    <div class="card__body">
+      <div class="grid-3">
+        <div>
+          <div class="text-xs text-muted">Paciente</div>
+          <div class="text-strong">
+            {{ intern.paciente.nome_exibicao if intern.paciente else '—' }}
           </div>
-          <select name="paciente_id" id="sel-pac" class="form-control" required>
-            <option value="">— Selecione —</option>
-            {% for p in pacientes %}
-            <option value="{{ p.id }}" {% if paciente_sel and paciente_sel.id == p.id %}selected{% endif %}>
-              {{ p.nome_exibicao }} — {{ p.cns or p.cpf or 'sem doc.' }}
-            </option>
-            {% endfor %}
-          </select>
-          <div id="sug-pac" style="display:none;background:var(--branco);border:1px solid var(--cinza-200);
-               border-radius:var(--raio);box-shadow:var(--sombra-md);max-height:200px;
-               overflow-y:auto;position:relative;z-index:100"></div>
         </div>
-
-        <div class="form-group">
-          <label class="form-label">Leito <span class="obrigatorio">*</span></label>
-          <select name="leito_id" class="form-control" required>
-            <option value="">— Selecione leito livre —</option>
-            {% for l in leitos_livres %}
-            <option value="{{ l.id }}">{{ l.setor.nome }} — {{ l.numero }}</option>
-            {% endfor %}
-          </select>
+        <div>
+          <div class="text-xs text-muted">Internado desde</div>
+          <div>{{ intern.data_entrada.strftime('%d/%m/%Y') if intern.data_entrada else '—' }}</div>
         </div>
-
-        <div class="form-group">
-          <label class="form-label">Tipo de internação</label>
-          <select name="tipo" class="form-control">
-            {% for val, lbl in [('clinica','Clínica médica'),('cirurgica','Cirúrgica'),
-              ('obstetricia','Obstetrícia'),('pediatrica','Pediátrica'),
-              ('psiquiatria','Psiquiatria'),('uti','UTI')] %}
-            <option value="{{ val }}">{{ lbl }}</option>
-            {% endfor %}
-          </select>
+        <div>
+          <div class="text-xs text-muted">Hipótese diagnóstica</div>
+          <div>{{ intern.hipotese_diag or '—' }}</div>
         </div>
-
-        <div class="form-group">
-          <label class="form-label">Médico responsável</label>
-          <select name="medico_id" class="form-control">
-            <option value="">— Não especificado —</option>
-            {% for m in medicos %}
-            <option value="{{ m.id }}">{{ m.nome }} — CRM {{ m.crm }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">CID-10 Principal</label>
-          <input type="text" name="cid_principal" class="form-control font-mono"
-                 placeholder="Ex: J18.9" maxlength="10" style="text-transform:uppercase">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Alta prevista</label>
-          <input type="datetime-local" name="data_prevista_alta" class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Número AIH</label>
-          <input type="text" name="aih_numero" class="form-control font-mono"
-                 placeholder="13 dígitos" maxlength="13">
-        </div>
-
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Hipótese diagnóstica</label>
-          <input type="text" name="hipotese_diag" class="form-control"
-                 placeholder="Ex: Pneumonia bacteriana, IAM, AVC...">
-        </div>
-
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Motivo da internação <span class="obrigatorio">*</span></label>
-          <textarea name="motivo" class="form-control" rows="4" required
-                    placeholder="Descreva o motivo clínico da internação..."></textarea>
-        </div>
-
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Observações</label>
-          <textarea name="observacoes" class="form-control" rows="2"></textarea>
-        </div>
-
       </div>
     </div>
-    <div class="card-footer" style="display:flex;justify-content:flex-end;gap:12px">
-      <a href="{{ url_for('internacao.painel') }}" class="btn btn-secondary">Cancelar</a>
-      <button type="submit" class="btn btn-primary btn-lg">Internar Paciente</button>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h3 class="card__title">Cuidados</h3></div>
+    <div class="card__body stack--sm">
+      <div class="field">
+        <label class="text-sm text-strong" for="dieta">Dieta</label>
+        <textarea class="textarea" id="dieta" name="dieta" rows="2"
+                  placeholder="Ex.: dieta branda hipossódica, via oral"></textarea>
+      </div>
+      <div class="field">
+        <label class="text-sm text-strong" for="decubito">Decúbito e mobilização</label>
+        <textarea class="textarea" id="decubito" name="decubito" rows="2"
+                  placeholder="Ex.: decúbito elevado 30°, mudança a cada 2h"></textarea>
+      </div>
+      <div class="field">
+        <label class="text-sm text-strong" for="sinais_vitais">Sinais vitais</label>
+        <textarea class="textarea" id="sinais_vitais" name="sinais_vitais" rows="2"
+                  placeholder="Ex.: PA, FC, FR, Tax e SpO₂ de 6/6h"></textarea>
+      </div>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header">
+      <h3 class="card__title">Medicamentos</h3>
+      <button type="button" class="btn btn--sm btn--secondary" id="add-item">
+        + Adicionar item
+      </button>
+    </div>
+    <div class="card__body">
+      {# Cada linha precisa enviar TODOS os campos, mesmo vazios: a rota casa as
+         listas por índice, e uma lista mais curta que as outras desalinharia os
+         itens seguintes. #}
+      <div id="itens" class="stack--sm">
+        <fieldset class="item-prescrito">
+          <div class="form-grid">
+            <div class="field">
+              <label class="text-xs text-muted">Medicamento</label>
+              <input class="input" name="item_nome" list="catalogo-medicamentos"
+                     placeholder="Nome ou item fora do catálogo" />
+              <input type="hidden" name="item_med_id" value="" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Dose</label>
+              <input class="input" name="item_dose" placeholder="Ex.: 1 g" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Concentração</label>
+              <input class="input" name="item_concentracao" placeholder="Ex.: 500 mg/mL" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Diluição</label>
+              <input class="input" name="item_diluicao" placeholder="Ex.: SF 0,9% 100 mL" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Via</label>
+              <input class="input" name="item_via" placeholder="Ex.: EV" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Velocidade</label>
+              <input class="input" name="item_velocidade" placeholder="Ex.: 60 mL/h" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Frequência</label>
+              <input class="input" name="item_frequencia" placeholder="Ex.: 8/8h" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Horários</label>
+              <input class="input" name="item_horarios" placeholder="Ex.: 06 14 22" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Duração</label>
+              <input class="input" name="item_duracao" placeholder="Ex.: 7 dias" />
+            </div>
+            <div class="field">
+              <label class="text-xs text-muted">Observações do item</label>
+              <input class="input" name="item_obs" placeholder="Ex.: infundir em 1h" />
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <datalist id="catalogo-medicamentos">
+        {% for m in catalogo %}
+        <option data-id="{{ m.id }}" value="{{ m.nome_generico }}">
+          {{ m.apresentacao or '' }}
+        </option>
+        {% endfor %}
+      </datalist>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h3 class="card__title">Observações gerais</h3></div>
+    <div class="card__body stack--sm">
+      <textarea class="textarea" name="observacoes" rows="3"
+                placeholder="Orientações que valem para a prescrição inteira"></textarea>
+      <label class="checkbox">
+        <input type="checkbox" name="assinar" value="1" />
+        Assinar agora
+      </label>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <a href="{{ url_for('pres_hosp.lista', internacao_id=intern.id) }}"
+       class="btn btn--secondary">Cancelar</a>
+    <button type="submit" class="btn btn--primary">Registrar prescrição</button>
   </div>
 </form>
-</div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-const busca = document.getElementById('busca-pac');
-const sel   = document.getElementById('sel-pac');
-const sug   = document.getElementById('sug-pac');
-let timer;
-busca.addEventListener('input', function() {
-  clearTimeout(timer);
-  const q = this.value.trim();
-  if (q.length < 2) { sug.style.display='none'; return; }
-  timer = setTimeout(() => {
-    fetch(`/pacientes/buscar?q=${encodeURIComponent(q)}`)
-      .then(r => r.json()).then(data => {
-        sug.innerHTML = '';
-        if (!data.length) { sug.style.display='none'; return; }
-        data.forEach(p => {
-          const d = document.createElement('div');
-          d.style.cssText='padding:9px 14px;cursor:pointer;font-size:.84rem;border-bottom:1px solid var(--cinza-100)';
-          d.innerHTML=`<strong>${p.nome}</strong> <span style="color:var(--cinza-400);font-size:.76rem">CNS ${p.cns||'—'} · ${p.idade} anos</span>`;
-          d.onmouseenter=()=>d.style.background='var(--sus-azul-claro)';
-          d.onmouseleave=()=>d.style.background='';
-          d.onclick=()=>{ sel.value=p.id; busca.value=p.nome; sug.style.display='none'; };
-          sug.appendChild(d);
-        });
-        sug.style.display='block';
-      });
-  }, 250);
-});
-document.addEventListener('click', e => {
-  if (!e.target.closest('#busca-pac') && !e.target.closest('#sug-pac'))
-    sug.style.display='none';
-});
+  // Clona a primeira linha para adicionar itens. Sem JS o formulário continua
+  // válido — a linha inicial já está no HTML.
+  (function () {
+    var itens = document.getElementById('itens');
+    var botao = document.getElementById('add-item');
+    if (!itens || !botao) { return; }
+
+    botao.addEventListener('click', function () {
+      var copia = itens.firstElementChild.cloneNode(true);
+      copia.querySelectorAll('input').forEach(function (campo) { campo.value = ''; });
+      itens.appendChild(copia);
+    });
+
+    // Casa o texto digitado com o catálogo e preenche o id oculto; item fora do
+    // catálogo fica com id vazio e é gravado como nome livre.
+    itens.addEventListener('change', function (evento) {
+      if (evento.target.name !== 'item_nome') { return; }
+      var linha = evento.target.closest('fieldset');
+      var oculto = linha.querySelector('input[name="item_med_id"]');
+      var opcao = document.querySelector(
+        '#catalogo-medicamentos option[value="' + evento.target.value.replace(/"/g, '\\"') + '"]'
+      );
+      oculto.value = opcao ? opcao.dataset.id : '';
+    });
+  })();
 </script>
+
 {% endblock %}

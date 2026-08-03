@@ -6,6 +6,7 @@
   <div class="card">
     <div class="card-body">
       <form method="post" action="{{ url_for('pronto_socorro.novo') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="form-control" name="nome" placeholder="Nome do paciente" style="min-width:220px;">
         <input class="form-control" name="motivo" placeholder="Motivo" style="min-width:260px;">
         <select class="form-control" name="prioridade">
@@ -36,9 +37,11 @@
             <td>{{ i.status }}</td>
             <td style="display:flex;gap:6px;">
               <form method="post" action="{{ url_for('pronto_socorro.chamar', item_id=i.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button class="btn btn-secondary btn-sm">Chamar</button>
               </form>
               <form method="post" action="{{ url_for('pronto_socorro.finalizar', item_id=i.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button class="btn btn-primary btn-sm">Finalizar</button>
               </form>
             </td>

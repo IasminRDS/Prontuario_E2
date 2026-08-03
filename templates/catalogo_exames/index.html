@@ -6,6 +6,7 @@
   <div class="card">
     <div class="card-body">
       <form method="post" action="{{ url_for('catalogo_exames.novo') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="form-control" name="codigo" placeholder="Código (EX001)">
         <input class="form-control" name="nome" placeholder="Nome do exame" style="min-width:260px;">
         <button class="btn btn-primary">Adicionar</button>

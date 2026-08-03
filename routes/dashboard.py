@@ -26,6 +26,19 @@ except Exception:
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/")
 
 
+def _degradar(padrao):
+    """Devolve `padrao` depois de recuperar a sessão do banco.
+
+    Cada painel deste dashboard tolera a própria falha e mostra zero. Isso só
+    funciona se a sessão continuar utilizável: em PostgreSQL, um erro aborta a
+    transação inteira, e sem o rollback os painéis SEGUINTES falham em cascata —
+    a tela responde 200 com tudo zerado, sem nenhum sinal de erro. Em SQLite a
+    sessão sobrevive sozinha, e foi por isso que a falta passou despercebida.
+    """
+    db.session.rollback()
+    return padrao
+
+
 def _count(model, coluna_data=None, hoje_only=False, inicio=None):
     if model is None:
         return 0
@@ -38,7 +51,7 @@ def _count(model, coluna_data=None, hoje_only=False, inicio=None):
                 q = q.filter(func.date(coluna_data) >= inicio)
         return int(q.count())
     except Exception:
-        return 0
+        return _degradar(0)
 
 
 def _serie_atendimentos_7dias():
@@ -68,7 +81,7 @@ def _serie_atendimentos_7dias():
             mapa[d] = int(c or 0)
         valores = [mapa.get(d, 0) for d in dias]
     except Exception:
-        pass
+        _degradar(None)
 
     return labels, valores
 
@@ -91,7 +104,7 @@ def _pacientes_por_sexo():
                 o += int(c or 0)
         return [m, f, o]
     except Exception:
-        return [0, 0, 0]
+        return _degradar([0, 0, 0])
 
 
 @dashboard_bp.get("/")

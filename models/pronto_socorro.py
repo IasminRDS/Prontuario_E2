@@ -27,6 +27,74 @@ class AtendimentoPS(db.Model):
     
     # Relacionamento reverso com o paciente
     paciente = db.relationship('Paciente', backref=db.backref('atendimentos_ps', lazy=True))
+    # A classificação de risco mora na triagem; o atendimento só aponta para ela.
+    triagem = db.relationship('Triagem', backref=db.backref('atendimentos_ps', lazy=True))
+    medico = db.relationship('Medico', backref=db.backref('atendimentos_ps', lazy=True))
+
+    # Rótulos de apresentação, no mesmo formato (texto, cor) de Internacao e
+    # Cirurgia — o template não conhece o valor cru do banco.
+    # Os nomes seguem a máquina de estados de routes/ps.py (TRANSICOES), que é
+    # quem manda. O comentário antigo da coluna listava só cinco e omitia
+    # 'em_observacao', 'transferido' e 'evadiu'.
+    STATUS = {
+        'em_espera': ('Em espera', 'amarelo'),
+        'em_atendimento': ('Em atendimento', 'azul'),
+        'em_observacao': ('Em observação', 'azul'),
+        'internado': ('Internado', 'vermelho'),
+        'transferido': ('Transferido', 'azul'),
+        'alta': ('Alta', 'verde'),
+        'obito': ('Óbito', 'cinza'),
+        'evadiu': ('Evadiu', 'cinza'),
+        'cancelado': ('Cancelado', 'cinza'),
+    }
+
+    # Status que encerram o atendimento — são estes que contam como desfecho.
+    DESFECHOS = ('alta', 'internado', 'transferido', 'obito', 'evadiu')
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, (self.status or '—', 'cinza'))
+
+    @property
+    def classificacao(self):
+        """Cor de risco Manchester, herdada da triagem.
+
+        Templates e relatórios já liam `atendimento.classificacao` como se fosse
+        coluna própria. Não é: o dado é da triagem, e um atendimento pode não ter
+        sido triado ainda.
+        """
+        return self.triagem.classificacao if self.triagem else None
+
+    @property
+    def cor_info(self):
+        """(rótulo, cor hex, tempo-alvo) da classificação — delega à triagem."""
+        if self.triagem:
+            return self.triagem.cor_info
+        return ('Não triado', '#888', '—')
+
+    @property
+    def desfecho(self):
+        """Como o atendimento terminou, ou None se ainda está em curso."""
+        return self.status if self.status in self.DESFECHOS else None
+
+    @property
+    def tempo_espera_min(self):
+        """Minutos até ser chamado — ou até agora, se ainda espera.
+
+        O painel do PS compara este valor com faixas (>60, >120) para colorir a
+        fila, então precisa ser sempre um número, nunca None.
+        """
+        if not self.data_chegada:
+            return 0
+        fim = self.data_atendimento or datetime.utcnow()
+        return max(0, int((fim - self.data_chegada).total_seconds() // 60))
+
+    @property
+    def tempo_total_min(self):
+        """Minutos entre a chegada e a liberação. None enquanto não liberado."""
+        if not (self.data_chegada and self.data_liberacao):
+            return None
+        return int((self.data_liberacao - self.data_chegada).total_seconds() // 60)
 
     def __repr__(self):
         return f'<AtendimentoPS {self.id} - Status: {self.status}>'

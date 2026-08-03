@@ -5,6 +5,7 @@
 {% block content %}
 <div style="max-width:420px">
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <div class="card">
       <div class="card-header">
         <svg width="17" height="17" fill="none" stroke="var(--sus-azul)" viewBox="0 0 24 24">

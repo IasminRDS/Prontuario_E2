@@ -28,3 +28,18 @@ class Agendamento(db.Model):
     paciente = db.relationship("Paciente", backref="agendamentos")
     medico = db.relationship("Medico", backref="agendamentos")
     unidade = db.relationship("UnidadeSaude", backref="agendamentos")
+
+    # routes/agendamento.py já usava `Agendamento.STATUS_LABELS` para validar o
+    # status recebido e `ag.status_label[0]` na mensagem de sucesso — nenhum dos
+    # dois existia, e a troca de status quebrava com AttributeError.
+    STATUS_LABELS = {
+        "agendado": ("Agendado", "azul"),
+        "confirmado": ("Confirmado", "verde"),
+        "atendido": ("Atendido", "verde"),
+        "faltou": ("Faltou", "amarelo"),
+        "cancelado": ("Cancelado", "cinza"),
+    }
+
+    @property
+    def status_label(self):
+        return self.STATUS_LABELS.get(self.status, (self.status or "—", "cinza"))

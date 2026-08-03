@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, current_app, render_template, url_for
 from flask_login import login_required
 
+from extensions import db
 from utils.rbac import pode
 
 alertas_bp = Blueprint("alertas", __name__, url_prefix="/alertas")
@@ -23,6 +24,19 @@ DIAS_EXAME_ATRASADO = 7
 HORAS_ESPERA_PS = 2
 HORAS_SEM_EVOLUCAO = 24
 OCUPACAO_CRITICA_PCT = 90
+
+
+def _falhou(mensagem):
+    """Registra a falha da fonte e devolve a sessão ao estado utilizável.
+
+    O rollback não é zelo: sem ele o isolamento prometido no topo deste módulo
+    não existe em PostgreSQL. Lá o primeiro erro aborta a transação inteira, e
+    toda consulta seguinte morre com InFailedSqlTransaction — ou seja, a falha
+    de UMA fonte derrubaria silenciosamente todas as outras. Em SQLite o efeito
+    não aparece, que é justamente por isso que passou despercebido.
+    """
+    current_app.logger.exception(mensagem)
+    db.session.rollback()
 
 
 def _alerta(sev, titulo, descricao, href=None, quantidade=None):
@@ -93,7 +107,7 @@ def _estoque():
                 len(proximos),
             ))
     except Exception:
-        current_app.logger.exception("alerta de estoque falhou")
+        _falhou("alerta de estoque falhou")
     return saidas
 
 
@@ -118,7 +132,7 @@ def _exames():
                 n,
             )]
     except Exception:
-        current_app.logger.exception("alerta de exames falhou")
+        _falhou("alerta de exames falhou")
     return []
 
 
@@ -143,7 +157,7 @@ def _pronto_socorro():
                 n,
             )]
     except Exception:
-        current_app.logger.exception("alerta de PS falhou")
+        _falhou("alerta de PS falhou")
     return []
 
 
@@ -168,7 +182,7 @@ def _internacao():
                     pct,
                 ))
     except Exception:
-        current_app.logger.exception("alerta de ocupação falhou")
+        _falhou("alerta de ocupação falhou")
 
     try:
         corte = datetime.utcnow() - timedelta(hours=HORAS_SEM_EVOLUCAO)
@@ -192,7 +206,7 @@ def _internacao():
                 sem_evolucao,
             ))
     except Exception:
-        current_app.logger.exception("alerta de evolução falhou")
+        _falhou("alerta de evolução falhou")
     return saidas
 
 
@@ -215,7 +229,7 @@ def _vigilancia():
                 n,
             )]
     except Exception:
-        current_app.logger.exception("alerta de vigilância falhou")
+        _falhou("alerta de vigilância falhou")
     return []
 
 

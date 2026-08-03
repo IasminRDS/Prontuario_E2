@@ -302,8 +302,13 @@ def gerar_alta(internacao, paciente, medico, unidade):
     if prescricoes_ativas:
         pres = prescricoes_ativas[0]
         bloco = [Paragraph("Medicamentos em Uso na Alta", e["secao"])]
-        if pres.dieta:
-            bloco.append(Paragraph(f"<b>Dieta:</b> {pres.dieta}", e["corpo"]))
+        # `dieta` é lido aqui e em três templates, e routes/prescricao_hosp.py
+        # tenta gravá-lo — mas a coluna nunca existiu no model, e o acesso direto
+        # derrubava a alta inteira com AttributeError. O getattr é provisório:
+        # ou a coluna entra (com migration), ou estas leituras saem.
+        dieta = getattr(pres, "dieta", None)
+        if dieta:
+            bloco.append(Paragraph(f"<b>Dieta:</b> {dieta}", e["corpo"]))
         for i, item in enumerate(pres.itens, 1):
             partes = [f"<b>{i}. {item.nome_exibicao}</b>"]
             if item.dose:
@@ -312,8 +317,11 @@ def gerar_alta(internacao, paciente, medico, unidade):
                 partes.append(item.via)
             if item.frequencia:
                 partes.append(item.frequencia)
-            if item.duracao:
-                partes.append(f"por {item.duracao}")
+            # Mesmo caso do `dieta` acima: ItemPrescricaoHosp não tem `duracao`
+            # (quem tem é ItemPrescricao, o item ambulatorial).
+            duracao = getattr(item, "duracao", None)
+            if duracao:
+                partes.append(f"por {duracao}")
             bloco.append(Paragraph(" · ".join(partes), e["corpo"]))
         s.append(KeepTogether(bloco))
         s.append(Spacer(1, 0.2 * cm))
@@ -323,11 +331,14 @@ def gerar_alta(internacao, paciente, medico, unidade):
     if cirurgias:
         bloco = [Paragraph("Procedimentos Cirúrgicos Realizados", e["secao"])]
         for c in cirurgias:
-            linha = f"<b>{c.procedimento}</b>"
+            # O model chama o procedimento de `descricao` e a duração calculada
+            # de `duracao_minutos`; `procedimento`/`duracao_real` não existem e
+            # saíam em branco (ou estouravam) no sumário de alta.
+            linha = f"<b>{c.descricao}</b>"
             if c.data_inicio:
                 linha += f' — {c.data_inicio.strftime("%d/%m/%Y")}'
-            if c.duracao_real:
-                linha += f" ({c.duracao_real} min)"
+            if c.duracao_minutos:
+                linha += f" ({c.duracao_minutos} min)"
             bloco.append(Paragraph(linha, e["corpo"]))
         s.append(KeepTogether(bloco))
         s.append(Spacer(1, 0.2 * cm))

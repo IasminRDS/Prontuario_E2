@@ -38,6 +38,9 @@ def nova(internacao_id):
         try:
             pres = PrescricaoHospitalar(
                 internacao_id   = internacao_id,
+                # A prescrição é do paciente, não só da internação: sem isto a
+                # tela não conseguia dizer de quem ela era.
+                paciente_id     = intern.paciente_id,
                 medico_id       = medico.id if medico else None,
                 unidade_id      = current_user.unidade_id,
                 validade_ate    = datetime.utcnow() + timedelta(hours=24),
@@ -47,7 +50,13 @@ def nova(internacao_id):
                 observacoes     = request.form.get('observacoes', '').strip() or None,
             )
             if 'assinar' in request.form:
-                pres.assinar()
+                # Não poder assinar não invalida a prescrição: salvamos sem
+                # assinatura e dizemos o porquê, em vez de perder o que foi
+                # digitado.
+                try:
+                    pres.assinar()
+                except ValueError as erro:
+                    flash(f"{erro} A prescrição foi salva sem assinatura.", "warning")
             db.session.add(pres)
             db.session.flush()
 
@@ -79,7 +88,10 @@ def nova(internacao_id):
                     frequencia     = freqs[i].strip()    if i < len(freqs)    else None,
                     horarios       = hors[i].strip()     if i < len(hors)     else None,
                     duracao        = durs[i].strip()     if i < len(durs)     else None,
-                    observacoes    = obs_list[i].strip() if i < len(obs_list) else None,
+                    # A coluna do item chama-se `instrucoes`; o campo do
+                    # formulário, `item_obs`. O construtor usava `observacoes`,
+                    # que não existe em ItemPrescricaoHosp.
+                    instrucoes     = obs_list[i].strip() if i < len(obs_list) else None,
                     ordem          = i,
                 )
                 db.session.add(item)

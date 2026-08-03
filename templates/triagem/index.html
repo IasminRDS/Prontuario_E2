@@ -131,6 +131,7 @@
                    class="btn btn-sm btn-secondary">Ver</a>
                 {% if t.status == 'aguardando' %}
                   <form method="POST" action="{{ url_for('triagem.atualizar_status', id=t.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <input type="hidden" name="status" value="em_atendimento">
                     <button type="submit" class="btn btn-sm btn-primary">Chamar</button>
                   </form>

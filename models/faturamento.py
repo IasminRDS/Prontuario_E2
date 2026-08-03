@@ -23,6 +23,27 @@ class AIH(db.Model):
     criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # As FKs existiam sem relação declarada: a lista de AIH não conseguia
+    # mostrar de quem era a autorização.
+    paciente = db.relationship('Paciente', backref='aihs')
+    medico_solicitante = db.relationship('Medico', backref='aihs')
+    internacao = db.relationship('Internacao', backref='aihs')
+
+    # Rótulos de apresentação (texto, cor). Cobre tanto os status de STATUS_AIH
+    # em routes/faturamento.py quanto 'faturada', que aparece em dados antigos.
+    STATUS = {
+        'aberta': ('Aberta', 'azul'),
+        'apresentada': ('Apresentada', 'amarelo'),
+        'aprovada': ('Aprovada', 'verde'),
+        'faturada': ('Faturada', 'verde'),
+        'rejeitada': ('Rejeitada', 'vermelho'),
+        'cancelada': ('Cancelada', 'cinza'),
+    }
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, (self.status or '—', 'cinza'))
+
     def __repr__(self):
         return f'<AIH {self.numero_aih} - Status: {self.status}>'
 
@@ -50,6 +71,19 @@ class APAC(db.Model):
 
     criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    paciente = db.relationship('Paciente', backref='apacs')
+    medico_solicitante = db.relationship('Medico', backref='apacs')
+
+    STATUS = {
+        'ativa': ('Ativa', 'verde'),
+        'encerrada': ('Encerrada', 'azul'),
+        'cancelada': ('Cancelada', 'cinza'),
+    }
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, (self.status or '—', 'cinza'))
 
     def __repr__(self):
         return f'<APAC {self.numero_apac} - Status: {self.status}>'

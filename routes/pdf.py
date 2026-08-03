@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, send_file, abort, request, render_template, flash, redirect, url_for
 from flask_login import login_required, current_user
 
+from extensions import db
 from models.prontuario import Prontuario
 from models.paciente import Paciente
 from models.medico import Medico
@@ -163,6 +164,10 @@ def processar_pdf():
         return send_file(caminho_saida, as_attachment=True, download_name=nome_download)
         
     except Exception as e:
+        # O bloco acima grava auditoria; se falhar depois disso, a sessão fica
+        # abortada em PostgreSQL e a tela do redirect não conseguiria consultar
+        # nada — inclusive as configurações que o base.html lê.
+        db.session.rollback()
         flash(f"Erro ao processar PDF: {e}", "danger")
         return redirect(url_for('pdf.ferramentas'))
     finally:
@@ -200,6 +205,7 @@ def reorganizar():
         
         return send_file(caminho_saida, as_attachment=True, download_name=f"novo_{nome_seguro}")
     except Exception as e:
+        db.session.rollback()
         flash(f"Erro ao reorganizar PDF.", "danger")
         return redirect(url_for('pdf.reorganizar'))
     finally:

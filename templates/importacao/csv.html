@@ -9,6 +9,7 @@
         Colunas mínimas: <code>nome</code>. Opcionais: cpf, cns, nome_social, sexo, telefone, municipio, uf.
       </p>
       <form method="post" enctype="multipart/form-data" action="{{ url_for('importacao.csv_importar') }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="form-control" type="file" name="arquivo" accept=".csv" required style="max-width:320px;">
         <button class="btn btn-primary" type="submit">Importar</button>
       </form>
