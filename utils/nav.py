@@ -125,7 +125,7 @@ GRUPOS = (
         _i("admin.index", "Usuários", "user-cog",
            "Contas, perfis e ativação.", ["user:manage", "admin:full"]),
         _i("alertas.index", "Alertas", "bell",
-           "Pendências operacionais do dia."),
+           "Pendências operacionais do dia.", ["reports:read"]),
         _i("configuracoes.index", "Configurações", "settings",
            "Parâmetros do sistema.", ["admin:full"]),
         _i("backup.index", "Backup", "database",

@@ -12,12 +12,15 @@ from flask import Blueprint, current_app, render_template, url_for
 from flask_login import login_required
 
 from extensions import db
-from utils.rbac import pode
+from utils.rbac import pode, requer_permissao
 
 alertas_bp = Blueprint("alertas", __name__, url_prefix="/alertas")
 
-CRITICO, ATENCAO, INFO = "critico", "atencao", "info"
-_ORDEM = {CRITICO: 0, ATENCAO: 1, INFO: 2}
+# Havia uma terceira severidade, `INFO`, que nenhuma fonte emitia: o resumo
+# sempre mostrava zero para ela. Quando alguma fonte precisar dela, é uma linha
+# aqui e outra no mapa de cores do template.
+CRITICO, ATENCAO = "critico", "atencao"
+_ORDEM = {CRITICO: 0, ATENCAO: 1}
 
 DIAS_VALIDADE_PROXIMA = 60
 DIAS_EXAME_ATRASADO = 7
@@ -233,8 +236,12 @@ def _vigilancia():
     return []
 
 
+# A tela agrega estoque, fila de urgência e notificações compulsórias de toda a
+# unidade. Só `@login_required` deixava a recepção ver o painel operacional
+# inteiro; `reports:read` é a mesma permissão que os demais relatórios exigem.
 @alertas_bp.get("/")
 @login_required
+@requer_permissao("reports:read")
 def index():
     alertas = (
         _pronto_socorro()
@@ -247,6 +254,6 @@ def index():
 
     resumo = {
         sev: sum(1 for a in alertas if a["severidade"] == sev)
-        for sev in (CRITICO, ATENCAO, INFO)
+        for sev in (CRITICO, ATENCAO)
     }
     return render_template("alertas/index.html", alertas=alertas, resumo=resumo)

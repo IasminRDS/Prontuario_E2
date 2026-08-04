@@ -1,13 +1,63 @@
 {% extends "base.html" %}
 {% block title %}Alertas{% endblock %}
 {% block page_title %}Alertas{% endblock %}
+
+{# A rota já classifica cada alerta e calcula para onde ir resolvê-lo. Este
+   mapa traduz a severidade nos modificadores do design system. #}
+{% set CORES = {'critico': 'red', 'atencao': 'amber'} %}
+{% set ROTULOS = {'critico': 'Crítico', 'atencao': 'Atenção'} %}
+
 {% block content %}
-<div style="max-width:1100px;margin:0 auto;display:grid;gap:12px;">
+
+<div class="maxw-lg stack">
+
+  {% if alertas %}
+  <div class="stats">
+    {% for chave in ['critico', 'atencao'] %}
+    {% if resumo.get(chave) %}
+    <div class="stat">
+      <div class="stat__label">{{ ROTULOS[chave] }}</div>
+      <div class="stat__value">{{ resumo[chave] }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% for a in alertas %}
-    <div class="card"><div class="card-body">
-      <strong>{{ a.titulo }}</strong>
-      <div class="text-muted" style="margin-top:6px;">{{ a.descricao }}</div>
-    </div></div>
+  <section class="card">
+    <div class="card__header">
+      <div class="card__title">{{ a.titulo }}</div>
+      <span class="badge badge--{{ CORES.get(a.severidade, 'slate') }}">
+        {{ ROTULOS.get(a.severidade, a.severidade) }}
+      </span>
+    </div>
+    <div class="card__body">
+      <p class="text-sm text-muted">{{ a.descricao }}</p>
+    </div>
+    {% if a.href %}
+    {# Um alerta que não leva a lugar nenhum obriga o operador a procurar a tela
+       certa no menu. O destino já vinha calculado e era descartado aqui. #}
+    <div class="card__footer text-right">
+      <a href="{{ a.href }}" class="btn btn--sm btn--secondary">Resolver</a>
+    </div>
+    {% endif %}
+  </section>
+  {% else %}
+  {# Sem isto, "nenhuma pendência" e "a tela quebrou" produziam a mesma página
+     em branco, e não havia como distinguir uma coisa da outra. #}
+  <section class="card">
+    <div class="card__body">
+      <p class="empty-state">Nenhuma pendência operacional no momento.</p>
+      <p class="text-xs text-muted text-center">
+        Esta tela acompanha estoque, fila do pronto-socorro, exames sem
+        resultado, ocupação de leitos, evolução de internados e notificações
+        compulsórias.
+      </p>
+    </div>
+  </section>
   {% endfor %}
+
 </div>
+
 {% endblock %}
