@@ -43,9 +43,15 @@ def _valor(coluna):
     largura = getattr(tipo, "length", None) or 40
     nome = coluna.name.lower()
     if "cpf" in nome:
-        base = "52998224725"
+        # `pacientes.cpf` e `pacientes.cns` são UNIQUE. Com valor fixo, esta
+        # semeadura ocupava o documento que os testes de deduplicação escrevem à
+        # mão, e o par deles só passava enquanto rodassem ANTES daqui — uma
+        # ordem que qualquer arquivo de teste novo em ordem alfabética anterior
+        # inverte. O contador dá um documento por linha; o formato de 11 e 15
+        # dígitos é o que `validar_cpf`/`validar_cns` exigem.
+        base = f"{90000000000 + n:011d}"
     elif "cns" in nome:
-        base = "700000000000000"
+        base = f"{700000000000000 + n:015d}"
     elif "email" in nome:
         base = f"teste{n}@exemplo.local"
     elif nome in ("data", "data_str"):
