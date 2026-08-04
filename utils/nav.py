@@ -34,6 +34,9 @@ GRUPOS = (
     Grupo("Atendimento", (
         _i("pacientes.listar_pacientes", "Pacientes", "users",
            "Cadastro, busca e Sumário do Paciente.", ["patient:read"]),
+        _i("duplicatas.index", "Cadastros duplicados", "users",
+           "Revisão e unificação de cadastros da mesma pessoa.",
+           ["patient:update"]),
         _i("pronto_socorro.index", "Pronto-Socorro", "ambulance",
            "Fila e atendimento de urgência e emergência.", ["emergency:write"]),
         _i("triagem.index", "Triagem", "clipboard-list",

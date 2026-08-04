@@ -6,6 +6,10 @@ def seed_data():
     from models.medico import Medico
     from models.regional import Regional
 
+    # A tabela territorial não depende de usuário e precisa existir mesmo num
+    # banco já povoado — por isso vem antes do retorno antecipado abaixo.
+    _seed_municipios()
+
     if User.query.first():
         return
 
@@ -53,6 +57,16 @@ def seed_data():
     _seed_vacinas()
     _seed_exames()
     _seed_hospital()
+
+
+def _seed_municipios():
+    """Capitais, para o sistema nascer com a tabela territorial utilizável.
+
+    A relação completa (5.570) vem do IBGE via `flask municipios-importar`.
+    """
+    from database.municipios import seed_capitais
+
+    seed_capitais()
 
 def _seed_vacinas():
     from models.vacina import Vacina

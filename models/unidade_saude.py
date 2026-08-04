@@ -14,6 +14,19 @@ class UnidadeSaude(db.Model):
     uf = db.Column(db.String(2), nullable=True, index=True)
     ativo = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Chave territorial. `cidade` continua existindo porque muito template e PDF
+    # a lê, mas quem manda para agregação e para o escopo de acesso é o código
+    # IBGE: texto livre não agrega, e "Feira de Santana" digitado de três jeitos
+    # vira três municípios em qualquer relatório.
+    municipio_ibge = db.Column(db.String(7),
+                               db.ForeignKey("municipios.codigo_ibge"),
+                               nullable=True, index=True)
+    regional_id = db.Column(db.Integer, db.ForeignKey("regionais.id"),
+                            nullable=True, index=True)
+
+    municipio_ref = db.relationship("Municipio", backref="unidades")
+    regional = db.relationship("Regional", backref="unidades")
+
     @property
     def municipio(self):
         """Alias de `cidade`.

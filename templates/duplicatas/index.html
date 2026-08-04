@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Cadastros duplicados{% endblock %}
+{% block page_title %}Cadastros duplicados{% endblock %}
+
+{% set CORES = {'azul': 'blue', 'amarelo': 'amber', 'verde': 'green',
+                'vermelho': 'red', 'laranja': 'amber', 'cinza': 'slate'} %}
+
+{% block content %}
+
+<p class="pagehead__subtitle mb-2">
+  A varredura sugere; a decisão é sua. Nenhum par é unificado automaticamente —
+  unificar dois pacientes errados mistura o histórico clínico de duas pessoas.
+</p>
+
+<div class="stats">
+  {% for chave, rotulo in [('pendente', 'Aguardando revisão'),
+                           ('unificado', 'Unificados'),
+                           ('distintos', 'Pessoas distintas')] %}
+  <div class="stat">
+    <div class="stat__label">{{ rotulo }}</div>
+    <div class="stat__value">{{ contagens.get(chave, 0) }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card mb-2">
+  <div class="card__header">
+    <div class="card__title">Fila de revisão</div>
+    <form method="post" action="{{ url_for('duplicatas.varrer') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn--secondary btn--sm">Varrer agora</button>
+    </form>
+  </div>
+  <div class="card__body">
+    <div class="filters mb-2">
+      {% for chave, rotulo in [('pendente', 'Pendentes'), ('unificado', 'Unificados'),
+                               ('distintos', 'Distintos'), ('', 'Todos')] %}
+      <a class="btn btn--sm {% if status == chave %}btn--primary{% else %}btn--ghost{% endif %}"
+         href="{{ url_for('duplicatas.index', status=chave) }}">{{ rotulo }}</a>
+      {% endfor %}
+    </div>
+
+    {% if candidatos %}
+    <div class="table-wrap">
+      <table class="table table--compact">
+        <thead>
+          <tr>
+            <th>Confiança</th>
+            <th>Cadastro A</th>
+            <th>Cadastro B</th>
+            <th>Evidências</th>
+            <th>Situação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in candidatos %}
+          {% set rotulo_conf, cor_conf = c.confianca %}
+          {% set rotulo_st, cor_st = c.status_label %}
+          <tr>
+            <td><span class="badge badge--{{ CORES.get(cor_conf, 'slate') }}">{{ rotulo_conf }}</span></td>
+            <td>
+              <div class="text-strong">{{ c.menor.nome_exibicao }}</div>
+              <div class="text-xs text-muted">
+                #{{ c.menor.id }} · {{ c.menor.data_nascimento.strftime('%d/%m/%Y') }}
+              </div>
+            </td>
+            <td>
+              <div class="text-strong">{{ c.maior.nome_exibicao }}</div>
+              <div class="text-xs text-muted">
+                #{{ c.maior.id }} · {{ c.maior.data_nascimento.strftime('%d/%m/%Y') }}
+              </div>
+            </td>
+            <td class="text-xs text-muted">{{ c.evidencias }}</td>
+            <td><span class="badge badge--{{ CORES.get(cor_st, 'slate') }}">{{ rotulo_st }}</span></td>
+            <td>
+              {% if c.status == 'pendente' %}
+              <a class="btn btn--sm btn--primary"
+                 href="{{ url_for('duplicatas.revisar', id=c.id) }}">Revisar</a>
+              {% elif c.sobrevivente %}
+              <span class="text-xs text-muted">→ #{{ c.sobrevivente_id }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty-state">Nenhum candidato nesta situação.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

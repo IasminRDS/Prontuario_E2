@@ -119,6 +119,14 @@ def _backup_postgres(url, carimbo):
         # O dono e as permissões pertencem ao ambiente, não ao dump; sem isto o
         # restore num servidor com outras roles falha.
         "--no-owner", "--no-privileges",
+        # Com Row-Level Security ativo, o pg_dump se recusa a rodar sem esta
+        # opção — e a recusa é acertada: ele não quer produzir um dump
+        # silenciosamente parcial. Combinada com o PGOPTIONS abaixo, que abre a
+        # conexão no escopo SISTEMA, o dump sai completo.
+        #
+        # Em produção o certo é um papel dedicado com BYPASSRLS fazendo o dump:
+        # aí a completude não depende de uma variável de ambiente estar certa.
+        "--enable-row-security",
         "--file", str(destino),
     ]
     if url.username:
@@ -129,6 +137,14 @@ def _backup_postgres(url, carimbo):
     ambiente = dict(os.environ)
     if url.password:
         ambiente["PGPASSWORD"] = url.password
+
+    # Com Row-Level Security em FORCE, o pg_dump também é barrado: ele conecta
+    # como dono das tabelas e sem escopo definido, então as políticas não
+    # liberam linha nenhuma e o dump falha. PGOPTIONS define o escopo já na
+    # abertura da conexão, que é o único momento disponível — não há como rodar
+    # um SET antes do dump.
+    opcoes = ambiente.get("PGOPTIONS", "")
+    ambiente["PGOPTIONS"] = f"{opcoes} -c app.nivel=SISTEMA".strip()
 
     try:
         proc = subprocess.run(comando, env=ambiente, capture_output=True,
@@ -143,8 +159,12 @@ def _backup_postgres(url, carimbo):
     if proc.returncode != 0:
         # Um dump parcial é pior que nenhum: parece backup e não restaura.
         destino.unlink(missing_ok=True)
-        erro = (proc.stderr or "").strip().splitlines()
-        return None, erro[-1] if erro else f"pg_dump falhou (código {proc.returncode})."
+        linhas = [l.strip() for l in (proc.stderr or "").splitlines() if l.strip()]
+        # A causa está na PRIMEIRA linha de erro; a última costuma ser o
+        # "Query was:", que não diz nada a quem lê o aviso na tela.
+        causa = next((l for l in linhas if "error" in l.lower() or "erro" in l.lower()),
+                     linhas[0] if linhas else "")
+        return None, causa or f"pg_dump falhou (código {proc.returncode})."
 
     return destino, None
 

@@ -82,8 +82,13 @@ def semear_uma_linha_por_tabela():
 
             if coluna.foreign_keys:
                 fk = next(iter(coluna.foreign_keys))
+                # Ordenar não é capricho: sem ORDER BY o PostgreSQL pode
+                # devolver qualquer linha, e o dado semeado passaria a apontar
+                # para uma unidade diferente a cada execução — com RLS ligado,
+                # isso vira teste que falha de forma intermitente.
                 referencia = db.session.execute(
-                    sa.select(fk.column).select_from(fk.column.table).limit(1)
+                    sa.select(fk.column).select_from(fk.column.table)
+                    .order_by(fk.column.asc()).limit(1)
                 ).scalar()
                 if referencia is None:
                     if not coluna.nullable:

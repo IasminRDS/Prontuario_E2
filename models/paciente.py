@@ -41,6 +41,22 @@ class Paciente(db.Model):
     alergias = db.Column(db.Text, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
 
+    # Unificação de cadastros duplicados.
+    #
+    # O registro absorvido NÃO é apagado: em prontuário, apagar é perder
+    # rastro. Ele fica inativo — some das listas, que já filtram por `ativo` —
+    # apontando para o sobrevivente, de modo que quem chegar por um link antigo
+    # ou por um documento impresso seja levado ao cadastro correto.
+    unificado_para_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"),
+                                  nullable=True, index=True)
+    unificado_em = db.Column(db.DateTime, nullable=True)
+    unificado_para = db.relationship("Paciente", remote_side=[id],
+                                     backref="absorvidos")
+
+    @property
+    def foi_unificado(self):
+        return self.unificado_para_id is not None
+
     # Controle
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)

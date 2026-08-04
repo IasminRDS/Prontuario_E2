@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Revisar duplicata{% endblock %}
+{% block page_title %}Revisar possível duplicata{% endblock %}
+
+{% set CORES = {'azul': 'blue', 'amarelo': 'amber', 'verde': 'green',
+                'vermelho': 'red', 'laranja': 'amber', 'cinza': 'slate'} %}
+{% set rotulo_conf, cor_conf = candidato.confianca %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('duplicatas.index') }}" class="btn btn--secondary">Voltar à fila</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-2">
+  <div class="card__header">
+    <div class="card__title">Evidências</div>
+    <span class="badge badge--{{ CORES.get(cor_conf, 'slate') }}">{{ rotulo_conf }}</span>
+  </div>
+  <div class="card__body">
+    <p class="text-sm">{{ candidato.evidencias }}</p>
+    <p class="text-xs text-muted">
+      Detectado em {{ candidato.detectado_em.strftime('%d/%m/%Y às %H:%M') }}.
+      Documento oficial coincidente é prova; o resto é indício e precisa de
+      conferência humana.
+    </p>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('duplicatas.unificar', id=candidato.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+  <div class="card mb-2">
+    <div class="card__header">
+      <div class="card__title">Qual cadastro preservar?</div>
+    </div>
+    <div class="card__body">
+      <p class="text-muted text-sm mb-2">
+        O outro fica inativo apontando para o preservado — nada é apagado. Todo
+        o histórico clínico é movido para o cadastro escolhido.
+      </p>
+
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Cadastro #{{ candidato.paciente_menor_id }}</th>
+              <th>Cadastro #{{ candidato.paciente_maior_id }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-strong">Preservar</td>
+              {% for p in [candidato.menor, candidato.maior] %}
+              <td>
+                <label class="checkbox">
+                  <input type="radio" name="sobrevivente_id" value="{{ p.id }}"
+                         {% if loop.first %}checked{% endif %} />
+                  Manter este
+                </label>
+              </td>
+              {% endfor %}
+            </tr>
+
+            {% for campo, rotulo in campos %}
+            {% set va = candidato.menor[campo] if candidato.menor[campo] is defined else none %}
+            {% set vb = candidato.maior[campo] if candidato.maior[campo] is defined else none %}
+            <tr>
+              <td class="text-xs text-muted">{{ rotulo }}</td>
+              <td {% if va and vb and va != vb %}class="text-strong"{% endif %}>
+                {{ va or '—' }}
+              </td>
+              <td {% if va and vb and va != vb %}class="text-strong"{% endif %}>
+                {{ vb or '—' }}
+              </td>
+            </tr>
+            {% endfor %}
+
+            <tr>
+              <td class="text-xs text-muted">Histórico clínico</td>
+              {% for volume in [volume_menor, volume_maior] %}
+              <td class="text-xs">
+                {% set total = volume.values() | sum %}
+                {% if total %}
+                  {% for rotulo, n in volume.items() %}
+                    {% if n %}<div>{{ rotulo }}: <strong>{{ n }}</strong></div>{% endif %}
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted">sem registros</span>
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card__footer" style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="submit" class="btn btn--primary">Unificar cadastros</button>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card__header"><div class="card__title">Não são a mesma pessoa</div></div>
+  <div class="card__body">
+    <p class="text-muted text-sm">
+      Homônimos nascidos no mesmo dia existem. Registrar aqui tira o par da fila
+      em definitivo, para que a próxima varredura não o traga de volta.
+    </p>
+  </div>
+  <div class="card__footer" style="display:flex;justify-content:flex-end">
+    <form method="post" action="{{ url_for('duplicatas.distintos', id=candidato.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn--secondary">Marcar como pessoas distintas</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

@@ -2,6 +2,7 @@
 """Fábrica da aplicação Flask."""
 import os
 
+import click
 from dotenv import load_dotenv
 from flask import Flask, render_template
 
@@ -20,6 +21,7 @@ BLUEPRINTS = (
     "routes.dashboard:dashboard_bp",
     # Assistencial
     "routes.pacientes:pacientes_bp",
+    "routes.duplicatas:duplicatas_bp",
     "routes.prontuario:prontuario_bp",
     "routes.triagem:triagem_bp",
     "routes.atendimento:atendimento_bp",
@@ -84,10 +86,11 @@ def _registrar_models():
     """
     from models import (  # noqa: F401
         agenda_evento, agendamento, atendimento, audit_log, catalogo_exame,
-        catalogo_vacina, cirurgia, configuracao, encaminhamento, estoque, exame,
-        faturamento, internacao, lgpd, medicamento, medico, notificacao,
-        paciente, prescricao_hospitalar, pronto_socorro, prontuario, regional,
-        triagem, unidade_saude, user, vacina,
+        catalogo_vacina, cirurgia, configuracao, duplicata, encaminhamento,
+        estoque, exame, faturamento, internacao, lgpd, medicamento, medico,
+        municipio, notificacao, paciente, prescricao_hospitalar,
+        pronto_socorro, prontuario, regional, triagem, unidade_saude, user,
+        vacina,
     )
 
 
@@ -99,6 +102,12 @@ def create_app():
     csrf.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+
+    # O escopo territorial precisa acompanhar TODA transação, inclusive as que
+    # começam depois de um commit no meio da requisição. Registrar aqui, e não
+    # num before_request, é o que garante isso.
+    from utils.rls import registrar as registrar_rls
+    registrar_rls(db, app)
 
     _registrar_models()
 
@@ -213,6 +222,57 @@ def _registrar_cli(app):
 
         seed_data()
         print("Seed concluído.")
+
+    @app.cli.command("rnds-processar")
+    @click.option("--limite", default=50, show_default=True,
+                  help="Máximo de envios por execução.")
+    def rnds_processar(limite):
+        """Drena a fila de envios à RNDS.
+
+        Feito para rodar em cron (a cada poucos minutos). É seguro rodar em
+        paralelo: em PostgreSQL o lote é travado com SKIP LOCKED, então dois
+        processos pegam envios diferentes em vez do mesmo.
+        """
+        from services import rnds_cliente, rnds_fila
+
+        if not rnds_cliente.esta_configurado():
+            print("AVISO: RNDS sem certificado configurado — usando cliente "
+                  "simulado. Defina RNDS_AUTH_URL, RNDS_EHR_URL e "
+                  "RNDS_CERTIFICADO para enviar de verdade.")
+
+        resumo = rnds_fila.processar(limite=limite)
+        print(f"enviados={resumo['enviados']} adiados={resumo['adiados']} "
+              f"recusados={resumo['recusados']}")
+
+    @app.cli.command("municipios-importar")
+    @click.argument("caminho", type=click.Path(exists=True, dir_okay=False))
+    def municipios_importar(caminho):
+        """Carrega a relação de municípios do IBGE a partir de um CSV.
+
+        Colunas obrigatórias: codigo_ibge, nome, uf. A UF é conferida contra os
+        dois primeiros dígitos do código — linha divergente é recusada em vez de
+        contaminar a tabela territorial.
+        """
+        from database.municipios import importar_csv
+
+        gravados, erros = importar_csv(caminho)
+        print(f"municípios gravados: {gravados}")
+        for problema in erros[:20]:
+            print(f"  RECUSADO: {problema}")
+        if len(erros) > 20:
+            print(f"  ... e mais {len(erros) - 20} linha(s) recusada(s)")
+
+    @app.cli.command("pacientes-deduplicar")
+    def pacientes_deduplicar():
+        """Procura cadastros duplicados e enfileira para revisão humana.
+
+        Não unifica nada: unificar dois pacientes errados mistura o histórico
+        clínico de duas pessoas. A decisão fica na tela de revisão.
+        """
+        from services import deduplicacao
+
+        analisados, novos = deduplicacao.varrer()
+        print(f"pares analisados={analisados} novos candidatos={novos}")
 
 
 app = create_app()

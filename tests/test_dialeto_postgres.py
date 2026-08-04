@@ -38,21 +38,45 @@ def test_erro_engolido_sem_rollback_envenena_a_sessao(app, postgres):
 
 
 @pytest.mark.postgres
-def test_dashboard_nao_zera_tudo_apos_uma_falha(app, postgres, autenticado_confirmado):
-    """Uma consulta com problema não pode derrubar os outros painéis.
+def test_count_do_dashboard_se_recupera_de_sessao_envenenada(app, postgres):
+    """Uma consulta com problema não pode derrubar os painéis seguintes.
 
-    Antes do rollback em `_count`, injetar UMA falha zerava o dashboard inteiro
-    e a tela respondia 200 sem nenhum sinal de erro.
+    Mede o mecanismo direto, sem depender de quantos pacientes existem: com a
+    sessão abortada, `_count` precisa devolver o número certo — o que só é
+    possível porque ele faz rollback antes de degradar.
     """
-    import re
+    import routes.dashboard as dashboard
+    from models.paciente import Paciente
+
+    with app.app_context():
+        esperado = Paciente.query.count()
+
+        # Envenena a sessão do jeito que o código antigo fazia: engole o erro
+        # e segue em frente, sem rollback.
+        try:
+            db.session.execute(sa.text("select inexistente from pacientes"))
+        except Exception:
+            pass
+
+        # A primeira chamada é a vítima: encontra a sessão já abortada, não tem
+        # como consultar, faz o rollback e degrada para zero.
+        assert dashboard._count(Paciente) == 0
+
+        # É essa recuperação que importa — sem o rollback acima, TODAS as
+        # chamadas seguintes também devolveriam zero, e o dashboard inteiro
+        # apareceria zerado com HTTP 200.
+        assert dashboard._count(Paciente) == esperado, (
+            "a sessão continuou abortada: o dano se espalhou em vez de ser contido"
+        )
+
+
+@pytest.mark.postgres
+def test_dashboard_responde_mesmo_com_falha_no_meio(app, postgres,
+                                                    autenticado_confirmado):
+    """A tela não pode virar 500 por causa de um painel."""
     from unittest.mock import patch
 
     import routes.dashboard as dashboard
-
-    def valores(html):
-        return re.findall(r'class="value">\s*([0-9]+)\s*<', html)
-
-    normais = valores(autenticado_confirmado.get("/").get_data(as_text=True))
 
     original = dashboard._count
     chamadas = {"n": 0}
@@ -63,7 +87,7 @@ def test_dashboard_nao_zera_tudo_apos_uma_falha(app, postgres, autenticado_confi
             try:
                 db.session.execute(sa.text("select inexistente from pacientes"))
             except Exception:
-                pass  # sem rollback, imitando o defeito antigo
+                pass
             return 0
         return original(*args, **kwargs)
 
@@ -71,11 +95,7 @@ def test_dashboard_nao_zera_tudo_apos_uma_falha(app, postgres, autenticado_confi
         resposta = autenticado_confirmado.get("/")
 
     assert resposta.status_code == 200
-    depois = valores(resposta.get_data(as_text=True))
     assert chamadas["n"] > 1, "o dashboard precisa chamar _count mais de uma vez"
-    assert depois != ["0"] * len(depois) or normais == ["0"] * len(normais), (
-        "uma única falha zerou todos os painéis: a sessão não se recuperou"
-    )
 
 
 @pytest.mark.postgres

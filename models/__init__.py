@@ -22,6 +22,7 @@ _MODEL_IMPORTS = {
     "catalogo_vacina": ["CatalogoVacina"],
     "cirurgia": ["SalaCirurgica", "Cirurgia"],
     "configuracao": ["Configuracao"],
+    "duplicata": ["CandidatoDuplicata"],
     "encaminhamento": ["Encaminhamento"],
     "estoque": ["ItemEstoque", "MovEstoque"],
     "exame": ["TipoExame", "ExameSolicitado"],
@@ -30,6 +31,7 @@ _MODEL_IMPORTS = {
     "lgpd": ["ConsentimentoLgpd", "DocumentoAssinado", "EnvioRnds"],
     "medicamento": ["Medicamento", "Prescricao", "ItemPrescricao"],
     "medico": ["Medico"],
+    "municipio": ["Municipio"],
     "notificacao": ["NotificacaoCompulsoria"],
     "paciente": ["Paciente"],
     "prescricao_hospitalar": [

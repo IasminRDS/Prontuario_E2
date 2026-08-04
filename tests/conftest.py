@@ -82,6 +82,16 @@ def app():
             _isolar_postgres(db.engine)
 
         db.create_all()
+
+        if postgres:
+            # As políticas vêm da migration, que a suíte não roda (o schema é
+            # montado com create_all). Sem aplicá-las aqui, os testes de RLS
+            # rodariam contra um banco sem RLS e passariam sem provar nada.
+            from utils.rls import aplicar_politicas, tabelas_protegidas
+
+            with db.engine.begin() as conexao:
+                aplicar_politicas(conexao, tabelas_protegidas(db.metadata))
+
         _semear()
 
     yield aplicacao
@@ -102,7 +112,10 @@ def _semear():
 
     seed_data()
 
-    unidade = UnidadeSaude.query.first()
+    # `first()` sem ordenação devolve linha arbitrária; com RLS ligado, o
+    # usuário acabaria vinculado a uma unidade diferente da que os testes
+    # semeiam, e nada seria visível.
+    unidade = UnidadeSaude.query.order_by(UnidadeSaude.id.asc()).first()
     for _chave, (nome, email, perfil) in PERFIS.items():
         if User.query.filter_by(email=email).first():
             continue
@@ -173,6 +186,19 @@ def ids_reais(app, dados_clinicos):
             except Exception:
                 db.session.rollback()
         return mapa
+
+
+@pytest.fixture(scope="session")
+def unidade_padrao(app):
+    """A unidade a que os usuários de teste pertencem.
+
+    Com RLS ligado, dado clínico criado em outra unidade fica invisível para
+    eles — então todo teste que cria registro precisa usar esta.
+    """
+    from models.unidade_saude import UnidadeSaude
+
+    with app.app_context():
+        return UnidadeSaude.query.order_by(UnidadeSaude.id.asc()).first().id
 
 
 @pytest.fixture
