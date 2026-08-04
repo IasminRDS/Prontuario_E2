@@ -17,6 +17,10 @@ from utils.rbac import requer_permissao
 
 pacientes_bp = Blueprint("pacientes", __name__, url_prefix="/pacientes")
 
+# Teto de sugestões do autocomplete, igual ao dos irmãos (`medicamentos.buscar`,
+# `estoque.api_buscar`): a lista é para escolher, não para navegar.
+LIMITE_AUTOCOMPLETE = 10
+
 
 # =========================================================
 # Config flags centralizadas (config.py)
@@ -206,6 +210,58 @@ def listar_pacientes_api():
         "uf": p.uf,
         "telefone": p.telefone,
         "ativo": p.ativo
+    } for p in itens]), 200
+
+
+# =========================================================
+# Autocomplete de paciente
+# =========================================================
+@pacientes_bp.get("/buscar")
+@login_required
+@requer_permissao("patient:read")
+def buscar():
+    """Autocomplete de paciente dos formulários clínicos e da busca do topo.
+
+    Sete telas já chamavam `/pacientes/buscar` — agenda, cirurgia,
+    encaminhamento, internação, medicamento, triagem e o campo de busca do
+    layout — e a rota nunca existiu. O `fetch` recebia o 404, o `.json()`
+    rejeitava e ninguém tratava: em `app.js` a rejeição caía num `catch` vazio,
+    nos templates virava rejeição não tratada. O efeito era o pior possível para
+    achar: digitar o nome do paciente simplesmente não sugeria nada, sem erro na
+    tela e sem nada no log do servidor.
+
+    Os campos devolvidos são exatamente os que o front lê. `idade` é derivada e
+    não existe como coluna; `data_nascimento` vai em dd/mm/aaaa porque o valor é
+    injetado direto no HTML da sugestão, não reformatado pelo JavaScript.
+    """
+    termo = (request.args.get("q") or "").strip()
+    # O front já segura em 2 caracteres, mas quem chama a URL na mão não segura:
+    # sem este piso, `q` vazio devolveria a primeira página de toda a base.
+    if len(termo) < 2:
+        return jsonify([]), 200
+
+    like = f"%{termo}%"
+    itens = (
+        _query_pacientes_escopo()
+        .filter(or_(
+            Paciente.nome.ilike(like),
+            Paciente.nome_social.ilike(like),
+            Paciente.cpf.ilike(like),
+            Paciente.cns.ilike(like),
+        ))
+        .order_by(Paciente.nome.asc())
+        .limit(LIMITE_AUTOCOMPLETE)
+        .all()
+    )
+
+    return jsonify([{
+        "id": p.id,
+        "nome": p.nome,
+        "cns": p.cns,
+        "idade": _idade_anos(p.data_nascimento),
+        "data_nascimento": (
+            p.data_nascimento.strftime("%d/%m/%Y") if p.data_nascimento else None
+        ),
     } for p in itens]), 200
 
 
