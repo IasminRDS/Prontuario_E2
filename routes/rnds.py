@@ -5,13 +5,16 @@ Porte de `modules/rnds` + `infra/fhir` do backend NestJS. Os mappers convertem o
 models locais em recursos FHIR (Patient, Encounter, MedicationRequest,
 Observation, Immunization).
 
-O envio real depende de certificado ICP-Brasil e credenciais do DATASUS. Aqui o
-despacho é SIMULADO — o payload é montado, validado e persistido em
-`envios_rnds`, com protocolo sintético. A troca para o cliente real é isolada em
-`_despachar`.
+A tela **enfileira**; quem envia é `services.rnds_fila.processar`, chamado pelo
+comando `flask rnds-processar` (cron) ou pelo botão "Processar fila". Manter o
+POST fora da requisição é o que garante que uma indisponibilidade momentânea da
+RNDS não vire registro clínico perdido.
+
+Sem certificado ICP-Brasil configurado, `services.rnds_cliente` entrega um
+cliente simulado, que devolve protocolo prefixado com `SIM-`. O ambiente de
+demonstração continua funcionando sem fingir que houve envio de verdade.
 """
 import json
-import uuid
 from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -22,6 +25,7 @@ from extensions import db
 from models.lgpd import EnvioRnds
 from models.paciente import Paciente
 from models.prontuario import Prontuario
+from services import rnds_cliente, rnds_fila
 from utils.audit import registrar
 from utils.rbac import requer_permissao
 from utils.terminologias import descricao_cid
@@ -157,15 +161,6 @@ def _montar(tipo, entity_id):
     return None, None, None
 
 
-def _despachar(_recurso):
-    """Ponto único de troca para o cliente RNDS real.
-
-    Hoje devolve um protocolo sintético. Ao integrar de verdade, é aqui que
-    entram o mTLS com certificado ICP-Brasil e o POST ao endpoint do DATASUS.
-    """
-    return f"SIM-{uuid.uuid4().hex[:16].upper()}"
-
-
 # --------------------------------------------------------------------------
 # Rotas
 # --------------------------------------------------------------------------
@@ -194,6 +189,9 @@ def index():
         contagens=contagens,
         status=status,
         tipos=TIPOS,
+        # A tela precisa dizer a verdade sobre o que está acontecendo: sem
+        # certificado, nada sai desta máquina.
+        cliente_simulado=not rnds_cliente.esta_configurado(),
     )
 
 
@@ -235,34 +233,51 @@ def enviar():
         flash("Registro não encontrado ou sem dados suficientes.", "warning")
         return redirect(url_for("rnds.index"))
 
-    envio = EnvioRnds(
-        tipo=tipo,
-        entidade_tabela=tabela,
-        entidade_id=entity_id,
-        paciente_id=paciente_id,
-        payload=json.dumps(recurso, ensure_ascii=False),
-        criado_por=current_user.id,
-        tentativas=1,
-    )
+    envio, novo = rnds_fila.enfileirar(
+        tipo, recurso, tabela, entity_id,
+        paciente_id=paciente_id, usuario_id=current_user.id)
 
-    try:
-        envio.protocolo = _despachar(recurso)
-        envio.status = "enviado"
-        envio.enviado_em = datetime.utcnow()
-        mensagem = f"{tipo} enviado à RNDS — protocolo {envio.protocolo}."
-        categoria = "success"
-    except Exception as exc:  # noqa: BLE001 — qualquer falha de transporte
-        envio.status = "erro"
-        envio.erro = str(exc)
-        mensagem = f"Falha no envio: {exc}"
-        categoria = "danger"
+    if not novo:
+        db.session.rollback()
+        flash(
+            f"Este {tipo} já está na fila (situação: {envio.status}). "
+            "Conteúdo idêntico não é enfileirado duas vezes.", "info")
+        return redirect(url_for("rnds.index"))
 
-    db.session.add(envio)
     registrar("envios_rnds", entity_id, "create",
-              f"Envio RNDS de {tipo}#{entity_id}: {envio.status}")
+              f"{tipo}#{entity_id} enfileirado para a RNDS")
     db.session.commit()
 
-    flash(mensagem, categoria)
+    flash(f"{tipo} enfileirado para envio à RNDS.", "success")
+    return redirect(url_for("rnds.index"))
+
+
+@rnds_bp.post("/processar")
+@login_required
+@requer_permissao("reports:read")
+def processar():
+    """Drena a fila sob demanda.
+
+    O caminho normal é o cron chamando `flask rnds-processar`; este botão existe
+    para operar e demonstrar sem depender do agendador.
+    """
+    resumo = rnds_fila.processar()
+
+    partes = []
+    if resumo["enviados"]:
+        partes.append(f"{resumo['enviados']} enviado(s)")
+    if resumo["adiados"]:
+        partes.append(f"{resumo['adiados']} adiado(s) para nova tentativa")
+    if resumo["recusados"]:
+        partes.append(f"{resumo['recusados']} recusado(s)")
+
+    if not partes:
+        flash("Nada pendente na fila.", "info")
+    else:
+        aviso = " (cliente simulado — sem certificado configurado)" if resumo["simulado"] else ""
+        flash("Fila processada: " + ", ".join(partes) + aviso,
+              "warning" if resumo["recusados"] else "success")
+
     return redirect(url_for("rnds.index"))
 
 
@@ -277,22 +292,14 @@ def reenviar(id):
         flash("O registro de origem não existe mais.", "warning")
         return redirect(url_for("rnds.index"))
 
-    envio.tentativas = (envio.tentativas or 0) + 1
-    envio.payload = json.dumps(recurso, ensure_ascii=False)
-
-    try:
-        envio.protocolo = _despachar(recurso)
-        envio.status = "enviado"
-        envio.enviado_em = datetime.utcnow()
-        envio.erro = None
-        flash(f"Reenviado — protocolo {envio.protocolo}.", "success")
-    except Exception as exc:  # noqa: BLE001
-        envio.status = "erro"
-        envio.erro = str(exc)
-        flash(f"Reenvio falhou: {exc}", "danger")
+    # Devolve à fila em vez de tentar aqui: o reenvio manual passa pelo mesmo
+    # caminho do automático, com o mesmo tratamento de falha.
+    rnds_fila.reenfileirar(envio)
 
     registrar("envios_rnds", envio.id, "update",
-              f"Reenvio RNDS (tentativa {envio.tentativas}): {envio.status}")
+              f"Envio {envio.id} devolvido à fila para nova tentativa")
     db.session.commit()
 
+    flash("Envio devolvido à fila. Use 'Processar fila' ou aguarde o agendador.",
+          "success")
     return redirect(url_for("rnds.index"))

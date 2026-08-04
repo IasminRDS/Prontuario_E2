@@ -100,6 +100,14 @@ class EnvioRnds(db.Model):
     erro = db.Column(db.Text, nullable=True)
     tentativas = db.Column(db.Integer, nullable=False, default=0)
 
+    # Impressão digital do conteúdo. Única: impede que o mesmo documento entre
+    # duas vezes na fila, e viaja no cabeçalho para a RNDS descartar reenvio
+    # quando a resposta anterior se perdeu no caminho.
+    chave_idempotencia = db.Column(db.String(64), nullable=True, unique=True,
+                                   index=True)
+    # Quando a próxima tentativa fica liberada. Nulo = pronto agora.
+    proxima_tentativa = db.Column(db.DateTime, nullable=True, index=True)
+
     criado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     enviado_em = db.Column(db.DateTime, nullable=True)
     criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)

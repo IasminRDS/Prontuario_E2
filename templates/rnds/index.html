@@ -10,15 +10,28 @@
   em Saúde.
 </p>
 
+{% if cliente_simulado %}
+<div class="alert alert--warning">
+  {{ icon('info') }}
+  <div class="alert__body">
+    <span class="alert__title">Cliente simulado.</span>
+    Não há certificado ICP-Brasil configurado, então nada sai desta máquina: os
+    protocolos vêm prefixados com <span class="mono">SIM-</span>. Para enviar de
+    verdade, defina <span class="mono">RNDS_AUTH_URL</span>,
+    <span class="mono">RNDS_EHR_URL</span> e
+    <span class="mono">RNDS_CERTIFICADO</span>.
+  </div>
+</div>
+{% else %}
 <div class="alert alert--info">
   {{ icon('info') }}
   <div class="alert__body">
-    <span class="alert__title">Despacho simulado.</span>
-    O payload FHIR é montado, validado e persistido, com protocolo sintético. O
-    envio real exige certificado ICP-Brasil e credenciais do DATASUS — a troca é
-    isolada na função <span class="mono">_despachar</span>.
+    <span class="alert__title">Envio real habilitado.</span>
+    Os documentos são enviados por TLS mútuo ao serviço de EHR da RNDS. A tela
+    enfileira; o envio acontece fora da requisição, com retentativa.
   </div>
 </div>
+{% endif %}
 
 <div class="stats">
   {% for s, rot in [('enviado', 'Enviados'), ('pendente', 'Pendentes'), ('erro', 'Com erro')] %}
@@ -27,6 +40,23 @@
       <div class="stat__value">{{ contagens.get(s, 0) }}</div>
     </div>
   {% endfor %}
+</div>
+
+<div class="card mb-2">
+  <div class="card__header">
+    <div class="card__title">Fila de envio</div>
+    <form method="post" action="{{ url_for('rnds.processar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn--secondary btn--sm">Processar fila agora</button>
+    </form>
+  </div>
+  <div class="card__body">
+    <p class="text-muted text-sm">
+      O caminho normal é o agendador chamando
+      <span class="mono">flask rnds-processar</span> de tempos em tempos.
+      Enviar aqui apenas antecipa a próxima passada.
+    </p>
+  </div>
 </div>
 
 <div class="card mb-2">
