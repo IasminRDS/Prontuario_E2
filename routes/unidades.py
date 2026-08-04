@@ -9,37 +9,12 @@ from utils.rbac import requer_permissao
 unidades_bp = Blueprint("unidades", __name__, url_prefix="/unidades")
 
 
-def _seed_if_empty():
-    if UnidadeSaude.query.count() > 0:
-        return
-    seed = [
-        ("UBS Central", "UBS", "0000001", "João Pessoa", "PB"),
-        ("UBS Bairro Norte", "UBS", "0000002", "João Pessoa", "PB"),
-        (
-            "Clínica Pública Municipal I",
-            "Clínica Pública",
-            "0000003",
-            "Campina Grande",
-            "PB",
-        ),
-        ("Hospital Municipal São Lucas", "Hospital", "0000004", "João Pessoa", "PB"),
-    ]
-    for nome, tipo, cnes, cidade, uf in seed:
-        db.session.add(
-            UnidadeSaude(
-                nome=nome, tipo=tipo, cnes=cnes, cidade=cidade, uf=uf, ativo=True
-            )
-        )
-    db.session.commit()
-
-
 # Cadastro de estabelecimentos é administração da rede, não tela de operação:
 # só tinha `@login_required` e qualquer sessão autenticada listava tudo.
 @unidades_bp.get("/")
 @login_required
 @requer_permissao("hospital:manage")
 def index():
-    _seed_if_empty()
     q = (request.args.get("q") or "").strip()
     tipo = (request.args.get("tipo") or "").strip()
 

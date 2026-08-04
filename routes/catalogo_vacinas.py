@@ -9,35 +9,9 @@ from utils.rbac import requer_permissao
 catalogo_vacinas_bp = Blueprint("catalogo_vacinas", __name__, url_prefix="/catalogo-vacinas")
 
 
-def _seed_if_empty():
-    if CatalogoVacina.query.count() > 0:
-        return
-    seed = [
-        ("BCG", "VAC001", "Dose única", "Ao nascer"),
-        ("Hepatite B", "VAC002", "3 doses", "Ao nascer / adultos"),
-        ("Pentavalente", "VAC003", "3 doses + reforço", "2, 4, 6 meses"),
-        ("Poliomielite (VIP/VOP)", "VAC004", "3 doses + reforços", "2, 4, 6 meses"),
-        ("Rotavírus", "VAC005", "2 doses", "2 e 4 meses"),
-        ("Pneumocócica 10v", "VAC006", "2 doses + reforço", "2, 4 e 12 meses"),
-        ("Meningocócica C", "VAC007", "2 doses + reforço", "3, 5 e 12 meses"),
-        ("Febre Amarela", "VAC008", "1 dose + reforço", "9 meses"),
-        ("Tríplice Viral (SCR)", "VAC009", "2 doses", "12 e 15 meses"),
-        ("Tetraviral", "VAC010", "1 dose", "15 meses"),
-        ("DTP", "VAC011", "Reforços", "15 meses e 4 anos"),
-        ("HPV quadrivalente", "VAC012", "2 doses", "9 a 14 anos"),
-        ("dT (Dupla adulto)", "VAC013", "3 doses + reforço", "Adolescentes e adultos"),
-        ("Influenza", "VAC014", "Anual", "Grupos prioritários"),
-        ("COVID-19", "VAC015", "Conforme campanha", "População elegível"),
-    ]
-    for nome, codigo, doses, faixa in seed:
-        db.session.add(CatalogoVacina(nome=nome, codigo=codigo, doses=doses, faixa=faixa, ativo=True))
-    db.session.commit()
-
-
 @catalogo_vacinas_bp.get("/")
 @login_required
 def index():
-    _seed_if_empty()
     q = (request.args.get("q") or "").strip()
     query = CatalogoVacina.query
     if q:

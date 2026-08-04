@@ -9,35 +9,9 @@ from utils.rbac import requer_permissao
 catalogo_exames_bp = Blueprint("catalogo_exames", __name__, url_prefix="/catalogo-exames")
 
 
-def _seed_if_empty():
-    if CatalogoExame.query.count() > 0:
-        return
-    seed = [
-        ("Hemograma completo", "EX001", "Laboratorial"),
-        ("Glicemia de jejum", "EX002", "Laboratorial"),
-        ("Hemoglobina glicada (HbA1c)", "EX003", "Laboratorial"),
-        ("Colesterol total e frações", "EX004", "Laboratorial"),
-        ("Triglicerídeos", "EX005", "Laboratorial"),
-        ("TSH", "EX006", "Laboratorial"),
-        ("T4 livre", "EX007", "Laboratorial"),
-        ("Creatinina", "EX008", "Laboratorial"),
-        ("Ureia", "EX009", "Laboratorial"),
-        ("EAS (Urina tipo I)", "EX010", "Laboratorial"),
-        ("Parasitológico de fezes", "EX011", "Laboratorial"),
-        ("Beta-HCG", "EX012", "Laboratorial"),
-        ("Raio-X de tórax", "EX013", "Imagem"),
-        ("Ultrassonografia abdominal", "EX014", "Imagem"),
-        ("Eletrocardiograma", "EX015", "Cardiológico"),
-    ]
-    for nome, codigo, grupo in seed:
-        db.session.add(CatalogoExame(nome=nome, codigo=codigo, grupo=grupo, ativo=True))
-    db.session.commit()
-
-
 @catalogo_exames_bp.get("/")
 @login_required
 def index():
-    _seed_if_empty()
     q = (request.args.get("q") or "").strip()
     query = CatalogoExame.query
     if q:

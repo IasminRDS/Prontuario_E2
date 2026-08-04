@@ -6,9 +6,15 @@ def seed_data():
     from models.medico import Medico
     from models.regional import Regional
 
-    # A tabela territorial não depende de usuário e precisa existir mesmo num
-    # banco já povoado — por isso vem antes do retorno antecipado abaixo.
+    # Território e catálogos não dependem de usuário e precisam existir mesmo
+    # num banco já povoado — por isso vêm antes do retorno antecipado abaixo.
+    #
+    # Os catálogos eram carregados preguiçosamente pelo `GET` do índice de cada
+    # tela. Além de um GET que escreve violar a semântica de HTTP, dois acessos
+    # simultâneos com a tabela vazia colidiam no índice único de `codigo` e um
+    # deles virava 500 numa requisição de leitura.
     _seed_municipios()
+    _seed_catalogos()
 
     if User.query.first():
         return
@@ -24,12 +30,10 @@ def seed_data():
         db.session.add(regional)
         db.session.flush()
 
-    unidade = Unidade(
-        nome='UBS Central',
-        tipo='UBS'
-    )
-    db.session.add(unidade)
-    db.session.flush()
+    # A unidade vem de `_seed_catalogos()`, que já a criou com CNES e município
+    # IBGE. Criar outra aqui produziria duas "UBS Central", uma sem CNES — e o
+    # RLS liga o usuário a UMA delas, deixando metade dos dados invisível.
+    unidade = Unidade.query.order_by(Unidade.id.asc()).first()
 
     medico_user = User.query.filter_by(email='medico@sus.gov.br').first()
     if not medico_user:
@@ -67,6 +71,13 @@ def _seed_municipios():
     from database.municipios import seed_capitais
 
     seed_capitais()
+
+
+def _seed_catalogos():
+    """Exames, vacinas e estabelecimentos de demonstração."""
+    from database.catalogos import seed_todos
+
+    seed_todos()
 
 def _seed_vacinas():
     from models.vacina import Vacina
