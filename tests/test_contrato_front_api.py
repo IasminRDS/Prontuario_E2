@@ -19,6 +19,7 @@ São duas verificações de natureza diferente:
 """
 import pathlib
 import re
+from datetime import date
 
 import pytest
 
@@ -142,6 +143,59 @@ def test_autocomplete_de_paciente_calcula_a_idade(cliente_api, termo):
     for p in com_data:
         assert isinstance(p["idade"], int), (
             f"paciente {p['id']} tem data de nascimento e idade={p['idade']!r}")
+
+
+@pytest.fixture(scope="module")
+def pacientes_de_nome(app, dados_clinicos):
+    """Dois pacientes: um com nome social, outro sem, para cobrir os dois ramos.
+
+    Criados e removidos aqui de propósito. Linha extra em `pacientes` que
+    sobrevivesse ao módulo entraria na varredura do teste de deduplicação, que
+    roda depois deste na ordem alfabética. Vão sem CPF e sem CNS para não
+    disputar as colunas UNIQUE com ninguém.
+    """
+    from extensions import db
+    from models.paciente import Paciente
+
+    with app.app_context():
+        com = Paciente(nome="Reginaldo Vieira Castro",
+                       nome_social="Regina Vieira Castro",
+                       data_nascimento=date(1990, 3, 14), sexo="F", ativo=True)
+        sem = Paciente(nome="Anselmo Pires Tavares", nome_social=None,
+                       data_nascimento=date(1985, 7, 2), sexo="M", ativo=True)
+        db.session.add_all([com, sem])
+        db.session.commit()
+        ids = (com.id, sem.id)
+
+    yield ids
+
+    with app.app_context():
+        for pid in ids:
+            alvo = db.session.get(Paciente, pid)
+            if alvo is not None:
+                db.session.delete(alvo)
+        db.session.commit()
+
+
+def test_autocomplete_responde_com_o_nome_social(cliente_api, pacientes_de_nome):
+    """Nome social é o nome de tratamento (Decreto 8.727/2016).
+
+    A busca casa com o nome de registro — quem procura por ele encontra —, mas a
+    sugestão tem de exibir o nome pelo qual a pessoa é chamada, ou a equipe lê a
+    tela em voz alta e usa o nome errado.
+    """
+    corpo = cliente_api.get("/pacientes/buscar?q=Reginaldo").get_json()
+    assert corpo, "buscar pelo nome de registro não encontrou o paciente"
+    assert corpo[0]["nome"] == "Regina Vieira Castro", (
+        f"a sugestão veio com {corpo[0]['nome']!r}, não com o nome social")
+
+
+def test_autocomplete_cai_no_nome_de_registro_sem_nome_social(
+        cliente_api, pacientes_de_nome):
+    """Sem nome social, o campo não pode vir nulo e apagar a sugestão."""
+    corpo = cliente_api.get("/pacientes/buscar?q=Anselmo").get_json()
+    assert corpo, "paciente sem nome social não foi encontrado"
+    assert corpo[0]["nome"] == "Anselmo Pires Tavares"
 
 
 def test_autocomplete_exige_dois_caracteres(cliente_api):
