@@ -37,8 +37,15 @@ python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements.txt
 # .env na raiz com SECRET_KEY e DATABASE_URL
 flask db upgrade
+flask seed          # catálogos, municípios, leitos e um médico de demonstração
+flask criar-admin   # pergunta nome, e-mail e senha
 python app.py
 ```
+
+O `criar-admin` não é opcional: o `seed` cria apenas um médico, e sem ele
+`/admin/`, `/configuracoes/`, `/unidades/` e `/backup/` ficam inalcançáveis. A
+senha é pedida pelo terminal com confirmação — não vai por argumento, que
+apareceria no histórico do shell e na lista de processos.
 
 ## Testes
 

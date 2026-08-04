@@ -5,6 +5,7 @@ from models.audit_log import AuditLog
 from models.unidade_saude import UnidadeSaude
 from database.db import db
 from utils.security import admin_requerido
+from utils.rbac import SUPER_ADMIN, _normalizar
 from utils.audit import audit_log, auditar_aqui
 from datetime import datetime
 
@@ -51,11 +52,25 @@ def novo_usuario():
                 "admin/usuario_form.html", usuario=None, unidades=unidades
             )
 
+        perfil = request.form.get("perfil", "recepcionista")
+        unidade_id = request.form.get("unidade_id") or None
+
+        # Usuário com nível de acesso UNIDADE (o padrão) e sem unidade vinculada
+        # não enxerga registro clínico nenhum: o Row-Level Security compara
+        # `unidade_id` com NULL, que nunca é verdadeiro. Antes do RLS isso
+        # passava despercebido; agora é um cadastro nascido inutilizável.
+        if not unidade_id and _normalizar(perfil) != SUPER_ADMIN:
+            flash("Selecione a unidade do usuário: sem ela, ele não terá acesso "
+                  "a nenhum registro clínico.", "warning")
+            return render_template(
+                "admin/usuario_form.html", usuario=None, unidades=unidades
+            )
+
         user = User(
             nome=request.form.get("nome", "").strip(),
             email=email,
-            perfil=request.form.get("perfil", "recepcionista"),
-            unidade_id=request.form.get("unidade_id") or None,
+            perfil=perfil,
+            unidade_id=unidade_id,
             ativo=True,
         )
         user.set_password(senha)

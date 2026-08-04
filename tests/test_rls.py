@@ -229,6 +229,50 @@ def test_usuarios_ficam_fora_do_escopo(app, postgres):
         assert "users" in rls.FORA_DO_ESCOPO
 
 
+def test_usuario_sem_unidade_e_sinalizado(app):
+    """Nível UNIDADE sem `unidade_id` não enxerga nada — e isso precisa aparecer.
+
+    A política compara `unidade_id = NULL`, que nunca é verdadeiro. Falhar
+    fechado é correto; falhar em silêncio faz o operador achar que os dados
+    sumiram. O sinal aqui é o que permite avisar.
+    """
+    from models.user import User
+
+    usuario = User(nome="Sem Unidade", email="su@y.z", perfil="admin",
+                   nivel_acesso="UNIDADE", unidade_id=None)
+    escopo = rls.escopo_do_usuario(usuario)
+    assert escopo["irresoluvel"] is True
+
+    usuario.unidade_id = 1
+    assert rls.escopo_do_usuario(usuario)["irresoluvel"] is False
+
+
+def test_super_admin_atravessa_o_isolamento(app):
+    """O RLS não pode contradizer o RBAC.
+
+    O perfil que o RBAC define como operador da plataforma precisa enxergar
+    além do próprio hospital — senão a autorização diz uma coisa e o banco outra.
+    """
+    from models.user import User
+
+    usuario = User(nome="Operador", email="op@y.z", perfil="SuperAdmin",
+                   nivel_acesso="UNIDADE", unidade_id=None)
+    assert rls.escopo_do_usuario(usuario)["nivel"] == "SISTEMA"
+
+
+def test_nivel_sistema_nao_vem_do_cadastro(app):
+    """`SISTEMA` é escopo de processo interno, não de gente.
+
+    Se pudesse ser gravado no cadastro, bastaria editar um usuário para lhe dar
+    acesso nacional sem passar por perfil nenhum.
+    """
+    from models.user import User
+
+    usuario = User(nome="Esperto", email="e@y.z", perfil="recepcionista",
+                   nivel_acesso="SISTEMA", unidade_id=1)
+    assert rls.escopo_do_usuario(usuario)["nivel"] == "UNIDADE"
+
+
 def test_escopo_do_usuario_traduz_nivel_de_acesso(app):
     from models.user import User
 

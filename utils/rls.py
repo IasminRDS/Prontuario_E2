@@ -119,19 +119,45 @@ def remover_politicas(conexao, tabelas):
         )
 
 
+# Cada nível depende de um campo do usuário. Se ele estiver vazio, o escopo é
+# irresolúvel — e a política, que compara com NULL, nega tudo.
+CAMPO_DO_NIVEL = {
+    "UNIDADE": "unidade_id",
+    "MUNICIPIO": "municipio_ibge",
+    "REGIONAL": "regional_id",
+    "ESTADO": "uf",
+}
+
+
 def escopo_do_usuario(usuario):
-    """Traduz o usuário no escopo que o banco entende."""
+    """Traduz o usuário no escopo que o banco entende.
+
+    Devolve também `irresoluvel`, que quem chama usa para avisar em vez de
+    deixar o operador diante de um sistema misteriosamente vazio.
+    """
+    from utils.rbac import SUPER_ADMIN, _normalizar
+
+    # O operador da plataforma atravessa o isolamento territorial — é o que o
+    # próprio RBAC já diz ao dar-lhe `hospital:manage`. Sem espelhar isso aqui,
+    # o RLS contradiria a autorização da aplicação.
+    if _normalizar(getattr(usuario, "perfil", None)) == SUPER_ADMIN:
+        return {"nivel": "SISTEMA", "irresoluvel": False}
+
     nivel = (getattr(usuario, "nivel_acesso", None) or "UNIDADE").upper()
-    if nivel not in NIVEIS:
+    if nivel not in NIVEIS or nivel == "SISTEMA":
+        # `SISTEMA` não pode vir do cadastro do usuário: é escopo de processo
+        # interno, não de gente.
         nivel = "UNIDADE"
 
-    return {
+    escopo = {
         "nivel": nivel,
         "unidade_id": getattr(usuario, "unidade_id", None),
         "municipio_ibge": getattr(usuario, "municipio_ibge", None),
         "regional_id": getattr(usuario, "regional_id", None),
         "uf": getattr(usuario, "uf", None),
     }
+    escopo["irresoluvel"] = not escopo.get(CAMPO_DO_NIVEL[nivel])
+    return escopo
 
 
 def escopo_atual():
@@ -158,7 +184,19 @@ def definir_escopo_da_requisicao(db):
     territorial — se estivesse protegida, o login não teria como acontecer.
     """
     if getattr(current_user, "is_authenticated", False):
-        g.escopo_rls = escopo_do_usuario(current_user)
+        escopo = escopo_do_usuario(current_user)
+        if escopo.get("irresoluvel"):
+            # Falhar fechado é o certo, mas em silêncio é armadilha: o operador
+            # vê um sistema vazio e conclui que perdeu os dados. O cadastro é
+            # que está incompleto — e isso precisa aparecer para quem investiga.
+            from flask import current_app
+
+            current_app.logger.warning(
+                "usuário %s tem nível %s sem o campo %s preenchido: não verá "
+                "nenhum registro clínico até o cadastro ser corrigido",
+                getattr(current_user, "email", "?"), escopo["nivel"],
+                CAMPO_DO_NIVEL[escopo["nivel"]])
+        g.escopo_rls = escopo
     else:
         g.escopo_rls = {"nivel": None}
 

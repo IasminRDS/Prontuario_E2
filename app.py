@@ -244,6 +244,34 @@ def _registrar_cli(app):
         print(f"enviados={resumo['enviados']} adiados={resumo['adiados']} "
               f"recusados={resumo['recusados']}")
 
+    @app.cli.command("criar-admin")
+    @click.option("--nome", prompt="Nome", help="Nome do administrador.")
+    @click.option("--email", prompt="E-mail", help="E-mail de acesso.")
+    @click.option("--unidade-id", type=int, default=None,
+                  help="Unidade do administrador. Sem isto, usa a primeira.")
+    @click.option("--perfil", default="admin", show_default=True,
+                  help="Use SuperAdmin para acesso que atravessa unidades.")
+    @click.password_option("--senha", prompt="Senha",
+                           help="Mínimo de 8 caracteres.")
+    def criar_admin(nome, email, unidade_id, perfil, senha):
+        """Cria um administrador — necessário numa instalação nova.
+
+        A senha é pedida pelo terminal, com confirmação, e não aparece no
+        histórico do shell nem na lista de processos, como aconteceria se
+        viesse por argumento.
+        """
+        from database.administrador import ErroBootstrap, criar_administrador
+
+        try:
+            usuario = criar_administrador(nome, email, senha,
+                                          unidade_id=unidade_id, perfil=perfil)
+        except ErroBootstrap as erro:
+            raise click.ClickException(str(erro))
+
+        db.session.commit()
+        print(f"Administrador criado: {usuario.email} "
+              f"(perfil {usuario.perfil}, unidade {usuario.unidade_id})")
+
     @app.cli.command("municipios-importar")
     @click.argument("caminho", type=click.Path(exists=True, dir_okay=False))
     def municipios_importar(caminho):
