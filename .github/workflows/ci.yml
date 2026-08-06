@@ -53,8 +53,37 @@ jobs:
       - name: Conferir que models e schema não divergem
         run: flask --app app db check
 
+      # `upgrade` sozinho não prova que a migration é reversível. Uma migration
+      # sem downgrade funcional só se descobre no dia em que é preciso voltar —
+      # e esse dia nunca é um bom dia.
+      - name: Migração reversa e reaplicação
+        run: |
+          flask --app app db downgrade base
+          flask --app app db upgrade
+
       - name: Testes
         run: pytest --cov=. --cov-report=term-missing:skip-covered
+
+      # Backup e restore são a garantia de continuidade. Aqui a cópia é gerada e
+      # restaurada de verdade, com conferência de contagens: sai 1 se divergir.
+      - name: Backup e validação de restore
+        run: |
+          pg_dump --host localhost --port 5432 --username postgres \
+                  --dbname prontuario_ci --format custom \
+                  --no-owner --no-privileges --enable-row-security \
+                  --file /tmp/ci.dump
+          flask --app app backup-validar /tmp/ci.dump
+        env:
+          PGPASSWORD: postgres
+          PGOPTIONS: -c app.nivel=SISTEMA
+
+      # Confere no banco os controles que a aplicação não garante sozinha.
+      # `continue-on-error` porque a propriedade de audit_logs depende de papel
+      # dedicado, que o banco efêmero do CI não tem: o relatório aparece no log
+      # sem reprovar o build por uma condição que não se aplica aqui.
+      - name: Verificação de hardening (informativo)
+        run: flask --app app hardening-check
+        continue-on-error: true
 
   sqlite:
     name: Testes (SQLite)
