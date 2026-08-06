@@ -1,14 +1,205 @@
-# Governança de Tecnologia da Informação Aplicada à Proteção de Dados em Saúde: Implementação e Avaliação de um Prontuário Eletrônico Multi-Tenant com Isolamento em Banco de Dados, Controle de Acesso e Auditoria Encadeada
+<!--
+ELEMENTOS PRÉ-TEXTUAIS
 
-**Curso:** Gestão da Tecnologia da Informação
-**Natureza:** Trabalho de Conclusão de Curso — estudo de caso aplicado
+Conforme o Art. 14 do Regulamento de TCC do Curso Superior de Tecnologia em
+Gestão da Tecnologia da Informação (IF Baiano — Campus Bom Jesus da Lapa), a
+redação segue as regras da ABNT e as "Normas Gerais para Redação da Monografia"
+definidas pelo COLEGIADO DO CURSO.
 
-> **Nota de elaboração.** Este documento descreve exclusivamente mecanismos
-> implementados e verificados no artefato produzido. Recursos planejados e não
-> implementados estão declarados nas seções 11 (Limitações) e 12 (Trabalhos
-> Futuros), nunca apresentados como resultados. As métricas de desempenho
-> apresentadas na seção 11 foram obtidas com volume sintético de 50 mil
-> pacientes; o escopo e os limites dessa medição estão declarados na seção 12.
+O regulamento NÃO especifica fonte, espaçamento nem margens — delega essa
+definição ao colegiado. Solicite esse documento à coordenação antes da formatação
+final. Na ausência dele, a referência usual é a ABNT NBR 14724: fonte tamanho 12,
+espaçamento 1,5 no texto, margens de 3 cm (esquerda e superior) e 2 cm (direita e
+inferior).
+
+CAMPOS A COMPLETAR estão marcados com colchetes.
+-->
+
+# INSTITUTO FEDERAL DE EDUCAÇÃO, CIÊNCIA E TECNOLOGIA BAIANO
+
+## CAMPUS BOM JESUS DA LAPA
+
+### CURSO SUPERIOR DE TECNOLOGIA EM GESTÃO DA TECNOLOGIA DA INFORMAÇÃO
+
+**IASMIN RIBEIRO DE SOUZA**
+
+# GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE
+
+## implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento em banco de dados, controle de acesso e auditoria encadeada
+
+BOM JESUS DA LAPA — BA
+
+[ANO]
+
+---
+
+## FOLHA DE ROSTO
+
+**IASMIN RIBEIRO DE SOUZA**
+
+**GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE:**
+implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento
+em banco de dados, controle de acesso e auditoria encadeada
+
+> Trabalho de Conclusão de Curso apresentado ao Curso Superior de Tecnologia em
+> Gestão da Tecnologia da Informação do Instituto Federal de Educação, Ciência e
+> Tecnologia Baiano, Campus Bom Jesus da Lapa, como requisito parcial para
+> obtenção do título de Tecnólogo em Gestão da Tecnologia da Informação.
+>
+> Orientador(a): [NOME DO(A) ORIENTADOR(A)]
+
+BOM JESUS DA LAPA — BA
+
+[ANO]
+
+---
+
+## FOLHA DE APROVAÇÃO
+
+**IASMIN RIBEIRO DE SOUZA**
+
+**GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE:**
+implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento
+em banco de dados, controle de acesso e auditoria encadeada
+
+Trabalho de Conclusão de Curso apresentado como requisito parcial para obtenção do
+título de Tecnólogo em Gestão da Tecnologia da Informação pelo Instituto Federal
+de Educação, Ciência e Tecnologia Baiano, Campus Bom Jesus da Lapa.
+
+Aprovado em ______ de ____________________ de __________.
+
+**BANCA EXAMINADORA**
+
+&nbsp;
+
+_______________________________________________________________
+
+[Nome do(a) Orientador(a)] — Presidente
+
+Instituto Federal Baiano — Campus Bom Jesus da Lapa
+
+&nbsp;
+
+_______________________________________________________________
+
+[Nome do Membro 1 da Banca Examinadora]
+
+&nbsp;
+
+_______________________________________________________________
+
+[Nome do Membro 2 da Banca Examinadora]
+
+---
+
+## RESUMO
+
+Sistemas de prontuário eletrônico concentram dados pessoais sensíveis e, em redes
+públicas de saúde, precisam conciliar duas exigências opostas: permitir o cuidado
+longitudinal, que atravessa unidades, e impedir o acesso indevido entre elas. Este
+trabalho apresenta a implementação e a avaliação crítica de uma plataforma de
+prontuário eletrônico multi-tenant, na qual múltiplas unidades compartilham a
+mesma aplicação e a mesma instância de banco de dados com isolamento lógico dos
+dados. A pesquisa é aplicada, de abordagem qualitativa, conduzida como estudo de
+caso com construção de artefato. Adotou-se como premissa metodológica que a
+inspeção de código é insuficiente para verificar controles de segurança,
+recorrendo-se à instrumentação e ao exercício efetivo do sistema. Foram
+implementados isolamento territorial por política de segurança em nível de linha
+no banco de dados, controle de acesso por permissão nomeada combinado a escopo
+territorial, trilha de auditoria encadeada por resumo criptográfico e rotina de
+cópia de segurança com validação automatizada de restauração. A verificação
+empírica identificou falhas nos próprios controles projetados, entre elas a
+ausência de cobertura da política de isolamento em cinco tabelas clínicas centrais
+e um teste de segurança que reportava conformidade sem verificá-la. O desempenho
+foi medido com volume sintético de 50 mil pacientes, observando-se redução de
+185,9 ms para 0,96 ms na consulta de sugestão de pacientes e de 4.616 ms para
+113 ms no relatório de pacientes. Conclui-se que a contribuição do mecanismo de
+isolamento decorre de sua cobertura verificada, e não de sua existência, e que
+controles de conformidade possuem custo operacional que exige medição —
+evidenciado por uma regressão de desempenho introduzida pela própria correção que
+passou a registrar as leituras de prontuário.
+
+**Palavras-chave:** Governança de TI. Segurança da Informação. Multi-tenancy.
+Row-Level Security. LGPD. Prontuário Eletrônico.
+
+---
+
+## ABSTRACT
+
+Electronic health record systems concentrate sensitive personal data and, in
+public health networks, must reconcile two opposing requirements: enabling
+longitudinal care across facilities while preventing improper access between them.
+This work presents the implementation and critical evaluation of a multi-tenant
+electronic health record platform, in which multiple facilities share the same
+application and database instance with logical data isolation. The research is
+applied and qualitative, conducted as a case study with artifact construction. The
+methodological premise adopted was that code inspection is insufficient to verify
+security controls, resorting instead to instrumentation and effective exercise of
+the system. Territorial isolation through row-level security policies in the
+database, access control combining named permissions with territorial scope, a
+hash-chained audit trail, and a backup routine with automated restore validation
+were implemented. Empirical verification identified failures in the designed
+controls themselves, including the absence of isolation policy coverage in five
+core clinical tables and a security test that reported compliance without
+verifying it. Performance was measured with a synthetic volume of 50,000 patients,
+showing a reduction from 185.9 ms to 0.96 ms in the patient suggestion query and
+from 4,616 ms to 113 ms in the patient report. It is concluded that the
+contribution of the isolation mechanism derives from its verified coverage rather
+than its existence, and that compliance controls carry an operational cost
+requiring measurement — evidenced by a performance regression introduced by the
+very correction that began recording record readings.
+
+**Keywords:** IT Governance. Information Security. Multi-tenancy. Row-Level
+Security. Data Protection. Electronic Health Record.
+
+---
+
+## LISTA DE ABREVIATURAS E SIGLAS
+
+| Sigla | Significado |
+|---|---|
+| ABNT | Associação Brasileira de Normas Técnicas |
+| AIH | Autorização de Internação Hospitalar |
+| CID-10 | Classificação Estatística Internacional de Doenças, 10ª revisão |
+| CNES | Cadastro Nacional de Estabelecimentos de Saúde |
+| CNS | Cartão Nacional de Saúde |
+| COBIT | *Control Objectives for Information and Related Technologies* |
+| CSRF | *Cross-Site Request Forgery* |
+| FHIR | *Fast Healthcare Interoperability Resources* |
+| IBGE | Instituto Brasileiro de Geografia e Estatística |
+| LGPD | Lei Geral de Proteção de Dados Pessoais |
+| ORM | *Object-Relational Mapping* |
+| RBAC | *Role-Based Access Control* |
+| RLS | *Row-Level Security* |
+| RNDS | Rede Nacional de Dados em Saúde |
+| SUS | Sistema Único de Saúde |
+| TI | Tecnologia da Informação |
+
+---
+
+## SUMÁRIO
+
+| | Seção | Página |
+|---|---|---|
+| 1 | INTRODUÇÃO | |
+| 2 | PROBLEMA E JUSTIFICATIVA | |
+| 3 | OBJETIVOS | |
+| 4 | FUNDAMENTAÇÃO TEÓRICA | |
+| 5 | METODOLOGIA | |
+| 6 | ARQUITETURA DO SISTEMA | |
+| 7 | IMPLEMENTAÇÃO | |
+| 8 | SEGURANÇA DA INFORMAÇÃO — ANÁLISE | |
+| 9 | TESTES E VALIDAÇÃO | |
+| 10 | VALIDAÇÃO DE USABILIDADE | |
+| 11 | RESULTADOS | |
+| 12 | LIMITAÇÕES | |
+| 13 | TRABALHOS FUTUROS | |
+| 14 | CONCLUSÃO | |
+| | REFERÊNCIAS | |
+| | APÊNDICE A — Relação com as disciplinas do curso | |
+| | APÊNDICE B — Glossário | |
+
+<!-- A paginação é gerada pelo editor de texto na formatação final. -->
 
 ---
 
@@ -1095,6 +1286,109 @@ falhas identificadas nos controles projetados. Essa opção é deliberada. Em
 sistemas que custodiam dados pessoais sensíveis, a maturidade de governança não
 se evidencia pela ausência de relato de falhas, mas pela existência de mecanismos
 capazes de detectá-las — e pela disposição institucional de registrá-las.
+
+
+---
+
+## REFERÊNCIAS
+
+<!--
+ATENÇÃO — LEIA ANTES DE ENTREGAR.
+
+Esta lista contém as obras e normas efetivamente MENCIONADAS no texto. Referência
+é declaração de que a fonte foi CONSULTADA: cite apenas o que você leu, e remova
+o que não leu, ajustando o texto que a mencionava.
+
+Duas verificações obrigatórias:
+
+1. CONFIRME A EDIÇÃO E O ANO de cada obra contra o exemplar que você consultou.
+   Editora, edição e ano mudam entre tiragens, e referência com dado errado é
+   apontada em banca.
+2. AS NORMAS DA ABNT SÃO REVISADAS. Confirme na Biblioteca do campus se as
+   versões listadas continuam vigentes.
+
+A formatação abaixo segue a ABNT NBR 6023. Se as "Normas Gerais para Redação da
+Monografia" do colegiado divergirem, elas prevalecem (Art. 14 do Regulamento).
+-->
+
+### Normas técnicas
+
+ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 6023**: informação e
+documentação: referências: elaboração. Rio de Janeiro: ABNT, 2018.
+
+ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 6028**: informação e
+documentação: resumo, resenha e recensão: apresentação. Rio de Janeiro: ABNT,
+2021.
+
+ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 14724**: informação e
+documentação: trabalhos acadêmicos: apresentação. Rio de Janeiro: ABNT, 2011.
+
+### Legislação e normas oficiais
+
+BRASIL. **Lei nº 13.709, de 14 de agosto de 2018**. Lei Geral de Proteção de
+Dados Pessoais (LGPD). Brasília, DF: Presidência da República, 2018. Disponível
+em: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm.
+Acesso em: [DATA].
+
+BRASIL. **Decreto nº 8.727, de 28 de abril de 2016**. Dispõe sobre o uso do nome
+social e o reconhecimento da identidade de gênero de pessoas travestis e
+transexuais no âmbito da administração pública federal direta, autárquica e
+fundacional. Brasília, DF: Presidência da República, 2016. Disponível em:
+https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2016/decreto/d8727.htm.
+Acesso em: [DATA].
+
+BRASIL. Ministério da Saúde. **Rede Nacional de Dados em Saúde (RNDS)**.
+Brasília, DF: Ministério da Saúde, [ANO]. Disponível em:
+https://www.gov.br/saude/pt-br/composicao/seidigi/rnds. Acesso em: [DATA].
+
+CONSELHO FEDERAL DE MEDICINA. **Resolução CFM nº 1.821/2007**. Aprova as normas
+técnicas concernentes à digitalização e uso dos sistemas informatizados para a
+guarda e manuseio dos documentos dos prontuários dos pacientes. Brasília, DF:
+CFM, 2007.
+
+### Governança e segurança da informação
+
+ISACA. **COBIT 2019 framework**: governance and management objectives. Schaumburg:
+ISACA, 2018.
+
+SALTZER, Jerome H.; SCHROEDER, Michael D. The protection of information in
+computer systems. **Proceedings of the IEEE**, v. 63, n. 9, p. 1278-1308, 1975.
+
+<!--
+Saltzer e Schroeder é a origem do princípio de "fail-safe defaults" (padrões que
+falham fechado), citado nas seções 4.4 e 8.1. É referência clássica e ainda
+usada; vale a leitura da seção "Design Principles", que é curta.
+-->
+
+### Usabilidade
+
+NIELSEN, Jakob. **Usability engineering**. San Francisco: Morgan Kaufmann, 1993.
+
+NIELSEN, Jakob. **10 usability heuristics for user interface design**. Nielsen
+Norman Group, 1994. Disponível em:
+https://www.nngroup.com/articles/ten-usability-heuristics/. Acesso em: [DATA].
+
+### Documentação técnica
+
+THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL documentation**: row
+security policies. [S. l.]: PostgreSQL, [ANO]. Disponível em:
+https://www.postgresql.org/docs/current/ddl-rowsecurity.html. Acesso em: [DATA].
+
+<!--
+SUGESTÕES DE LEITURA COMPLEMENTAR — não incluídas na lista acima porque só devem
+entrar se você efetivamente consultá-las:
+
+- ABNT NBR ISO/IEC 27001 e 27002, para fundamentar a seção 4.2 (Segurança da
+  Informação) em norma, e não apenas em definição operacional.
+- ABNT NBR ISO/IEC 38500, sobre governança de TI, complementar ao COBIT.
+- Literatura sobre multi-tenancy: procure artigos revisados por pares sobre
+  "multi-tenant data architecture", que dão respaldo à comparação da seção 4.3.
+- Trabalhos sobre prontuário eletrônico no SUS, para situar o contexto nacional
+  da seção 1 — busque no repositório da CAPES ou na SciELO.
+
+A seção 4 é a que mais se beneficia de referências: hoje ela apresenta conceitos
+com definição própria, e uma banca costuma cobrar ancoragem bibliográfica.
+-->
 
 ---
 
