@@ -22,15 +22,15 @@
       <tr>
         <td class="fw-500">{{ s.nome }}</td>
         <td><span class="badge badge-cinza">{{ s.tipo.replace('_',' ')|capitalize }}</span></td>
-        <td class="font-mono">{{ s.total_leitos }}</td>
-        <td class="font-mono fw-600" style="color:{% if s.leitos_ocupados==s.total_leitos %}var(--sus-vermelho){% else %}var(--cinza-700){% endif %}">{{ s.leitos_ocupados }}</td>
-        <td class="font-mono" style="color:var(--sus-verde)">{{ s.leitos_livres }}</td>
+        <td class="font-mono">{{ resumo[s.id].total }}</td>
+        <td class="font-mono fw-600" style="color:{% if resumo[s.id].ocupados == resumo[s.id].total %}var(--sus-vermelho){% else %}var(--cinza-700){% endif %}">{{ resumo[s.id].ocupados }}</td>
+        <td class="font-mono" style="color:var(--sus-verde)">{{ resumo[s.id].livres }}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;background:var(--cinza-100);border-radius:100px;height:6px;overflow:hidden">
-              <div style="height:100%;border-radius:100px;width:{{ s.taxa_ocupacao }}%;background:{% if s.taxa_ocupacao>=90 %}var(--sus-vermelho){% elif s.taxa_ocupacao>=70 %}var(--sus-amarelo){% else %}var(--sus-verde){% endif %}"></div>
+              <div style="height:100%;border-radius:100px;width:{{ resumo[s.id].taxa }}%;background:{% if resumo[s.id].taxa >= 90 %}var(--sus-vermelho){% elif resumo[s.id].taxa >= 70 %}var(--sus-amarelo){% else %}var(--sus-verde){% endif %}"></div>
             </div>
-            <span class="font-mono" style="font-size:.82rem;min-width:36px">{{ s.taxa_ocupacao }}%</span>
+            <span class="font-mono" style="font-size:.82rem;min-width:36px">{{ resumo[s.id].taxa }}%</span>
           </div>
         </td>
       </tr>

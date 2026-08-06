@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import (
     Blueprint,
+    current_app,
     render_template,
     request,
     send_file,
@@ -60,14 +61,26 @@ def pacientes():
         d_min = date.today() - relativedelta(years=int(idade_max) + 1)
         q = q.filter(Paciente.data_nascimento >= d_min)
 
-    pacientes = q.order_by(Paciente.nome).all()
+    q = q.order_by(Paciente.nome)
 
+    # A exportação é a única que legitimamente quer todas as linhas: o arquivo é
+    # o produto. A TELA não — carregar 50 mil pacientes para renderizar uma
+    # tabela levava 4,6 segundos e crescia linearmente com a base, e ninguém
+    # rola 50 mil linhas.
     if exportar == "csv":
-        return _csv_pacientes(pacientes)
+        return _csv_pacientes(q.all())
+
+    pagina = q.paginate(
+        page=request.args.get("page", 1, type=int),
+        per_page=int(current_app.config.get("RELATORIOS_PER_PAGE", 50)),
+        error_out=False,
+    )
 
     return render_template(
         "relatorios/pacientes.html",
-        pacientes=pacientes,
+        pacientes=pagina.items,
+        pagina=pagina,
+        total_encontrado=pagina.total,
         filtros=dict(
             sexo=sexo,
             municipio=municipio,

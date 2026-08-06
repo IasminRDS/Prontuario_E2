@@ -22,9 +22,38 @@ def index():
 @rel_hosp_bp.route("/ocupacao")
 @login_required
 def ocupacao():
-    setores = Setor.query.filter_by(ativo=True).all()
-    total = sum(s.total_leitos for s in setores)
-    ocupados = sum(s.leitos_ocupados for s in setores)
+    setores = Setor.query.filter_by(ativo=True).order_by(Setor.nome).all()
+
+    # UMA consulta agregada em vez de quatro por setor. As propriedades
+    # `Setor.total_leitos`, `leitos_ocupados`, `leitos_livres` e `taxa_ocupacao`
+    # emitem um COUNT cada; num laço sobre 45 setores isso media 90 consultas e
+    # 190 ms só para montar a tabela — e cresce linearmente com os setores.
+    # As propriedades continuam válidas para UM setor; o que não serve é chamá-las
+    # dentro de laço.
+    contagens = dict(
+        (linha.setor_id, linha)
+        for linha in db.session.query(
+            Leito.setor_id.label("setor_id"),
+            db.func.count(Leito.id).label("total"),
+            db.func.count(db.case((Leito.status == "ocupado", 1))).label("ocupados"),
+            db.func.count(db.case((Leito.status == "livre", 1))).label("livres"),
+        ).filter(Leito.ativo.is_(True)).group_by(Leito.setor_id).all()
+    )
+
+    resumo = {}
+    for s in setores:
+        linha = contagens.get(s.id)
+        t = linha.total if linha else 0
+        ocup = linha.ocupados if linha else 0
+        resumo[s.id] = {
+            "total": t,
+            "ocupados": ocup,
+            "livres": linha.livres if linha else 0,
+            "taxa": round(ocup / t * 100) if t else 0,
+        }
+
+    total = sum(r["total"] for r in resumo.values())
+    ocupados = sum(r["ocupados"] for r in resumo.values())
     taxa = round(ocupados / total * 100) if total else 0
     internacoes_mes = Internacao.query.filter(
         Internacao.data_entrada >= date.today().replace(day=1),
@@ -41,6 +70,7 @@ def ocupacao():
     return render_template(
         "relatorios_hosp/ocupacao.html",
         setores=setores,
+        resumo=resumo,
         total=total,
         ocupados=ocupados,
         taxa=taxa,

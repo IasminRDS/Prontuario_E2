@@ -53,7 +53,7 @@
   <div class="card-header">
     <h3>Resultado</h3>
     <span style="font-size:.82rem;color:var(--cinza-400);margin-left:8px">
-      {{ pacientes|length }} paciente(s)
+      {{ total_encontrado if total_encontrado is defined else pacientes|length }} paciente(s){% if pagina is defined and pagina.pages > 1 %} · página {{ pagina.page }} de {{ pagina.pages }}{% endif %}
     </span>
   </div>
   <div class="table-wrapper">
