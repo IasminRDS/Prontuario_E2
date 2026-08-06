@@ -1,23 +1,29 @@
 {% extends "base.html" %}
-{% block title %}Nova Internação{% endblock %}
-{% block page_title %}Registrar Internação{% endblock %}
+{% block title %}Agendar cirurgia{% endblock %}
+{% block page_title %}Agendar Cirurgia{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('internacao.painel') }}" class="btn btn-secondary">Voltar</a>
+  <a href="{{ url_for('cirurgia.painel') }}" class="btn btn-secondary">Voltar</a>
 {% endblock %}
 
 {% block content %}
-<div style="max-width:720px">
+{# Os campos são exatamente os que `cirurgia.nova` grava. O caráter (eletiva ou
+   urgência) não aparece porque não é escolhido: `Cirurgia.carater_label` o
+   deriva do tipo da sala, e um controle que não vai para lugar nenhum é o
+   defeito que este formulário tinha. #}
+<div class="form-narrow">
 <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card mb-20">
-    <div class="card-header"><h3>Dados da Internação</h3></div>
+    <div class="card-header"><h3>Dados do procedimento</h3></div>
     <div class="card-body">
       <div class="form-grid form-grid-2">
 
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Paciente <span class="obrigatorio">*</span></label>
-          <div class="search-bar" style="width:100%;margin-bottom:6px">
+        <div class="form-group form-group--full">
+          <label class="form-label" for="busca-pac">
+            Paciente <span class="obrigatorio">*</span>
+          </label>
+          <div class="search-bar mb-2">
             <svg class="ico" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -34,36 +40,22 @@
             </option>
             {% endfor %}
           </select>
-          <div id="sug-pac" style="display:none;background:var(--branco);border:1px solid var(--cinza-200);
-               border-radius:var(--raio);box-shadow:var(--sombra-md);max-height:200px;
-               overflow-y:auto;position:relative;z-index:100"></div>
+          <div id="sug-pac" class="sugestoes" hidden></div>
+        </div>
+
+        <div class="form-group form-group--full">
+          <label class="form-label" for="procedimento">
+            Procedimento <span class="obrigatorio">*</span>
+          </label>
+          <input type="text" id="procedimento" name="procedimento" class="form-control"
+                 maxlength="255" required
+                 placeholder="Ex: Colecistectomia videolaparoscópica">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Leito <span class="obrigatorio">*</span></label>
-          <select name="leito_id" class="form-control" required>
-            <option value="">— Selecione leito livre —</option>
-            {% for l in leitos_livres %}
-            <option value="{{ l.id }}">{{ l.setor.nome }} — {{ l.numero }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Tipo de internação</label>
-          <select name="tipo" class="form-control">
-            {% for val, lbl in [('clinica','Clínica médica'),('cirurgica','Cirúrgica'),
-              ('obstetricia','Obstetrícia'),('pediatrica','Pediátrica'),
-              ('psiquiatria','Psiquiatria'),('uti','UTI')] %}
-            <option value="{{ val }}">{{ lbl }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Médico responsável</label>
-          <select name="medico_id" class="form-control">
-            <option value="">— Não especificado —</option>
+          <label class="form-label" for="cirurgiao_id">Cirurgião principal</label>
+          <select name="cirurgiao_id" id="cirurgiao_id" class="form-control">
+            <option value="">— Não definido —</option>
             {% for m in medicos %}
             <option value="{{ m.id }}">{{ m.nome }} — CRM {{ m.crm }}</option>
             {% endfor %}
@@ -71,44 +63,48 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">CID-10 Principal</label>
-          <input type="text" name="cid_principal" class="form-control font-mono"
-                 placeholder="Ex: J18.9" maxlength="10" style="text-transform:uppercase">
+          <label class="form-label" for="sala_id">Sala cirúrgica</label>
+          <select name="sala_id" id="sala_id" class="form-control">
+            <option value="">— A definir —</option>
+            {% for s in salas %}
+            <option value="{{ s.id }}">{{ s.nome }} — {{ s.tipo }}</option>
+            {% endfor %}
+          </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Alta prevista</label>
-          <input type="datetime-local" name="data_prevista_alta" class="form-control">
+          <label class="form-label" for="data_agendada">Data e hora</label>
+          <input type="datetime-local" id="data_agendada" name="data_agendada"
+                 class="form-control">
         </div>
 
+        {% if internacoes %}
         <div class="form-group">
-          <label class="form-label">Número AIH</label>
-          <input type="text" name="aih_numero" class="form-control font-mono"
-                 placeholder="13 dígitos" maxlength="13">
+          <label class="form-label" for="internacao_id">Internação vinculada</label>
+          <select name="internacao_id" id="internacao_id" class="form-control">
+            <option value="">— Nenhuma —</option>
+            {% for i in internacoes %}
+            <option value="{{ i.id }}">
+              Leito {{ i.leito.numero if i.leito else '—' }} — desde
+              {{ i.data_entrada.strftime('%d/%m/%Y') if i.data_entrada else '—' }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
+        {% endif %}
 
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Hipótese diagnóstica</label>
-          <input type="text" name="hipotese_diag" class="form-control"
-                 placeholder="Ex: Pneumonia bacteriana, IAM, AVC...">
-        </div>
-
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Motivo da internação <span class="obrigatorio">*</span></label>
-          <textarea name="motivo" class="form-control" rows="4" required
-                    placeholder="Descreva o motivo clínico da internação..."></textarea>
-        </div>
-
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Observações</label>
-          <textarea name="observacoes" class="form-control" rows="2"></textarea>
+        <div class="form-group form-group--full">
+          <label class="form-label" for="observacoes">Observações</label>
+          <textarea name="observacoes" id="observacoes" class="form-control"
+                    rows="3"
+                    placeholder="Preparo, materiais, restrições..."></textarea>
         </div>
 
       </div>
     </div>
-    <div class="card-footer" style="display:flex;justify-content:flex-end;gap:12px">
-      <a href="{{ url_for('internacao.painel') }}" class="btn btn-secondary">Cancelar</a>
-      <button type="submit" class="btn btn-primary btn-lg">Internar Paciente</button>
+    <div class="card-footer form-actions">
+      <a href="{{ url_for('cirurgia.painel') }}" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary btn-lg">Agendar cirurgia</button>
     </div>
   </div>
 </form>
@@ -121,31 +117,35 @@ const busca = document.getElementById('busca-pac');
 const sel   = document.getElementById('sel-pac');
 const sug   = document.getElementById('sug-pac');
 let timer;
-busca.addEventListener('input', function() {
+busca.addEventListener('input', function () {
   clearTimeout(timer);
   const q = this.value.trim();
-  if (q.length < 2) { sug.style.display='none'; return; }
+  if (q.length < 2) { sug.hidden = true; return; }
   timer = setTimeout(() => {
     fetch(`/pacientes/buscar?q=${encodeURIComponent(q)}`)
-      .then(r => r.json()).then(data => {
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
         sug.innerHTML = '';
-        if (!data.length) { sug.style.display='none'; return; }
+        if (!data.length) { sug.hidden = true; return; }
         data.forEach(p => {
           const d = document.createElement('div');
-          d.style.cssText='padding:9px 14px;cursor:pointer;font-size:.84rem;border-bottom:1px solid var(--cinza-100)';
-          d.innerHTML=`<strong>${p.nome}</strong> <span style="color:var(--cinza-400);font-size:.76rem">CNS ${p.cns||'—'} · ${p.idade} anos</span>`;
-          d.onmouseenter=()=>d.style.background='var(--sus-azul-claro)';
-          d.onmouseleave=()=>d.style.background='';
-          d.onclick=()=>{ sel.value=p.id; busca.value=p.nome; sug.style.display='none'; };
+          d.className = 'sugestao';
+          d.textContent = `${p.nome} · CNS ${p.cns || '—'} · ${p.idade} anos`;
+          d.onclick = () => {
+            sel.value = p.id;
+            busca.value = p.nome;
+            sug.hidden = true;
+          };
           sug.appendChild(d);
         });
-        sug.style.display='block';
-      });
+        sug.hidden = false;
+      })
+      .catch(() => { sug.hidden = true; });
   }, 250);
 });
 document.addEventListener('click', e => {
   if (!e.target.closest('#busca-pac') && !e.target.closest('#sug-pac'))
-    sug.style.display='none';
+    sug.hidden = true;
 });
 </script>
 {% endblock %}

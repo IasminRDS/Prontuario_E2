@@ -236,6 +236,37 @@ textarea.form-control { min-height: 5rem; resize: vertical; }
   .form-grid-2, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
 }
 
+/* Campo que ocupa a linha inteira do grid. Existe para os templates pararem de
+   repetir `style="grid-column:1/-1"`, que é CSS inline e não responde a tema. */
+.form-group--full { grid-column: 1 / -1; }
+
+/* Formulário de cadastro não deve esticar até a borda numa tela larga: uma
+   linha de rótulo muito longa custa legibilidade. Substitui o
+   `style="max-width:720px"` repetido nos formulários herdados. */
+.form-narrow { max-width: 45rem; }
+
+/* Lista de sugestões do autocomplete de paciente. Seis formulários clínicos
+   desenhavam esta caixa com `style=` copiado; aqui ela existe uma vez só, e nos
+   tokens, então acompanha o tema escuro — o que a versão inline não fazia. */
+.sugestoes {
+  background: var(--clinic-surface);
+  border: 1px solid var(--clinic-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  max-height: 12.5rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 100;
+}
+.sugestao {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.84rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--clinic-border);
+}
+.sugestao:last-child { border-bottom: 0; }
+.sugestao:hover { background: var(--slate-100); }
+
 .search-bar,
 .toolbar,
 .leitos-toolbar {

@@ -52,37 +52,53 @@ def nova(paciente_id=None):
     salas     = SalaCirurgica.query.filter_by(ativa=True).all()
 
     if request.method == 'POST':
-        try:
-            da_str = request.form.get('data_agendada', '').strip()
-            data_ag = datetime.strptime(da_str, '%Y-%m-%dT%H:%M') if da_str else None
+        # Esta rota construía `Cirurgia` com nove argumentos que não são colunas
+        # do model (`cirurgiao_id`, `procedimento`, `cid`, `carater`,
+        # `especialidade`, `duracao_prevista`, `codigo_tuss`, `anestesista_id`,
+        # `unidade_id`). O primeiro deles levantava TypeError, o `except` abaixo
+        # o transformava num aviso amarelo, e agendar cirurgia nunca funcionou —
+        # nenhuma linha era criada. Os nomes agora são os do model:
+        # `descricao` guarda o procedimento e `medico_id` é o cirurgião
+        # principal.
+        paciente_id_sel = request.form.get('paciente_id', type=int)
+        procedimento = (request.form.get('procedimento') or '').strip()
 
-            cir = Cirurgia(
-                paciente_id      = int(request.form['paciente_id']),
-                internacao_id    = request.form.get('internacao_id') or None,
-                sala_id          = request.form.get('sala_id') or None,
-                cirurgiao_id     = request.form.get('cirurgiao_id') or None,
-                anestesista_id   = request.form.get('anestesista_id') or None,
-                unidade_id       = current_user.unidade_id,
-                procedimento     = request.form.get('procedimento', '').strip(),
-                codigo_tuss      = request.form.get('codigo_tuss', '').strip() or None,
-                cid              = request.form.get('cid', '').strip().upper() or None,
-                tipo_anestesia   = request.form.get('tipo_anestesia', '').strip() or None,
-                carater          = request.form.get('carater', 'eletiva'),
-                especialidade    = request.form.get('especialidade', '').strip() or None,
-                data_agendada    = data_ag,
-                duracao_prevista = int(request.form['duracao_prevista']) if request.form.get('duracao_prevista') else None,
-                observacoes      = request.form.get('observacoes', '').strip() or None,
-                criado_por       = current_user.id,
-            )
-            db.session.add(cir)
-            db.session.flush()
-            auditar_aqui("cirurgias", "create")
-            db.session.commit()
-            flash('Cirurgia agendada!', 'success')
-            return redirect(url_for('cirurgia.visualizar', id=cir.id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Erro: {e}', 'danger')
+        da_str = (request.form.get('data_agendada') or '').strip()
+        try:
+            data_ag = datetime.strptime(da_str, '%Y-%m-%dT%H:%M') if da_str else None
+        except ValueError:
+            data_ag = None
+
+        # `descricao` é NOT NULL: sem validar aqui, o formulário vazio viraria
+        # um IntegrityError exibido cru para quem está agendando.
+        if not paciente_id_sel:
+            flash('Selecione o paciente.', 'warning')
+        elif not procedimento:
+            flash('Descreva o procedimento.', 'warning')
+        elif da_str and data_ag is None:
+            flash('Data do agendamento inválida.', 'warning')
+        else:
+            try:
+                cir = Cirurgia(
+                    paciente_id   = paciente_id_sel,
+                    medico_id     = request.form.get('cirurgiao_id', type=int),
+                    sala_id       = request.form.get('sala_id', type=int),
+                    internacao_id = request.form.get('internacao_id', type=int),
+                    descricao     = procedimento,
+                    data_agendada = data_ag,
+                    status        = 'agendada',
+                    observacoes   = (request.form.get('observacoes') or '').strip() or None,
+                    criado_por    = current_user.id,
+                )
+                db.session.add(cir)
+                db.session.flush()
+                auditar_aqui("cirurgias", "create")
+                db.session.commit()
+                flash('Cirurgia agendada!', 'success')
+                return redirect(url_for('cirurgia.visualizar', id=cir.id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erro: {e}', 'danger')
 
     paciente_sel = Paciente.query.get(paciente_id) if paciente_id else None
     internacoes  = []

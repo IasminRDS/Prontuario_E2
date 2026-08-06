@@ -234,12 +234,12 @@ def buscar():
     não existe como coluna; `data_nascimento` vai em dd/mm/aaaa porque o valor é
     injetado direto no HTML da sugestão, não reformatado pelo JavaScript.
 
-    `nome` sai como o **nome social** quando existe. Não é preferência de
-    interface: o nome social é o nome de tratamento (Decreto 8.727/2016), e uma
-    sugestão que exibe o nome de registro faz a equipe chamar a pessoa pelo nome
-    errado na frente de todo mundo. A busca continua casando com os dois, então
-    procurar pelo nome de registro encontra — só que a lista responde com o nome
-    pelo qual a pessoa deve ser chamada.
+    `nome` sai de `Paciente.nome_exibicao`, que é o nome social quando existe.
+    Não é preferência de interface: o nome social é o nome de tratamento
+    (Decreto 8.727/2016), e uma sugestão que exibe o nome de registro faz a
+    equipe chamar a pessoa pelo nome errado na frente de todo mundo. A busca
+    continua casando com os dois, então procurar pelo nome de registro encontra
+    — só que a lista responde com o nome pelo qual a pessoa deve ser chamada.
     """
     termo = (request.args.get("q") or "").strip()
     # O front já segura em 2 caracteres, mas quem chama a URL na mão não segura:
@@ -263,7 +263,7 @@ def buscar():
 
     return jsonify([{
         "id": p.id,
-        "nome": p.nome_social or p.nome,
+        "nome": p.nome_exibicao,
         "cns": p.cns,
         "idade": _idade_anos(p.data_nascimento),
         "data_nascimento": (

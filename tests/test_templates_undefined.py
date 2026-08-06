@@ -35,7 +35,6 @@ PENDENCIAS = {
     "templates/faturamento/apac_form.html": {"comp_atual"},
     # Telas de relatório e formulários cujas rotas não passam o contexto que o
     # template espera.
-    "templates/cirurgia/form.html": {"leitos_livres"},
     "templates/internacao/form.html": {"leitos_livres"},
     "templates/encaminhamentos/painel.html": {"filtro_esp"},
     "templates/exames/catalogo.html": {"meds"},
