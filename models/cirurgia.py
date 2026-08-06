@@ -28,7 +28,7 @@ class Cirurgia(db.Model):
     # quem agendou) para a política ser `unidade_id = current_setting(...)`,
     # sem subconsulta a cada linha lida.
     unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
-                           nullable=True, index=True)
+                           nullable=False, index=True)
 
     descricao = db.Column(db.String(255), nullable=False) # Nome/tipo do procedimento
     status = db.Column(db.String(20), default='agendada') # agendada, em_andamento, concluida, cancelada

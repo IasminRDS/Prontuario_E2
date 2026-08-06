@@ -15,7 +15,7 @@ class Encaminhamento(db.Model):
     # descobre o escopo pela coluna `unidade_id`, e uma política especial só
     # para esta tabela seria a exceção que ninguém lembra de manter.
     unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
-                           nullable=True, index=True)
+                           nullable=False, index=True)
 
     # Dados do Encaminhamento
     especialidade   = db.Column(db.String(100), nullable=False)

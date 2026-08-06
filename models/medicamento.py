@@ -72,7 +72,7 @@ class ItemPrescricao(db.Model):
     prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes.id'), nullable=False, index=True)
     # Escopo territorial do RLS, desnormalizado da prescrição.
     unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
-                           nullable=True, index=True)
+                           nullable=False, index=True)
     medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True, index=True)
     
     nome_livre = db.Column(db.String(150), nullable=True) # Caso o médico digite um remédio que não está no catálogo

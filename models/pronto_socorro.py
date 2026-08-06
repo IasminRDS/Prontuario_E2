@@ -12,7 +12,7 @@ class AtendimentoPS(db.Model):
     triagem_id = db.Column(db.Integer, db.ForeignKey('triagens.id'), nullable=True, index=True)
     # Escopo territorial do RLS.
     unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
-                           nullable=True, index=True)
+                           nullable=False, index=True)
     
     # Dados do Atendimento
     motivo_consulta = db.Column(db.Text, nullable=False)
