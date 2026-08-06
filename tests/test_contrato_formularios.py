@@ -62,12 +62,8 @@ PENDENCIAS = {
     # --- telas que são o formulário ERRADO, copiado de outra e nunca reescrito.
     # O `page_title` de cada uma anuncia a tela de origem. Corrigir é escrever o
     # formulário certo a partir do que a rota lê — é trabalho de tela inteira,
-    # não renomeação de campo. (O caso da cirurgia já foi corrigido.)
-    # Idêntico, byte a byte, a templates/triagem/form.html.
-    "templates/encaminhamentos/form.html -> encaminhamentos.novo": {
-        "classificacao", "discriminadores", "dor_escala", "queixa_principal",
-    },
-    # Também uma cópia da triagem.
+    # não renomeação de campo. (Cirurgia e encaminhamento já foram corrigidos.)
+    # Cópia da triagem.
     "templates/medicamentos/form.html -> medicamentos.prescrever": {
         "classificacao", "discriminadores", "dor_escala", "paciente_id",
         "queixa_principal",
