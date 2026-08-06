@@ -31,7 +31,11 @@ if _URL_TESTE:
 # SQLite não tem schema; sem um arquivo próprio a suíte escreveria no banco de
 # desenvolvimento. Redireciona antes que a app leia a configuração.
 if os.environ.get("DATABASE_URL", "").startswith("sqlite"):
-    _tmp = pathlib.Path(tempfile.gettempdir()) / "prontuario_suite_testes.db"
+    # O PID no nome é o que permite duas suítes ao mesmo tempo. Com nome fixo,
+    # a segunda execução apagava o arquivo da primeira no import e a primeira
+    # seguia consultando um banco que já não existia.
+    _tmp = (pathlib.Path(tempfile.gettempdir())
+            / f"prontuario_suite_testes_{os.getpid()}.db")
     _tmp.unlink(missing_ok=True)
     os.environ["DATABASE_URL"] = f"sqlite:///{_tmp.as_posix()}"
 
@@ -42,7 +46,20 @@ from sqlalchemy import event  # noqa: E402
 from app import app as aplicacao  # noqa: E402
 from extensions import db  # noqa: E402
 
-ESQUEMA = "teste_automatizado"
+# O PID no nome existe para que duas suítes possam rodar ao mesmo tempo. Com um
+# nome fixo, a sessão que começa depois derruba com `DROP SCHEMA ... CASCADE` o
+# schema da que já estava rodando, e a primeira passa a falhar em dezenas de
+# testes com `UndefinedTable: não existe a relação "users"` — um sintoma que não
+# aponta para lugar nenhum perto da causa. Acontece sempre que alguém roda a
+# suíte em duas janelas, ou dispara uma tarefa de fundo que roda os testes.
+#
+# Uma execução interrompida à força (kill, queda de energia) deixa o schema para
+# trás, porque só o teardown apaga. Não limpamos schema alheio na entrada de
+# propósito: decidir se um `teste_automatizado_<pid>` ainda está em uso exigiria
+# checar se aquele processo vive, e a checagem clássica (`os.kill(pid, 0)`) no
+# Windows não pergunta — ela ENCERRA o processo. Sobra apagar à mão:
+#     DROP SCHEMA IF EXISTS teste_automatizado_<pid> CASCADE;
+ESQUEMA = f"teste_automatizado_{os.getpid()}"
 
 SENHA = "senha12345"
 PERFIS = {
