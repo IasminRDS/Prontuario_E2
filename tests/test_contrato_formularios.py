@@ -59,15 +59,11 @@ IGNORAR = {"csrf_token"}
 # aumentá-la exige justificar. O teste abaixo também reprova item já corrigido
 # que continue aqui, senão a lista vira decoração.
 PENDENCIAS = {
-    # --- telas que são o formulário ERRADO, copiado de outra e nunca reescrito.
-    # O `page_title` de cada uma anuncia a tela de origem. Corrigir é escrever o
-    # formulário certo a partir do que a rota lê — é trabalho de tela inteira,
-    # não renomeação de campo. (Cirurgia e encaminhamento já foram corrigidos.)
-    # Cópia da triagem.
-    "templates/medicamentos/form.html -> medicamentos.prescrever": {
-        "classificacao", "discriminadores", "dor_escala", "paciente_id",
-        "queixa_principal",
-    },
+    # As três telas que eram o formulário de OUTRA rota, copiado no andaime e
+    # nunca reescrito — cirurgia, encaminhamento e prescrição — já foram
+    # corrigidas. Se aparecer uma nova, o sintoma é este mesmo: um punhado de
+    # campos de um domínio alheio caindo no vazio, e um `page_title` que
+    # denuncia a tela de origem.
 
     # --- a AIH e a APAC pedem campos que o model não tem. Completar exige
     # decidir o schema de faturamento, não mexer no template.

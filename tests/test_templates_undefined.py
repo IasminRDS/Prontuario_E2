@@ -40,7 +40,6 @@ PENDENCIAS = {
     "templates/exames/catalogo.html": {"meds"},
     "templates/exames/pendentes.html": {"exames"},
     "templates/medicamentos/catalogo.html": {"tipos"},
-    "templates/medicamentos/form.html": {"pacientes"},
     "templates/ps/historico.html": {"data_s", "ats"},
     "templates/ps/painel.html": {"ORDEM_CORES"},
     # `Atendimento` não tem `status` — tem `tipo`. Definir o que a coluna
