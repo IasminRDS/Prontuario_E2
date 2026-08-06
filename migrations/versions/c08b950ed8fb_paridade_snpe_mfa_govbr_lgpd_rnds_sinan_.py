@@ -4,6 +4,14 @@ Revision ID: c08b950ed8fb
 Revises: 
 Create Date: 2026-07-29 20:45:27.596110
 
+Migration inicial do schema, com paridade funcional ao monorepo NestJS+Next.
+
+Alem das tabelas clinicas, traz o que o sistema precisa para ser um prontuario e
+nao apenas um cadastro: segundo fator de autenticacao, login gov.br, registro de
+consentimento LGPD, fila de envio a RNDS em FHIR, notificacao compulsoria ao
+SINAN e — o mais importante — o encadeamento por hash da trilha de auditoria,
+que torna o log resistente a alteracao sem depender de permissao do banco.
+
 """
 from alembic import op
 import sqlalchemy as sa
