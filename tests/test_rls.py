@@ -198,10 +198,14 @@ def test_politicas_cobrem_toda_tabela_com_unidade_id(app, postgres):
     reflete a lista, e não uma versão antiga dela.
     """
     with app.app_context():
+        from tests.conftest import ESQUEMA
+
         esperadas = set(rls.tabelas_protegidas(db.metadata))
         com_politica = set(db.session.execute(sa.text(
-            "SELECT tablename FROM pg_policies WHERE policyname = 'escopo_territorial'"
-        )).scalars().all())
+            # Mesmo motivo do teste abaixo: `pg_policies` também é global.
+            "SELECT tablename FROM pg_policies "
+            "WHERE policyname = 'escopo_territorial' AND schemaname = :schema"
+        ), {"schema": ESQUEMA}).scalars().all())
 
         faltando = esperadas - com_politica
         assert not faltando, f"tabelas sem política de RLS: {sorted(faltando)}"
@@ -214,10 +218,20 @@ def test_rls_esta_em_force(app, postgres):
     """
     with app.app_context():
         esperadas = rls.tabelas_protegidas(db.metadata)
+        # O filtro por schema não é detalhe: `pg_class` é global, e sem ele esta
+        # consulta lia as tabelas homônimas de `public` — o banco de
+        # DESENVOLVIMENTO — em vez das do schema da suíte. O teste passava por
+        # coincidência (public tinha as políticas de uma migration anterior) e
+        # reprovava assim que uma tabela nova entrava no escopo antes de o dev
+        # rodar `flask db upgrade`.
+        from tests.conftest import ESQUEMA
+
         sem_force = db.session.execute(sa.text(
-            "SELECT relname FROM pg_class "
-            "WHERE relname = ANY(:t) AND (NOT relrowsecurity OR NOT relforcerowsecurity)"
-        ), {"t": list(esperadas)}).scalars().all()
+            "SELECT c.relname FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = :schema AND c.relname = ANY(:t) "
+            "AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity)"
+        ), {"schema": ESQUEMA, "t": list(esperadas)}).scalars().all()
         assert not sem_force, f"RLS sem FORCE em: {sem_force}"
 
 
