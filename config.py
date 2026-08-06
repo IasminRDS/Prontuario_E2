@@ -55,9 +55,15 @@ class Config:
     )
     SESSION_REFRESH_EACH_REQUEST = True
 
-    # Segurança de Cookies
+    # Segurança de Cookies.
+    #
+    # `SECURE` nasce LIGADO: o padrão precisa ser o seguro, porque o custo de
+    # errar para cada lado é assimétrico. Desligado por engano em produção, o
+    # cookie de sessão de um prontuário trafega em claro no primeiro request que
+    # cair em HTTP; ligado por engano em dev, o login apenas não funciona — e
+    # isso se descobre em dez segundos. Só `DevelopmentConfig` desliga.
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = _to_bool(os.getenv("SESSION_COOKIE_SECURE"), True)
     SESSION_COOKIE_SAMESITE = "Lax"
 
     # Banco de Dados
@@ -95,19 +101,45 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     LOG_LEVEL = "DEBUG"
+    # Dev roda em http://localhost: com o cookie marcado como `Secure` o
+    # navegador não o devolve, e o login fica em laço infinito.
+    SESSION_COOKIE_SECURE = _to_bool(os.getenv("SESSION_COOKIE_SECURE"), False)
 
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     LOG_LEVEL = "INFO"
 
-# Dicionário de configuração fora das classes
 config_map = {
     "dev": DevelopmentConfig,
     "prod": ProductionConfig,
-    "default": DevelopmentConfig
 }
 
 def get_config_class():
-    env = os.getenv("APP_ENV", "dev").strip().lower()
-    return config_map.get(env, config_map["default"])
+    """Classe de configuração a partir de `APP_ENV`, sem recuo silencioso.
+
+    Antes: `os.getenv("APP_ENV", "dev")` com `config_map.get(env, Development)`.
+    Duas portas para a configuração de DESENVOLVIMENTO entrar em produção sem
+    ninguém perceber — e ela carrega `DEBUG = True` e cookie sem `Secure`:
+
+    - a variável não definida no servidor caía em "dev";
+    - `APP_ENV=production` (em vez de "prod"), `APP_ENV=PROD `, ou qualquer
+      erro de digitação caíam em "dev" também, calados.
+
+    Configuração errada tem de FALHAR, não degradar. O `.env.example` e o CI já
+    definem `APP_ENV`, então exigir a variável não muda nenhum fluxo existente.
+    """
+    bruto = os.getenv("APP_ENV")
+    if bruto is None or not bruto.strip():
+        raise RuntimeError(
+            "APP_ENV não definida. Use APP_ENV=dev ou APP_ENV=prod — não há "
+            "padrão, porque o padrão errado seria a configuração insegura."
+        )
+
+    env = bruto.strip().lower()
+    if env not in config_map:
+        raise RuntimeError(
+            f"APP_ENV={bruto!r} não é válida. Valores aceitos: "
+            f"{', '.join(sorted(config_map))}."
+        )
+    return config_map[env]
