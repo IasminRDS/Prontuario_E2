@@ -46,7 +46,7 @@
     <tbody>
       {% for i in itens %}
       {% set qtd = i.quantidade if i.quantidade is not none else 0 %}
-      {% set minv = i.minimo if i.minimo is not none else 0 %}
+      {% set minv = i.estoque_minimo if i.estoque_minimo is not none else 0 %}
       <tr>
         <td><strong>{{ i.nome }}</strong></td>
         <td>{{ i.categoria or '-' }}</td>

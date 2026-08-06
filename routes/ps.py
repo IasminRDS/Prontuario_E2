@@ -181,6 +181,10 @@ def visualizar(id):
         ps=ps,
         classificacao=_classificacao(ps),
         desfechos=DESFECHOS,
+        # O seletor de "Médico responsável" existia no template e a rota nunca
+        # mandou a lista: renderizava vazio, e chamar o paciente atribuindo um
+        # médico era impossível pela tela.
+        medicos=Medico.query.order_by(Medico.id.asc()).all(),
         proximos=TRANSICOES.get(ps.status, ()),
         # A tela não deve repetir a lista de estados: ela derivava de nomes que
         # não existem mais ('aguardando_triagem', 'evasao') e por isso escondia

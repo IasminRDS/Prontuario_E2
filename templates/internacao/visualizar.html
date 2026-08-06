@@ -174,7 +174,7 @@
         {% set slbl, scor = c.status_label %}
         {% set clbl, ccor = c.carater_label %}
         <tr>
-          <td class="fw-500">{{ c.procedimento }}</td>
+          <td class="fw-500">{{ c.descricao }}</td>
           <td><span class="badge badge-{{ ccor }}">{{ clbl }}</span></td>
           <td class="font-mono" style="font-size:.8rem">
             {{ c.data_agendada.strftime('%d/%m/%Y %H:%M') if c.data_agendada else '—' }}

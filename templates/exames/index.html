@@ -29,9 +29,12 @@
         {% for e in exames %}
           <tr>
             <td>{{ e.id }}</td>
-            <td>{{ e.paciente }}</td>
-            <td>{{ e.exame }}</td>
-            <td>{{ e.prioridade }}</td>
+            {# `e.paciente` sozinho imprimia o repr do objeto ("<Paciente ...>");
+               `e.exame` e `e.prioridade` não existem no model — o exame vem da
+               relação `tipo_exame` e a prioridade chama-se `urgencia`. #}
+            <td>{{ e.paciente.nome_exibicao if e.paciente else '—' }}</td>
+            <td>{{ e.tipo_exame.nome if e.tipo_exame else '—' }}</td>
+            <td>{{ e.urgencia or '—' }}</td>
             <td>{{ e.status }}</td>
             <td>
               <form method="post" action="{{ url_for('exames.alterar_status', exame_id=e.id) }}" style="display:flex;gap:6px;">

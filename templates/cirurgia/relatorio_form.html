@@ -9,7 +9,7 @@
 {% block content %}
 <div class="card mb-16" style="border-left:4px solid var(--sus-vermelho)">
   <div class="card-body" style="padding:14px 20px">
-    <div class="fw-600">{{ cir.procedimento }}</div>
+    <div class="fw-600">{{ cir.descricao }}</div>
     <div style="font-size:.8rem;color:var(--cinza-400)">
       {{ cir.paciente.nome_exibicao }} ·
       Iniciado às {{ cir.data_inicio.strftime('%H:%M') if cir.data_inicio else '—' }}
