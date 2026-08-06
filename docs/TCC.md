@@ -6,8 +6,9 @@
 > **Nota de elaboração.** Este documento descreve exclusivamente mecanismos
 > implementados e verificados no artefato produzido. Recursos planejados e não
 > implementados estão declarados nas seções 11 (Limitações) e 12 (Trabalhos
-> Futuros), nunca apresentados como resultados. Não são apresentadas métricas de
-> desempenho sob carga, por não terem sido medidas.
+> Futuros), nunca apresentados como resultados. As métricas de desempenho
+> apresentadas na seção 11 foram obtidas com volume sintético de 50 mil
+> pacientes; o escopo e os limites dessa medição estão declarados na seção 12.
 
 ---
 
@@ -121,7 +122,7 @@ organização de saúde.
 
 O objetivo 6 merece registro: a avaliação crítica é resultado do trabalho, não
 apenas seu método. A identificação de falhas nos próprios controles projetados
-constitui contribuição relevante, conforme discutido na seção 10.3.
+constitui contribuição relevante, conforme discutido na seção 11.4.
 
 ---
 
@@ -458,6 +459,15 @@ contagens de registros com a origem, remove o *schema* e encerra com código de
 erro em caso de divergência — permitindo execução automatizada e alarme
 automático.
 
+**Retenção e descarte de cópia inválida.** A rotina mantém um número configurável
+de cópias, removendo as mais antigas: gerar sem expurgar esgota o armazenamento e,
+por consequência, indisponibiliza o próprio banco que se pretendia proteger. Além
+disso, arquivo de tamanho implausível é descartado na origem — situação observada
+neste trabalho, em que uma falha de autenticação ocorreu **após** a criação do
+arquivo, deixando no diretório de cópias um arquivo vazio com nome inteiramente
+plausível. Cópia aparente é mais perigosa que cópia ausente, porque só se revela
+no momento da recuperação.
+
 A restauração ocorre em *schema* e não em banco separado por decisão de segurança:
 criar banco exige privilégio `CREATEDB`, que o papel da aplicação não possui e
 não deve possuir, enquanto criar *schema* exige apenas privilégio sobre o próprio
@@ -506,13 +516,23 @@ quais controles a organização recebe pronto e quais deve implementar e auditar
 por conta própria — informação frequentemente ausente na documentação de sistemas
 adquiridos.
 
+Mais relevante que documentá-la é **torná-la verificável**. O comando
+`flask hardening-check` confronta o estado real do servidor de banco de dados com
+cada pressuposto da coluna direita, e encerra com código de erro quando algum não
+se sustenta. A fronteira deixa de ser uma afirmação da documentação e passa a ser
+uma verificação executável, apta a integrar rotina periódica. Executado sobre o
+ambiente deste trabalho, o comando confirma cinco dos sete pressupostos e acusa os
+dois que dependem de privilégio administrativo do banco — resultado que a seção 12
+registra como limitação, e que o próprio sistema passa a denunciar em vez de
+depender da memória de quem o implantou.
+
 ---
 
 ## 9. TESTES E VALIDAÇÃO
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **269 testes**, executados sobre PostgreSQL e
+A suíte automatizada compreende **282 testes**, executados sobre PostgreSQL e
 sobre SQLite. Dois testes estruturais sustentam a maior parte da proteção contra
 regressões: a renderização de todas as rotas de leitura com dados reais, e a
 verificação estática de que toda rota nasce com autenticação e, quando efetua
@@ -541,6 +561,25 @@ não apenas o código de resposta HTTP — distinção que se revelou determinan
 - Matriz de perfis por rota.
 - Verificação de que rotas de escrita declaram autorização.
 - Verificação de ausência de construção dinâmica de SQL por interpolação.
+
+**Testes de negação.** Um conjunto específico verifica a propriedade inversa: não
+que a política exista, mas que ela **recuse**. Cada caso grava um registro
+pertencente a uma unidade e tenta alcançá-lo com o escopo de outra, consultando o
+banco diretamente, sem passar pelo filtro da aplicação. A escolha é deliberada —
+o que se mede é a defesa que resta quando o filtro da aplicação falha; um teste
+que passasse pela aplicação provaria os dois controles juntos e não distinguiria
+qual deles operou. O conjunto cobre: leitura cruzada entre unidades; a unidade
+proprietária enxergando o próprio registro (negar em excesso é falha de
+disponibilidade, não sucesso); escopo ausente; nível de acesso inválido; e a
+não persistência do escopo entre transações da mesma conexão.
+
+**Verificação da configuração do banco.** Um comando específico
+(`flask hardening-check`) confronta o estado do servidor com os pressupostos do
+modelo de segurança: políticas ativas, modo `FORCE`, ausência de `BYPASSRLS` e de
+privilégio de superusuário no papel da aplicação, ausência de escopo
+pré-definido na sessão, e propriedade da tabela de auditoria. O comando encerra
+com código de erro quando alguma verificação falha, permitindo execução
+periódica.
 
 ### 9.4 Defeitos identificados e correções aplicadas
 
@@ -659,6 +698,33 @@ administrativa explícita e auditável.
   instalação, falhando quando o servidor está instalado em outra unidade de
   disco. O defeito só se manifestaria no momento de necessidade do backup.
 
+#### 9.4.7 Regressão de desempenho introduzida por uma correção de conformidade
+
+**Achado.** Após a correção descrita em 9.4.4 — que passou a persistir a
+auditoria de leitura —, a listagem de pacientes passou a emitir uma consulta por
+registro exibido: vinte consultas para uma página de vinte linhas.
+
+**Análise.** A confirmação da transação expira os objetos carregados na sessão do
+mapeador objeto-relacional, comportamento padrão da ferramenta. Como o registro
+de auditoria era gravado **depois** de carregar as linhas, a camada de
+apresentação encontrava objetos expirados e recarregava cada um individualmente.
+
+O caso é relevante para a discussão de governança por três razões. Primeiro,
+demonstra que **controle de conformidade tem custo operacional**, e que esse
+custo precisa ser medido — não é suficiente implementar o controle e declarar o
+requisito atendido. Segundo, o defeito é invisível sem instrumentação: a página
+respondia corretamente, apenas mais devagar, e o volume de consultas só aparece
+ao contá-las. Terceiro, a correção adequada **não foi remover o controle**, mas
+reordená-lo.
+
+**Correção.** Registrar a leitura antes de materializar as linhas. O evento de
+auditoria é idêntico, a exigência legal permanece atendida, e a sessão do mapeador
+não é invalidada.
+
+**Generalização.** Toda rota de leitura que confirme a transação de auditoria
+após carregar entidades apresenta a mesma latência. O padrão foi documentado no
+código para que a correção não seja desfeita por desconhecimento.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -774,10 +840,64 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 269 testes executa em ambos os sistemas de banco de dados, e a
-sequência de migrações foi exercitada a partir de banco vazio.
+A suíte de 282 testes executa em ambos os sistemas de banco de dados. A sequência
+de migrações foi exercitada a partir de banco vazio e também no sentido inverso,
+com reversão completa e reaplicação.
 
-### 11.2 Resultados gerenciais
+A coluna de escopo territorial tornou-se obrigatória nas cinco tabelas clínicas
+corrigidas, após o preenchimento retroativo ser exercitado com 9.565 registros:
+zerada a coluna e reprocessado o preenchimento, nenhuma linha permaneceu sem
+unidade resolvida. A migração que aplica a obrigatoriedade não executa a alteração
+diretamente — conta os registros irresolúveis e, havendo algum, interrompe com o
+diagnóstico da tabela e da quantidade, em vez de falhar com a mensagem genérica do
+servidor. A decisão de **não atribuir** unidade arbitrária a registro irresolúvel é
+deliberada: registro clínico associado ao município errado é mais danoso que
+registro invisível, pois o invisível é notado e o incorreto integra relatórios sem
+ser percebido.
+
+### 11.2 Resultados de desempenho
+
+O desempenho foi medido com volume sintético de 50 mil pacientes e cerca de 20 mil
+internações, distribuídos de forma desbalanceada entre unidades — a distribuição
+uniforme produziria seletividade artificialmente favorável e ocultaria o pior caso,
+que é o da unidade de maior movimento.
+
+**Consultas de busca**, sob escopo de unidade, antes e depois da criação de índices
+escolhidos a partir dos planos de execução observados:
+
+| Consulta | Antes | Depois | Plano após |
+|---|---|---|---|
+| Listagem paginada de pacientes | 40,1 ms | 0,19 ms | varredura sequencial e ordenação → varredura por índice |
+| Contagem para paginação | 16,0 ms | 6,7 ms | varredura sequencial → varredura apenas de índice |
+| Sugestão de paciente (`ILIKE`) | 185,9 ms | 0,96 ms | varredura sequencial e ordenação → varredura por índice |
+
+A sugestão de paciente é o caso determinante: a consulta é disparada a cada
+caractere digitado, e executava varredura completa da tabela. Com volume de
+demonstração o problema é indetectável — o otimizador do PostgreSQL sequer
+considera índice em tabela pequena, pois a varredura integral é menos custosa.
+**Sem volume representativo, a decisão de indexação não é informada; é arbitrária.**
+
+**Rotas de relatório**, medidas por número de consultas emitidas e tempo total:
+
+| Rota | Antes | Depois |
+|---|---|---|
+| Relatório de pacientes | 4.616 ms | 113 ms |
+| Ocupação de leitos | 106 consultas · 190 ms | 17 consultas · 78 ms |
+| Listagem de pacientes | 44 consultas · 123 ms | 24 consultas · 67 ms |
+
+As três causas foram distintas e ilustrativas. O relatório de pacientes
+materializava a base inteira para renderizar uma tabela — corrigido com paginação,
+preservando o carregamento completo apenas na exportação, onde o arquivo é o
+produto. A ocupação de leitos invocava, dentro de um laço, propriedades do modelo
+que emitiam uma contagem cada — substituídas por uma única consulta agregada. A
+listagem de pacientes é o caso analisado em 9.4.7, em que a própria correção de
+conformidade introduziu a regressão.
+
+Registre-se que **não foi criado índice onde a medição não o justificou**: as
+consultas sobre internações já resolviam por varredura de índice, e um índice sem
+consulta que o utilize representa custo de escrita e armazenamento sem retorno.
+
+### 11.3 Resultados gerenciais
 
 **Redução de risco por transferência de camada.** Ao mover o isolamento para o
 banco, o controle deixa de depender da disciplina individual em cada consulta
@@ -795,7 +915,7 @@ suposição de continuidade em verificação periódica com alarme automático.
 dependências de infraestrutura (seção 8.2) fornece à organização a lista dos
 controles que permanecem sob sua responsabilidade.
 
-### 11.3 A avaliação crítica como resultado
+### 11.4 A avaliação crítica como resultado
 
 Os defeitos relatados em 9.4 constituem resultado do trabalho, e não relato de
 insucesso. Três considerações sustentam essa interpretação.
@@ -823,18 +943,16 @@ artefato de controle e está sujeita a verificação como qualquer outro.
 hash torna a adulteração detectável, não impossível. A imutabilidade efetiva exige
 que a tabela pertença a papel distinto do utilizado pela aplicação, o que demanda
 privilégio de superusuário e é ação de administração de banco de dados. Enquanto
-não executada, o controle é *tamper-evident*, não *tamper-proof*.
+não executada, o controle é *tamper-evident*, não *tamper-proof*. A pendência é
+detectada automaticamente pela verificação de configuração descrita em 8.2, de
+modo que permanece visível em vez de esquecida.
 
-**A coluna de escopo admite valor nulo.** Registros anteriores à migração cuja
-unidade não pôde ser derivada permanecem sem escopo definido e, por consequência,
-invisíveis a qualquer escopo territorial — comportamento de falha fechada,
-deliberado. A restrição de obrigatoriedade da coluna depende da estabilização do
-preenchimento retroativo em base de produção e não foi aplicada.
-
-**Ausência de medição sob volume.** Não foram executados testes de carga nem
-análise de planos de execução com RLS ativo. Índices compostos incluindo a coluna
-de escopo e eventual particionamento não foram avaliados. Não se afirma nada sobre
-o desempenho do sistema em escala de produção.
+**Medição limitada a volume sintético.** Os planos de execução foram analisados
+com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição
+real de uma rede de saúde — sazonalidade, concentração por especialidade,
+crescimento da trilha de auditoria ao longo de anos — não foi observado.
+Particionamento por unidade não foi avaliado, por ausência de evidência que o
+justifique no volume medido.
 
 **Regra de negócio acoplada à camada de rotas.** Não há camada de serviço
 explícita: parte da lógica de domínio reside nos manipuladores de requisição. A
@@ -889,23 +1007,18 @@ privilégio `CREATEDB` ao papel da aplicação.
 **Segurança e conformidade**
 - Transferência da propriedade da tabela de auditoria para papel dedicado, com
   concessão restrita a inserção e leitura.
-- Aplicação de obrigatoriedade à coluna de escopo, após estabilização do
-  preenchimento retroativo.
-- Ampliação dos testes de negação de acesso, cobrindo sistematicamente todas as
-  rotas.
-- Extensão do controle de tentativas às rotas de dados.
+- Ampliação dos testes de negação de acesso, hoje concentrados na camada de
+  dados, para cobrir sistematicamente cada rota da aplicação.
+- Extensão do controle de tentativas às rotas de dados, hoje limitado à
+  autenticação.
 - Evolução do modelo de autorização para incorporar atributos contextuais, além
   do perfil.
-- Roteiro automatizado de verificação de configuração do banco (papéis,
-  concessões, estado das políticas).
 
 **Operação e continuidade**
-- Política de retenção, rotação e custódia externa de cópias de segurança.
-- Integração da migração a partir de banco vazio e da validação de restauração ao
-  processo de integração contínua.
-- Teste automatizado das migrações reversas.
-- Monitoramento com alerta sobre falhas de autorização, que constituem indicador
-  precoce de tentativa de acesso indevido.
+- Custódia externa das cópias de segurança: a retenção e a rotação foram
+  implementadas, mas as cópias permanecem no mesmo servidor que protegem.
+- Agregação e alerta sobre as negações de autorização já registradas em log —
+  o registro existe; o monitoramento que o consome é infraestrutura.
 
 **Desempenho e escala**
 - Construção de base de dados sintética em volume representativo.
@@ -939,6 +1052,15 @@ não de sua existência.** O sistema possuía Row-Level Security corretamente
 implementado — com `FORCE`, falha fechada e escopo reposto por transação — e ainda
 assim mantinha cinco tabelas clínicas centrais integralmente fora de proteção. O
 mecanismo estava certo; o alcance, não.
+
+Um segundo achado, de natureza distinta, reforça a mesma tese por outro caminho.
+A correção que passou a registrar as leituras de prontuário — exigência do art. 37
+da LGPD — introduziu uma regressão de desempenho, por invalidar a sessão do
+mapeador objeto-relacional no momento em que confirmava a transação. O controle
+estava correto e a exigência legal, atendida; o custo operacional é que não havia
+sido medido. A correção adequada não foi remover o controle, mas reordená-lo.
+**Controle de conformidade tem custo, e o custo precisa ser medido com o mesmo
+rigor com que se verifica a conformidade.**
 
 Essa constatação constitui a principal contribuição do trabalho para a Gestão da
 Tecnologia da Informação. Há diferença substantiva entre **implementar um controle**
