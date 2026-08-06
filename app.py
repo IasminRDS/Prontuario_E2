@@ -302,6 +302,116 @@ def _registrar_cli(app):
         analisados, novos = deduplicacao.varrer()
         print(f"pares analisados={analisados} novos candidatos={novos}")
 
+    @app.cli.command("hardening-check")
+    def hardening_check():
+        """Confere no BANCO os controles que a aplicação não consegue garantir.
+
+        A aplicação garante o que está no seu código. Não garante que o DBA
+        ligou FORCE, que o papel não tem BYPASSRLS, que a trilha de auditoria
+        não pertence a quem ela audita, nem que ninguém deixou um escopo
+        pré-definido no ambiente. Esta é a lista dessas coisas — e o comando sai
+        com código 1 se alguma falhar, para entrar em verificação periódica.
+        """
+        import sys
+
+        from services.hardening import verificar
+
+        achados = verificar()
+        falhas = [a for a in achados if not a.ok]
+
+        for a in achados:
+            print(f"  {'OK  ' if a.ok else 'FALHA'} {a.nome}")
+            if not a.ok:
+                print(f"        {a.detalhe}")
+                if a.correcao:
+                    print(f"        corrigir: {a.correcao}")
+
+        if falhas:
+            print(f"\nRESULTADO: {len(falhas)} verificação(ões) falharam")
+            sys.exit(1)
+        print(f"\nRESULTADO: {len(achados)} verificações passaram")
+
+    @app.cli.command("seed-volume")
+    @click.option("--pacientes", default=50_000, show_default=True)
+    @click.option("--limpar", is_flag=True, help="Remove os dados sintéticos.")
+    def seed_volume(pacientes, limpar):
+        """Gera volume sintético para medir o sistema sob carga.
+
+        NÃO use em produção: os registros são marcados como SINTETICO e existem
+        para tornar possível medir plano de consulta e efeito de índice, o que
+        não se faz com dezenas de linhas — o planejador nem considera índice em
+        tabela pequena.
+        """
+        from services import seed_volume as sv
+
+        if limpar:
+            print(f"removidos: {sv.limpar()}")
+            return
+
+        print(f"gerando {pacientes} pacientes sintéticos...")
+        print(f"  {sv.gerar(pacientes=pacientes)}")
+        print("gerando internações...")
+        print(f"  {sv.gerar_internacoes()}")
+        print("pronto. Rode `flask medir-consultas` para os planos.")
+
+    @app.cli.command("backup-validar")
+    @click.argument("caminho", type=click.Path(exists=True, dir_okay=False))
+    @click.option("--apenas-restore", is_flag=True,
+                  help="Só verifica se restaura; não compara com o banco atual.")
+    def backup_validar(caminho, apenas_restore):
+        """Restaura um backup num schema temporário e confere as contagens.
+
+        Backup que nunca foi restaurado é um arquivo, não um backup. Feito para
+        rodar em cron logo depois da rotina de backup: sai com código 1 quando
+        diverge, então o agendador acusa sozinho.
+
+        A comparação é contra o banco COMO ESTÁ AGORA, o que só faz sentido para
+        um backup recém-tirado. Para conferir um arquivo antigo — cujo conteúdo
+        legitimamente difere do banco de hoje — use `--apenas-restore`, que
+        verifica se ele aplica sem erro e ignora as contagens.
+
+        O schema temporário é destruído no fim, mesmo se a validação falhar.
+        """
+        import sys
+
+        from services.backup_validacao import BackupInvalido, validar
+
+        try:
+            comparacoes, erros = validar(caminho)
+        except BackupInvalido as e:
+            print(f"BACKUP INVÁLIDO: {e}")
+            sys.exit(1)
+
+        if apenas_restore:
+            for tabela, _origem, restaurado in comparacoes:
+                print(f"  restaurado {tabela:22} {restaurado} linha(s)")
+            if erros:
+                print(f"\nerros durante o restore: {len(erros)}")
+                for linha in erros[:10]:
+                    print(f"   {linha[:160]}")
+                print("\nRESULTADO: NÃO RESTAURA")
+                sys.exit(1)
+            print(f"\nRESULTADO: restaura sem erro "
+                  f"({len(comparacoes)} tabelas conferidas; contagens não comparadas)")
+            return
+
+        divergentes = [(t, a, b) for t, a, b in comparacoes if a != b]
+
+        for tabela, origem, restaurado in comparacoes:
+            marca = "ok " if origem == restaurado else "DIVERGE"
+            print(f"  {marca:8} {tabela:22} origem={origem} restaurado={restaurado}")
+
+        if erros:
+            print(f"\nerros durante o restore: {len(erros)}")
+            for linha in erros[:10]:
+                print(f"   {linha[:160]}")
+
+        if divergentes or erros:
+            print("\nRESULTADO: BACKUP NÃO CONFIÁVEL")
+            sys.exit(1)
+
+        print(f"\nRESULTADO: íntegro ({len(comparacoes)} tabelas conferidas)")
+
 
 app = create_app()
 

@@ -30,6 +30,54 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TIMEOUT_DUMP = int(os.getenv("BACKUP_TIMEOUT", "600"))
 
 
+def _to_int_env(nome, padrao):
+    try:
+        return int(os.getenv(nome) or padrao)
+    except (TypeError, ValueError):
+        return padrao
+
+
+# Abaixo disto o arquivo não pode ser um dump: um schema vazio já passa de
+# 100 KB. O caso real que motivou este piso foi um `pg_dump` que falhou na
+# autenticação DEPOIS de criar o arquivo, deixando 0 byte no diretório de
+# backups com nome perfeitamente plausível.
+TAMANHO_MINIMO = _to_int_env("BACKUP_TAMANHO_MINIMO", 4096)
+
+# Quantas cópias manter. Gerar sem expurgar enche o disco em silêncio, e disco
+# cheio derruba justamente o banco que se queria proteger.
+RETENCAO = _to_int_env("BACKUP_RETENCAO", 10)
+
+
+def _rotacionar(manter=None):
+    """Remove as cópias mais antigas além do limite. Devolve quantas saíram.
+
+    A ordenação é por data de modificação, não pelo nome: nome com carimbo de
+    tempo ordena bem por acaso, e o dia em que alguém renomear um arquivo à mão
+    o critério silenciosamente passa a apagar o backup errado.
+    """
+    manter = RETENCAO if manter is None else manter
+    if manter <= 0:
+        return 0
+
+    pasta = _pasta_destino()
+    copias = sorted(
+        (p for p in pasta.glob("backup_*") if p.is_file()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    removidos = 0
+    for antigo in copias[manter:]:
+        try:
+            antigo.unlink()
+            removidos += 1
+        except OSError:
+            # Falha ao apagar cópia velha não pode derrubar o backup novo, que
+            # é o que realmente importa nesta operação.
+            continue
+    return removidos
+
+
 def _pasta_destino():
     destino = Path(os.getenv("BACKUP_DIR") or (BASE_DIR / "backups"))
     destino.mkdir(parents=True, exist_ok=True)
@@ -66,14 +114,64 @@ def _localizar_pg_dump():
     if no_path:
         return no_path
 
-    for padrao in (r"C:\Program Files\PostgreSQL\*\bin\pg_dump.exe",
-                   "/usr/lib/postgresql/*/bin/pg_dump",
-                   "/usr/bin/pg_dump"):
+    # No Windows, o registro é a fonte autoritativa: o instalador grava ali o
+    # diretório real, seja qual for a unidade. O glob fixo em
+    # `C:\Program Files\PostgreSQL` só acerta a instalação padrão — numa máquina
+    # com o Postgres em `F:\PostgreSQL 16` o backup falhava com "pg_dump não
+    # encontrado", e o operador só descobria na hora de precisar do backup.
+    for base in _bases_do_registro_windows():
+        candidato = Path(base) / "bin" / "pg_dump.exe"
+        if candidato.is_file():
+            return str(candidato)
+
+    padroes = ["/usr/lib/postgresql/*/bin/pg_dump", "/usr/bin/pg_dump"]
+    if os.name == "nt":
+        for unidade in _unidades_windows():
+            padroes += [
+                rf"{unidade}\Program Files\PostgreSQL\*\bin\pg_dump.exe",
+                rf"{unidade}\PostgreSQL*\bin\pg_dump.exe",
+            ]
+
+    for padrao in padroes:
         achados = sorted(glob(padrao), reverse=True)
         if achados:
             return achados[0]
 
     return None
+
+
+def _bases_do_registro_windows():
+    """Diretórios de instalação declarados pelo instalador do PostgreSQL."""
+    if os.name != "nt":
+        return []
+    try:
+        import winreg
+    except ImportError:  # pragma: no cover - só existe no Windows
+        return []
+
+    bases = []
+    for raiz in (r"SOFTWARE\PostgreSQL\Installations",
+                 r"SOFTWARE\Wow6432Node\PostgreSQL\Installations"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, raiz) as chave:
+                for i in range(winreg.QueryInfoKey(chave)[0]):
+                    try:
+                        with winreg.OpenKey(chave, winreg.EnumKey(chave, i)) as sub:
+                            bases.append(winreg.QueryValueEx(sub, "Base Directory")[0])
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    # Mais recente primeiro, para não cair numa instalação antiga esquecida.
+    return sorted(bases, reverse=True)
+
+
+def _unidades_windows():
+    try:
+        return os.listdrives()  # Python 3.12+
+    except AttributeError:
+        return [f"{letra}:" for letra in "CDEFGH"
+                if Path(f"{letra}:\\").exists()]
 
 
 def _backup_sqlite(url, carimbo):
@@ -203,9 +301,28 @@ def gerar():
         return redirect(url_for("backup.index"))
 
     tamanho = destino.stat().st_size
+
+    if tamanho < TAMANHO_MINIMO:
+        # Arquivo minúsculo não é backup: é um `pg_dump` que criou o arquivo e
+        # morreu antes de escrever. Ficando no diretório, vira armadilha para
+        # quem for restaurar sob pressão — nome plausível, conteúdo nenhum.
+        destino.unlink(missing_ok=True)
+        current_app.logger.warning(
+            "Backup descartado por tamanho implausível: %s (%s bytes)",
+            destino.name, tamanho)
+        flash(f"Backup descartado: o arquivo saiu com {tamanho} bytes, "
+              "o que indica falha silenciosa do processo de dump.", "danger")
+        return redirect(url_for("backup.index"))
+
+    removidos = _rotacionar()
+
     registrar("backup", None, "create",
-              f"Backup {dialeto} gerado em {destino} ({tamanho} bytes)",
+              f"Backup {dialeto} gerado em {destino} ({tamanho} bytes)"
+              + (f"; {removidos} antigo(s) removido(s)" if removidos else ""),
               commit=True)
 
-    flash(f"Backup criado: {destino.name} ({tamanho // 1024} KB)", "success")
+    aviso = f"Backup criado: {destino.name} ({tamanho // 1024} KB)"
+    if removidos:
+        aviso += f" · {removidos} cópia(s) antiga(s) removida(s)"
+    flash(aviso, "success")
     return redirect(url_for("backup.index"))
