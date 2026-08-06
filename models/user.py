@@ -18,7 +18,8 @@ class User(UserMixin, db.Model):
 
     # vínculo operacional
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=True
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=True,
+        index=True,
     )
 
     # NOVO: nível territorial de acesso
@@ -26,7 +27,7 @@ class User(UserMixin, db.Model):
     # ESTADO | REGIONAL | MUNICIPIO | UNIDADE
 
     # NOVO: escopos territoriais explícitos (opcional para admin global)
-    regional_id = db.Column(db.Integer, db.ForeignKey("regionais.id"), nullable=True)
+    regional_id = db.Column(db.Integer, db.ForeignKey("regionais.id"), nullable=True, index=True)
     municipio_ibge = db.Column(db.String(7), nullable=True, index=True)
     uf = db.Column(db.String(2), nullable=True, index=True)
 

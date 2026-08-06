@@ -27,7 +27,7 @@ class ConsentimentoLgpd(db.Model):
 
     criado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     revogado_em = db.Column(db.DateTime, nullable=True)
-    registrado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    registrado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     paciente = db.relationship("Paciente", backref="consentimentos")
 
@@ -60,7 +60,9 @@ class DocumentoAssinado(db.Model):
     # SHA-256 do PDF gerado, em hexadecimal.
     hash_conteudo = db.Column(db.String(64), nullable=False, index=True)
 
-    assinado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    assinado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True,
+        index=True,
+    )
     assinante_nome = db.Column(db.String(120), nullable=True)
     assinante_registro = db.Column(db.String(40), nullable=True)  # CRM/COREN
 
@@ -110,7 +112,7 @@ class EnvioRnds(db.Model):
 
     criado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     enviado_em = db.Column(db.DateTime, nullable=True)
-    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     paciente = db.relationship("Paciente", backref="envios_rnds")
 

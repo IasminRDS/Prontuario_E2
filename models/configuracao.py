@@ -29,7 +29,7 @@ class Configuracao(db.Model):
     chave = db.Column(db.String(80), unique=True, nullable=False, index=True)
     valor = db.Column(db.Text, nullable=True)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    atualizado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    atualizado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     def __repr__(self):
         return f"<Configuracao {self.chave}={self.valor!r}>"

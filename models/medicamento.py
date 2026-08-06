@@ -25,17 +25,19 @@ class Prescricao(db.Model):
     __tablename__ = 'prescricoes'
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
-    prontuario_id = db.Column(db.Integer, db.ForeignKey('prontuarios.id'), nullable=True)
-    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
-    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    prontuario_id = db.Column(db.Integer, db.ForeignKey('prontuarios.id'), nullable=True, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=True, index=True)
     
     tipo = db.Column(db.String(50), default='ambulatorial')
     validade_dias = db.Column(db.Integer, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='ativa')
     
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relacionamento com os Itens da Prescrição
@@ -67,8 +69,8 @@ class ItemPrescricao(db.Model):
     __tablename__ = 'itens_prescricao'
 
     id = db.Column(db.Integer, primary_key=True)
-    prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes.id'), nullable=False)
-    medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True)
+    prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes.id'), nullable=False, index=True)
+    medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True, index=True)
     
     nome_livre = db.Column(db.String(150), nullable=True) # Caso o médico digite um remédio que não está no catálogo
     dose = db.Column(db.String(100), nullable=True)

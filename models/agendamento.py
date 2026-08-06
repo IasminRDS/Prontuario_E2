@@ -6,12 +6,13 @@ class Agendamento(db.Model):
     __tablename__ = "agendamentos"
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False)
-    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )  # <- aqui
-    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     data_hora = db.Column(db.DateTime, nullable=False)
     tipo = db.Column(db.String(30), default="consulta")

@@ -6,13 +6,15 @@ class Prontuario(db.Model):
     __tablename__ = "prontuarios"
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
     atendimento_id = db.Column(
-        db.Integer, db.ForeignKey("atendimentos.id"), nullable=True
+        db.Integer, db.ForeignKey("atendimentos.id"), nullable=True,
+        index=True,
     )
-    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
 
     # SOAP (padrão de prontuário clínico)

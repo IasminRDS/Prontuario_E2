@@ -7,13 +7,15 @@ class Triagem(db.Model):
     __tablename__ = "triagens"
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
-    realizado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    realizado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     agendamento_id = db.Column(
-        db.Integer, db.ForeignKey("agendamentos.id"), nullable=True
+        db.Integer, db.ForeignKey("agendamentos.id"), nullable=True,
+        index=True,
     )
 
     # Classificação de risco - Protocolo Manchester

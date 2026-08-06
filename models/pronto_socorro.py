@@ -7,9 +7,9 @@ class AtendimentoPS(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Relacionamentos
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
-    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
-    triagem_id = db.Column(db.Integer, db.ForeignKey('triagens.id'), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
+    triagem_id = db.Column(db.Integer, db.ForeignKey('triagens.id'), nullable=True, index=True)
     
     # Dados do Atendimento
     motivo_consulta = db.Column(db.Text, nullable=False)
@@ -23,7 +23,7 @@ class AtendimentoPS(db.Model):
     data_liberacao = db.Column(db.DateTime, nullable=True)
     
     # Controle
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     
     # Relacionamento reverso com o paciente
     paciente = db.relationship('Paciente', backref=db.backref('atendimentos_ps', lazy=True))

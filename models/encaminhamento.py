@@ -7,10 +7,10 @@ class Encaminhamento(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Relacionamentos FK
-    paciente_id     = db.Column(db.Integer, db.ForeignKey('pacientes.id'),   nullable=False)
-    prontuario_id   = db.Column(db.Integer, db.ForeignKey('prontuarios.id'), nullable=True)
-    medico_id       = db.Column(db.Integer, db.ForeignKey('medicos.id'),     nullable=True)
-    unidade_origem_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=False)
+    paciente_id     = db.Column(db.Integer, db.ForeignKey('pacientes.id'),   nullable=False, index=True)
+    prontuario_id   = db.Column(db.Integer, db.ForeignKey('prontuarios.id'), nullable=True, index=True)
+    medico_id       = db.Column(db.Integer, db.ForeignKey('medicos.id'),     nullable=True, index=True)
+    unidade_origem_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=False, index=True)
 
     # Dados do Encaminhamento
     especialidade   = db.Column(db.String(100), nullable=False)
@@ -33,7 +33,9 @@ class Encaminhamento(db.Model):
     observacoes      = db.Column(db.Text, nullable=True)
     retorno_info     = db.Column(db.Text, nullable=True)
 
-    criado_por  = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por  = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
 
     # Relacionamentos (ORM)
     paciente       = db.relationship('Paciente',   backref='encaminhamentos')

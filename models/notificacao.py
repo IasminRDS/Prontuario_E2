@@ -85,7 +85,7 @@ class NotificacaoCompulsoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
-    prontuario_id = db.Column(db.Integer, db.ForeignKey("prontuarios.id"), nullable=True)
+    prontuario_id = db.Column(db.Integer, db.ForeignKey("prontuarios.id"), nullable=True, index=True)
     unidade_id = db.Column(db.Integer, db.ForeignKey("unidades_saude.id"), nullable=True, index=True)
 
     cid = db.Column(db.String(10), nullable=False, index=True)
@@ -102,7 +102,7 @@ class NotificacaoCompulsoria(db.Model):
 
     detectado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     resolvido_em = db.Column(db.DateTime, nullable=True)
-    resolvido_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    resolvido_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     paciente = db.relationship("Paciente", backref="notificacoes")
     unidade = db.relationship("UnidadeSaude", backref="notificacoes")

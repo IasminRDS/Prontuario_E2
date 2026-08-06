@@ -30,16 +30,19 @@ class ExameSolicitado(db.Model):
     __tablename__ = "exames_solicitados"
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
     prontuario_id = db.Column(
-        db.Integer, db.ForeignKey("prontuarios.id"), nullable=True
+        db.Integer, db.ForeignKey("prontuarios.id"), nullable=True,
+        index=True,
     )
-    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
     tipo_exame_id = db.Column(
-        db.Integer, db.ForeignKey("tipos_exame.id"), nullable=False
+        db.Integer, db.ForeignKey("tipos_exame.id"), nullable=False,
+        index=True,
     )
 
     status = db.Column(db.String(20), default="solicitado")
@@ -63,7 +66,9 @@ class ExameSolicitado(db.Model):
     data_coleta = db.Column(db.DateTime, nullable=True)
     data_resultado = db.Column(db.DateTime, nullable=True)
 
-    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True,
+        index=True,
+    )
 
     # Relacionamentos
     paciente = db.relationship("Paciente", backref="exames_solicitados")

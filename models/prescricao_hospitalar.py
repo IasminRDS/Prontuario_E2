@@ -5,10 +5,10 @@ class PrescricaoHospitalar(db.Model):
     __tablename__ = 'prescricoes_hospitalares'
 
     id = db.Column(db.Integer, primary_key=True)
-    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=True)
-    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
-    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=True)
+    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True, index=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=True, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=True, index=True)
 
     data_prescricao = db.Column(db.DateTime, default=datetime.utcnow)
     # `validade_horas` é a janela declarada; `validade_ate` é o instante em que
@@ -28,9 +28,11 @@ class PrescricaoHospitalar(db.Model):
 
     # Assinatura, no mesmo formato de Prontuario.assinar().
     assinada_em = db.Column(db.DateTime, nullable=True)
-    assinada_por = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
+    assinada_por = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
 
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relacionamento com os itens da prescrição
@@ -90,8 +92,8 @@ class ItemPrescricaoHosp(db.Model):
     # Era `prescricao_hosp_id`; a rota e os templates sempre usaram
     # `prescricao_id`, igual ao item ambulatorial. Renomeado para o nome que o
     # resto do código já assumia.
-    prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes_hospitalares.id'), nullable=False)
-    medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True)
+    prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes_hospitalares.id'), nullable=False, index=True)
+    medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True, index=True)
 
     nome_livre = db.Column(db.String(150), nullable=True)
     dose = db.Column(db.String(100), nullable=True)
@@ -129,8 +131,8 @@ class AdministracaoMed(db.Model):
     __tablename__ = 'administracoes_med'
 
     id = db.Column(db.Integer, primary_key=True)
-    item_prescricao_id = db.Column(db.Integer, db.ForeignKey('itens_prescricao_hosp.id'), nullable=False)
-    administrado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    item_prescricao_id = db.Column(db.Integer, db.ForeignKey('itens_prescricao_hosp.id'), nullable=False, index=True)
+    administrado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
 
     data_agendada = db.Column(db.DateTime, nullable=True)
     data_administracao = db.Column(db.DateTime, nullable=True)

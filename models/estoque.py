@@ -17,7 +17,8 @@ class ItemEstoque(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
     medicamento_id = db.Column(db.Integer, nullable=True)
 
@@ -63,11 +64,12 @@ class MovEstoque(db.Model):
     __tablename__ = "mov_estoque"
 
     id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey("itens_estoque.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("itens_estoque.id"), nullable=False, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
-    usuario_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     tipo = db.Column(db.String(20), nullable=False)
     quantidade = db.Column(db.Float, nullable=False)
@@ -78,7 +80,8 @@ class MovEstoque(db.Model):
     fornecedor = db.Column(db.String(100), nullable=True)
     nota_fiscal = db.Column(db.String(50), nullable=True)
     internacao_id = db.Column(
-        db.Integer, db.ForeignKey("internacoes.id"), nullable=True
+        db.Integer, db.ForeignKey("internacoes.id"), nullable=True,
+        index=True,
     )
 
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)

@@ -6,9 +6,9 @@ class AIH(db.Model):
     __tablename__ = 'faturamento_aih'
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
-    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True)
-    medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True, index=True)
+    medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
 
     numero_aih = db.Column(db.String(20), unique=True, nullable=True)
     procedimento_principal = db.Column(db.String(255), nullable=False)
@@ -20,7 +20,9 @@ class AIH(db.Model):
     valor_total = db.Column(db.Numeric(10, 2), nullable=True)
     status = db.Column(db.String(20), default='aberta') # aberta, faturada, rejeitada, cancelada
     
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     # As FKs existiam sem relação declarada: a lista de AIH não conseguia
@@ -53,8 +55,8 @@ class APAC(db.Model):
     __tablename__ = 'faturamento_apac'
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
-    medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
 
     numero_apac = db.Column(db.String(20), unique=True, nullable=True)
     procedimento_principal = db.Column(db.String(255), nullable=False)
@@ -69,7 +71,9 @@ class APAC(db.Model):
     valor_total = db.Column(db.Numeric(10, 2), nullable=True)
     status = db.Column(db.String(20), default='ativa') # ativa, encerrada, cancelada
 
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     paciente = db.relationship('Paciente', backref='apacs')

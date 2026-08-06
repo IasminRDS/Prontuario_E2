@@ -35,11 +35,11 @@ class CandidatoDuplicata(db.Model):
 
     # Para onde os registros foram, quando o par foi unificado.
     sobrevivente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"),
-                                nullable=True)
+                                nullable=True, index=True)
 
     detectado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     decidido_em = db.Column(db.DateTime, nullable=True)
-    decidido_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    decidido_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     menor = db.relationship("Paciente", foreign_keys=[paciente_menor_id])
     maior = db.relationship("Paciente", foreign_keys=[paciente_maior_id])

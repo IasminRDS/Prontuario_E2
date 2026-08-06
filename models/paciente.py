@@ -63,7 +63,7 @@ class Paciente(db.Model):
     atualizado_em = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Relacionamentos
     atendimentos = db.relationship("Atendimento", backref="paciente", lazy="dynamic")

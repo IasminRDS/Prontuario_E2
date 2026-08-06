@@ -52,7 +52,7 @@ class Leito(db.Model):
         db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False, index=True
     )
     unidade = db.relationship("UnidadeSaude", backref="leitos")
-    setor_id = db.Column(db.Integer, db.ForeignKey("setores.id"), nullable=False)
+    setor_id = db.Column(db.Integer, db.ForeignKey("setores.id"), nullable=False, index=True)
     numero = db.Column(db.String(20), nullable=False)  # ex: 201A, UTI-03
     tipo = db.Column(db.String(30), nullable=True)  # comum | isolamento | uti
     status = db.Column(db.String(20), default="livre")
@@ -88,13 +88,14 @@ class Internacao(db.Model):
     __tablename__ = "internacoes"
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False)
-    leito_id = db.Column(db.Integer, db.ForeignKey("leitos.id"), nullable=False)
-    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
+    leito_id = db.Column(db.Integer, db.ForeignKey("leitos.id"), nullable=False, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey("medicos.id"), nullable=True, index=True)
     unidade_id = db.Column(
-        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False
+        db.Integer, db.ForeignKey("unidades_saude.id"), nullable=False,
+        index=True,
     )
-    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Tipo e motivo
     tipo = db.Column(db.String(30), default="clinica")
@@ -147,7 +148,13 @@ class Internacao(db.Model):
     @property
     def dias_internado(self):
         fim = self.data_alta or datetime.utcnow()
-        return (fim - self.data_entrada).days
+        # Nunca negativo. `timedelta.days` trunca para baixo, então uma alta
+        # registrada com hora anterior à entrada — mesmo por segundos, o que
+        # acontece quando as duas são preenchidas na mesma tela — devolvia -1, e
+        # o sumário de alta imprimia "Dias internado: -1 dias". Pior: o
+        # `permanencia_media` de routes/relatorios_hosp.py soma isto, então um
+        # registro torto puxava a média do hospital inteiro para baixo.
+        return max(0, (fim - self.data_entrada).days)
 
     def __repr__(self):
         return f"<Internacao {self.id} paciente={self.paciente_id}>"
@@ -160,9 +167,10 @@ class EvolucaoInternacao(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     internacao_id = db.Column(
-        db.Integer, db.ForeignKey("internacoes.id"), nullable=False
+        db.Integer, db.ForeignKey("internacoes.id"), nullable=False,
+        index=True,
     )
-    profissional_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    profissional_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     tipo = db.Column(db.String(20), default="medica")
     # medica | enfermagem | fisioterapia | nutricao | psicologia | servico_social

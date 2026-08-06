@@ -20,10 +20,10 @@ class Cirurgia(db.Model):
     __tablename__ = 'cirurgias'
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
-    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True) # Cirurgião principal
-    sala_id = db.Column(db.Integer, db.ForeignKey('salas_cirurgicas.id'), nullable=True)
-    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True) # Cirurgião principal
+    sala_id = db.Column(db.Integer, db.ForeignKey('salas_cirurgicas.id'), nullable=True, index=True)
+    internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True, index=True)
 
     descricao = db.Column(db.String(255), nullable=False) # Nome/tipo do procedimento
     status = db.Column(db.String(20), default='agendada') # agendada, em_andamento, concluida, cancelada
@@ -34,7 +34,9 @@ class Cirurgia(db.Model):
     
     observacoes = db.Column(db.Text, nullable=True)
     
-    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
+        index=True,
+    )
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relações explícitas: `sala` já vem do backref em SalaCirurgica.
