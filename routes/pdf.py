@@ -1,5 +1,7 @@
 import os
 import uuid
+from io import BytesIO
+
 from werkzeug.utils import secure_filename
 from flask import Blueprint, send_file, abort, request, render_template, flash, redirect, url_for
 from flask_login import login_required, current_user
@@ -161,8 +163,15 @@ def processar_pdf():
             PDFManager.proteger_pdf(caminho_temp, caminho_saida, senha, permitir_impressao)
             registrar("pdf_tools", None, "process", f"Ferramenta PDF: {acao}", commit=True)
 
-        return send_file(caminho_saida, as_attachment=True, download_name=nome_download)
-        
+        # Entregue de memória para o `finally` poder apagar: com `send_file`
+        # sobre o caminho, o arquivo precisa sobreviver ao envio, e por isso
+        # nenhum dos processados era removido — documento clínico de terceiro
+        # acumulava em `instance/` indefinidamente, fora do backup e do RLS.
+        with open(caminho_saida, 'rb') as fonte:
+            conteudo = BytesIO(fonte.read())
+        return send_file(conteudo, mimetype='application/pdf',
+                         as_attachment=True, download_name=nome_download)
+
     except Exception as e:
         # O bloco acima grava auditoria; se falhar depois disso, a sessão fica
         # abortada em PostgreSQL e a tela do redirect não conseguiria consultar
@@ -171,8 +180,9 @@ def processar_pdf():
         flash(f"Erro ao processar PDF: {e}", "danger")
         return redirect(url_for('pdf.ferramentas'))
     finally:
-        if os.path.exists(caminho_temp):
-            os.remove(caminho_temp)
+        for caminho in (caminho_temp, caminho_saida):
+            if os.path.exists(caminho):
+                os.remove(caminho)
 
 @pdf_bp.route('/reorganizar', methods=['GET', 'POST'])
 @login_required
@@ -192,7 +202,12 @@ def reorganizar():
     nome_seguro = secure_filename(arquivo.filename)
     nome_temp = f"temp_{uuid.uuid4().hex}_{nome_seguro}"
     caminho_temp = os.path.join('instance', nome_temp)
-    caminho_saida = os.path.join('instance', f"reorg_{nome_seguro}")
+    # O nome de SAÍDA precisa do mesmo identificador único da entrada. Com
+    # `reorg_{nome_seguro}`, dois usuários que enviassem "laudo.pdf" escreviam
+    # no mesmo arquivo: o segundo sobrescrevia o do primeiro entre o processar e
+    # o send_file, e um baixava o documento clínico do outro. O caminho também
+    # era adivinhável a partir do nome do arquivo.
+    caminho_saida = os.path.join('instance', f"reorg_{nome_temp}")
     
     arquivo.save(caminho_temp)
     
@@ -203,11 +218,15 @@ def reorganizar():
         PDFManager.reorganizar_pdf(caminho_temp, caminho_saida, nova_ordem)
         registrar("pdf_tools", None, "process", "Ferramenta PDF: reorganizar", commit=True)
         
-        return send_file(caminho_saida, as_attachment=True, download_name=f"novo_{nome_seguro}")
+        with open(caminho_saida, 'rb') as fonte:
+            conteudo = BytesIO(fonte.read())
+        return send_file(conteudo, mimetype='application/pdf',
+                         as_attachment=True, download_name=f"novo_{nome_seguro}")
     except Exception as e:
         db.session.rollback()
         flash(f"Erro ao reorganizar PDF.", "danger")
         return redirect(url_for('pdf.reorganizar'))
     finally:
-        if os.path.exists(caminho_temp):
-            os.remove(caminho_temp)
+        for caminho in (caminho_temp, caminho_saida):
+            if os.path.exists(caminho):
+                os.remove(caminho)
