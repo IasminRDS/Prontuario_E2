@@ -352,7 +352,10 @@ def _registrar_cli(app):
         print(f"  {sv.gerar(pacientes=pacientes)}")
         print("gerando internações...")
         print(f"  {sv.gerar_internacoes()}")
-        print("pronto. Rode `flask medir-consultas` para os planos.")
+        print("gerando registros clínicos (cirurgia, encaminhamento, PS, "
+              "evolução, itens de prescrição)...")
+        print(f"  {sv.gerar_clinicas()}")
+        print("pronto.")
 
     @app.cli.command("backup-validar")
     @click.argument("caminho", type=click.Path(exists=True, dir_okay=False))
