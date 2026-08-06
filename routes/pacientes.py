@@ -129,6 +129,13 @@ def index():
     query = _query_pacientes_escopo()
     query, filtros = _aplicar_filtros(query)
 
+    # A auditoria vem ANTES de materializar as linhas, e não depois: `commit`
+    # expira todos os objetos da sessão (`expire_on_commit` é o padrão), então
+    # auditar depois de carregar fazia o template recarregar paciente por
+    # paciente — 20 consultas para uma página de 20. Registrar a leitura antes
+    # de lê-la é igualmente correto e não invalida nada.
+    auditar_aqui("pacientes", "read", commit=True)
+
     pacientes = query.order_by(Paciente.nome.asc()).paginate(
         page=request.args.get("page", 1, type=int),
         per_page=_per_page(),
@@ -141,7 +148,6 @@ def index():
         if getattr(p, "idade", None) is None:
             p.idade = _idade_anos(p.data_nascimento)
 
-    auditar_aqui("pacientes", "read", commit=True)
     return render_template("pacientes/listar.html", pacientes=pacientes, **filtros)
 
 
@@ -165,9 +171,9 @@ def listar_pacientes():
 def listar_pacientes_api():
     query = _query_pacientes_escopo()
     query, filtros = _aplicar_filtros(query)
-    itens = query.order_by(Paciente.nome.asc()).all()
-
     auditar_aqui("pacientes", "read", commit=True)
+
+    itens = query.order_by(Paciente.nome.asc()).all()
 
     return jsonify([{
         "id": p.id,
