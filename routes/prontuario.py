@@ -303,14 +303,18 @@ def listar_prontuarios():
 
     itens = q.order_by(Prontuario.criado_em.desc()).all()
 
-    auditar_aqui("prontuarios", "list")
+    # `commit=True` aqui, e não só no ramo HTML abaixo: em rota de leitura não
+    # existe transação de escrita para carregar o log, e a sessão é descartada
+    # no fim da requisição. O commit vivia dentro do `if not quer_json`, então
+    # quem consultasse a lista de prontuários em JSON — a mesma URL, com
+    # `?formato=json` ou `Accept: application/json` — não deixava rastro nenhum.
+    auditar_aqui("prontuarios", "list", commit=True)
 
     quer_json = (
         request.args.get("formato") == "json"
         or request.accept_mimetypes.best == "application/json"
     )
     if not quer_json:
-        db.session.commit()  # persiste o evento de auditoria
         pacientes = {}
         ids = {p.paciente_id for p in itens}
         if ids:

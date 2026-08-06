@@ -136,9 +136,14 @@ def _semear():
     for _chave, (nome, email, perfil) in PERFIS.items():
         if User.query.filter_by(email=email).first():
             continue
+        # O "admin" da suíte é o operador da plataforma nos testes: precisa
+        # enxergar além da unidade. Desde que só SuperAdmin atravessa hospital
+        # por PERFIL, esse alcance passa a vir do nível de acesso — que é onde a
+        # decisão deve morar.
+        nivel = "SISTEMA" if perfil == "admin" else "UNIDADE"
         u = User(nome=nome, email=email, perfil=perfil, ativo=True,
                  unidade_id=unidade.id if unidade else None,
-                 nivel_acesso="UNIDADE")
+                 nivel_acesso=nivel)
         u.set_password(SENHA)
         db.session.add(u)
     db.session.commit()

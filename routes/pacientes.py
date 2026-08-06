@@ -11,7 +11,10 @@ from database.db import db
 from models.atendimento import Atendimento
 from models.paciente import Paciente
 from models.prontuario import Prontuario
-from utils.security import validar_cpf, validar_cns, pode_acessar_paciente
+from utils.security import (
+    validar_cpf, validar_cns, pode_acessar_paciente,
+    query_pacientes_no_escopo,
+)
 from utils.audit import audit_log, auditar_aqui, registrar
 from utils.rbac import requer_permissao
 
@@ -56,45 +59,13 @@ def _idade_anos(data_nascimento):
 
 
 def _query_pacientes_escopo():
-    q = Paciente.query.filter_by(ativo=True)
+    """Escopo territorial de pacientes.
 
-    # DEV / bypass explícito
-    if _is_dev_mode() or _bypass_scope():
-        return q
-
-    # Produção: RBAC estrito
-    if current_user.perfil == "admin" or getattr(current_user, "nivel_acesso", "UNIDADE") == "ESTADO":
-        return q
-
-    nivel = getattr(current_user, "nivel_acesso", "UNIDADE")
-
-    if nivel == "MUNICIPIO":
-        user_ibge = getattr(current_user, "municipio_ibge", None)
-        if user_ibge and hasattr(Paciente, "municipio_ibge"):
-            return q.filter(Paciente.municipio_ibge == user_ibge)
-
-        if current_user.unidade:
-            return q.filter(
-                Paciente.municipio == current_user.unidade.municipio,
-                Paciente.uf == current_user.unidade.uf
-            )
-        return q.filter(Paciente.id == -1)
-
-    if nivel == "REGIONAL":
-        user_uf = getattr(current_user, "uf", None)
-        if user_uf and hasattr(Paciente, "uf"):
-            return q.filter(Paciente.uf == user_uf)
-        return q.filter(Paciente.id == -1)
-
-    if current_user.unidade:
-        return q.filter(
-            Paciente.municipio == current_user.unidade.municipio,
-            Paciente.uf == current_user.unidade.uf
-        )
-
-    if _rbac_strict():
-        return q.filter(Paciente.id == -1)
-    return q
+    A regra mora em `utils/security`, junto de `pode_acessar_paciente`: as duas
+    respondem à mesma pergunta e precisam divergir juntas, nunca em silêncio.
+    Este alias existe só para não reescrever as chamadas deste módulo.
+    """
+    return query_pacientes_no_escopo()
 
 
 def _aplicar_filtros(query):
@@ -170,7 +141,7 @@ def index():
         if getattr(p, "idade", None) is None:
             p.idade = _idade_anos(p.data_nascimento)
 
-    auditar_aqui("pacientes", "read")
+    auditar_aqui("pacientes", "read", commit=True)
     return render_template("pacientes/listar.html", pacientes=pacientes, **filtros)
 
 
@@ -196,7 +167,7 @@ def listar_pacientes_api():
     query, filtros = _aplicar_filtros(query)
     itens = query.order_by(Paciente.nome.asc()).all()
 
-    auditar_aqui("pacientes", "read")
+    auditar_aqui("pacientes", "read", commit=True)
 
     return jsonify([{
         "id": p.id,
@@ -467,7 +438,7 @@ def obter_paciente(paciente_id):
         if not pode_acessar_paciente(p, current_user):
             return jsonify({"erro": "Sem permissão para acessar este paciente"}), 403
 
-    auditar_aqui("pacientes", "read")
+    auditar_aqui("pacientes", "read", commit=True)
     return jsonify({
         "id": p.id,
         "nome": p.nome,
