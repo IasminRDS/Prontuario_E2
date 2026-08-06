@@ -142,6 +142,7 @@ def entrada(paciente_id=None):
                 paciente_id=paciente.id,
                 medico_id=request.form.get("medico_id", type=int),
                 triagem_id=triagem.id if triagem else None,
+                unidade_id=current_user.unidade_id,
                 motivo_consulta=queixa,
                 diagnostico_preliminar=(request.form.get("hipotese_diag") or "").strip() or None,
                 status="em_espera",

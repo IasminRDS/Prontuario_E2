@@ -171,6 +171,9 @@ class EvolucaoInternacao(db.Model):
         index=True,
     )
     profissional_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    # Escopo territorial do RLS, desnormalizado da internação.
+    unidade_id = db.Column(db.Integer, db.ForeignKey("unidades_saude.id"),
+                           nullable=True, index=True)
 
     tipo = db.Column(db.String(20), default="medica")
     # medica | enfermagem | fisioterapia | nutricao | psicologia | servico_social

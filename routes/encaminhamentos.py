@@ -139,6 +139,7 @@ def novo(paciente_id=None):
                 prontuario_id=request.form.get("prontuario_id", type=int),
                 medico_id=medico.id if medico else None,
                 unidade_origem_id=origem_id,
+                unidade_id=origem_id,
                 especialidade=especialidade,
                 servico_destino=(request.form.get("servico_destino") or "").strip() or None,
                 prioridade=prioridade if prioridade in PRIORIDADES else "eletivo",

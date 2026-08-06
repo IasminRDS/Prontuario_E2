@@ -84,6 +84,7 @@ def nova(paciente_id=None):
                     medico_id     = request.form.get('cirurgiao_id', type=int),
                     sala_id       = request.form.get('sala_id', type=int),
                     internacao_id = request.form.get('internacao_id', type=int),
+                    unidade_id    = current_user.unidade_id,
                     descricao     = procedimento,
                     data_agendada = data_ag,
                     status        = 'agendada',

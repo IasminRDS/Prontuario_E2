@@ -24,6 +24,11 @@ class Cirurgia(db.Model):
     medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True) # Cirurgião principal
     sala_id = db.Column(db.Integer, db.ForeignKey('salas_cirurgicas.id'), nullable=True, index=True)
     internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True, index=True)
+    # Escopo territorial do RLS. Desnormalizado do pai (internação/unidade de
+    # quem agendou) para a política ser `unidade_id = current_setting(...)`,
+    # sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
 
     descricao = db.Column(db.String(255), nullable=False) # Nome/tipo do procedimento
     status = db.Column(db.String(20), default='agendada') # agendada, em_andamento, concluida, cancelada

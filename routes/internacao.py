@@ -219,6 +219,7 @@ def nova_evolucao(id):
         ev = EvolucaoInternacao(
             internacao_id=intern.id,
             profissional_id=current_user.id,
+            unidade_id=intern.unidade_id,
             tipo=(request.form.get("tipo") or "medica"),
             pressao_arterial=(request.form.get("pressao_arterial") or "").strip() or None,
             subjetivo=(request.form.get("subjetivo") or "").strip() or None,

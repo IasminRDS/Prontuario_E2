@@ -10,6 +10,9 @@ class AtendimentoPS(db.Model):
     paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
     medico_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
     triagem_id = db.Column(db.Integer, db.ForeignKey('triagens.id'), nullable=True, index=True)
+    # Escopo territorial do RLS.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     
     # Dados do Atendimento
     motivo_consulta = db.Column(db.Text, nullable=False)

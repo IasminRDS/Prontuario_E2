@@ -104,6 +104,7 @@ def prescrever(paciente_id, prontuario_id=None):
                 mid = med_ids[i] if i < len(med_ids) and med_ids[i] else None
                 item = ItemPrescricao(
                     prescricao_id  = pres.id,
+                    unidade_id     = pres.unidade_id,
                     medicamento_id = int(mid) if mid else None,
                     nome_livre     = nome.strip() if not mid else None,
                     dose           = doses[i].strip()    if i < len(doses)    else None,

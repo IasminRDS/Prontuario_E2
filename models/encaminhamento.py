@@ -11,6 +11,11 @@ class Encaminhamento(db.Model):
     prontuario_id   = db.Column(db.Integer, db.ForeignKey('prontuarios.id'), nullable=True, index=True)
     medico_id       = db.Column(db.Integer, db.ForeignKey('medicos.id'),     nullable=True, index=True)
     unidade_origem_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'), nullable=False, index=True)
+    # Espelha `unidade_origem_id`. Redundante de propósito: `tabelas_protegidas`
+    # descobre o escopo pela coluna `unidade_id`, e uma política especial só
+    # para esta tabela seria a exceção que ninguém lembra de manter.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
 
     # Dados do Encaminhamento
     especialidade   = db.Column(db.String(100), nullable=False)
@@ -41,7 +46,11 @@ class Encaminhamento(db.Model):
     paciente       = db.relationship('Paciente',   backref='encaminhamentos')
     prontuario     = db.relationship('Prontuario', backref='encaminhamentos')
     medico         = db.relationship('Medico',     backref='encaminhamentos')
-    unidade_origem = db.relationship('UnidadeSaude', backref='encaminhamentos')
+    # `foreign_keys` é obrigatório desde que a tabela passou a ter DUAS chaves
+    # para `unidades_saude` (origem e escopo do RLS): sem isto o mapeamento
+    # falha inteiro com AmbiguousForeignKeysError.
+    unidade_origem = db.relationship('UnidadeSaude', backref='encaminhamentos',
+                                     foreign_keys=[unidade_origem_id])
 
     # Dicionários Auxiliares de Labels
     STATUS_LABELS = {
