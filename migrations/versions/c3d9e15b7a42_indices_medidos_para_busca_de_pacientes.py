@@ -67,7 +67,7 @@ def upgrade():
         op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         op.execute(
             "CREATE INDEX ix_pacientes_nome_trgm "
-            "ON pacientes USING gin (nome gin_trgm_ops)")
+            "ON pacientes USING gin (nome public.gin_trgm_ops)")
 
 
 def downgrade():

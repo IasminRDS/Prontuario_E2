@@ -75,6 +75,10 @@ def _isolar_postgres(engine):
     with engine.connect() as con:
         con.execute(sa.text(f"DROP SCHEMA IF EXISTS {ESQUEMA} CASCADE"))
         con.execute(sa.text(f"CREATE SCHEMA {ESQUEMA}"))
+        # O índice de trigramas de `pacientes` depende desta extensão. A suíte
+        # monta o schema com `create_all` e nunca roda migration, então quem
+        # cria a extensão na migration não a cria aqui.
+        con.execute(sa.text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         con.commit()
 
     @event.listens_for(engine, "connect")

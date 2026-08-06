@@ -5,6 +5,32 @@ from datetime import datetime, date
 class Paciente(db.Model):
     __tablename__ = "pacientes"
 
+    # Declarados aqui, e não só na migration, porque `flask db check` compara o
+    # banco com o METADATA: índice que existe no banco e não no model é
+    # reportado como deriva, e o autogenerate seguinte proporia removê-lo.
+    #
+    # Ambos foram escolhidos por medição com 50 mil linhas (ver a migration
+    # c3d9e15b7a42): a lista paginada caiu de 40,1 ms para 0,19 ms e o
+    # autocomplete de 185,9 ms para 0,96 ms.
+    __table_args__ = (
+        # Na ordem certa, o mesmo índice filtra (município, UF) E ordena (nome),
+        # o que elimina o Sort. Parcial em `ativo` porque paciente inativo não
+        # aparece nessas telas.
+        db.Index("ix_pacientes_territorio", "municipio", "uf", "nome",
+                 postgresql_where=db.text("ativo"),
+                 sqlite_where=db.text("ativo")),
+        # `ILIKE '%texto%'` não usa B-tree: o curinga à esquerda impede busca por
+        # prefixo. Em SQLite as opções `postgresql_*` são ignoradas e sobra um
+        # índice comum, que é inofensivo — o banco de teste não tem volume.
+        #
+        # `public.` na classe de operadores não é enfeite: a extensão instala em
+        # `public`, e a suíte prende o `search_path` ao schema de teste. Sem
+        # qualificar, `create_all` falha com "gin_trgm_ops não existe".
+        db.Index("ix_pacientes_nome_trgm", "nome",
+                 postgresql_using="gin",
+                 postgresql_ops={"nome": "public.gin_trgm_ops"}),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
 
     # Identificação
