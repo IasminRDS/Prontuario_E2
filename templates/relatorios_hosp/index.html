@@ -1,71 +1,41 @@
 {% extends "base.html" %}
-{% block title %}Estoque{% endblock %}
-{% block page_title %}Controle de Estoque{% endblock %}
-{% block topbar_actions %}
-  <a href="{{ url_for('estoque.alertas') }}" class="btn btn-secondary">
-    Alertas {% if criticos_n %}<span class="badge badge-vermelho" style="margin-left:4px">{{ criticos_n }}</span>{% endif %}
-  </a>
-  <a href="{{ url_for('estoque.novo') }}" class="btn btn-primary">+ Novo Item</a>
-{% endblock %}
+
+{% block title %}Relatórios hospitalares{% endblock %}
+{% block page_title %}Relatórios hospitalares{% endblock %}
+
 {% block content %}
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
-  <div class="stat-card azul"><div class="stat-label">Itens cadastrados</div><div class="stat-value">{{ total_itens }}</div></div>
-  <div class="stat-card" style="border-left:4px solid var(--sus-vermelho)"><div class="stat-label">Estoque crítico</div><div class="stat-value" style="color:var(--sus-vermelho)">{{ criticos_n }}</div></div>
-  <div class="stat-card" style="border-left:4px solid var(--cinza-400)"><div class="stat-label">Zerados</div><div class="stat-value" style="color:var(--cinza-600)">{{ zerados_n }}</div></div>
-</div>
 
-<form method="GET" class="card mb-20">
-  <div class="card-body" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-    <div class="search-bar" style="flex:1">
-      <svg class="ico" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-      </svg>
-      <input type="text" name="q" value="{{ q }}" placeholder="Buscar medicamento ou material...">
-    </div>
-    <div class="form-group" style="min-width:130px">
-      <select name="categoria" class="form-control">
-        <option value="">Todas categorias</option>
-        {% for val, lbl in [('medicamento','Medicamento'),('material','Material'),
-          ('opme','OPME'),('dietetico','Dietético')] %}
-        <option value="{{ val }}" {% if cat==val %}selected{% endif %}>{{ lbl }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:.84rem;cursor:pointer;white-space:nowrap">
-      <input type="checkbox" name="criticos" value="1" {% if criticos %}checked{% endif %}>
-      Só críticos
-    </label>
-    <button type="submit" class="btn btn-primary">Filtrar</button>
-    <a href="{{ url_for('estoque.index') }}" class="btn btn-secondary">Limpar</a>
-  </div>
-</form>
+<div class="cards">
+  <article class="report-card">
+    <h3>Ocupação de leitos</h3>
+    <p>Taxa de ocupação por setor, internações no mês e permanência média.</p>
+    {% if 'rel_hosp.ocupacao' in available_endpoints %}
+      <a class="btn" href="{{ url_for('rel_hosp.ocupacao') }}">Acessar →</a>
+    {% else %}
+      <span class="btn" aria-disabled="true">Indisponível</span>
+    {% endif %}
+  </article>
 
-<div class="card">
-  <div class="table-wrapper">
-    <table class="tabela">
-      <thead><tr><th>Nome</th><th>Categoria</th><th>Quantidade</th><th>Mínimo</th><th>Lote</th><th>Validade</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-        {% for i in itens %}
-        {% set slabel, scor = i.status %}
-        <tr>
-          <td class="fw-500">{{ i.nome }}<div style="font-size:.72rem;color:var(--cinza-400)">{{ i.apresentacao or '' }}</div></td>
-          <td><span class="badge badge-cinza">{{ i.categoria|capitalize }}</span></td>
-          <td class="font-mono fw-600" style="color:{% if i.quantidade<=0 %}var(--sus-vermelho){% elif i.abaixo_minimo %}var(--sus-amarelo){% else %}var(--sus-verde){% endif %}">
-            {{ i.quantidade }} {{ i.unidade_medida }}
-          </td>
-          <td class="font-mono" style="font-size:.8rem;color:var(--cinza-400)">{{ i.estoque_minimo }} {{ i.unidade_medida }}</td>
-          <td class="font-mono" style="font-size:.8rem">{{ i.lote_atual or '—' }}</td>
-          <td class="font-mono" style="font-size:.8rem">{{ i.validade.strftime('%m/%Y') if i.validade else '—' }}</td>
-          <td><span class="badge badge-{{ scor }}">{{ slabel }}</span></td>
-          <td>
-            <a href="{{ url_for('estoque.movimentar', id=i.id) }}" class="btn btn-sm btn-primary">Movimentar</a>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--cinza-400)">Nenhum item encontrado.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <article class="report-card">
+    <h3>Produção hospitalar</h3>
+    <p>Internações, altas, cirurgias, atendimentos de PS e óbitos no período.
+       Exportável em CSV.</p>
+    {% if 'rel_hosp.producao' in available_endpoints %}
+      <a class="btn" href="{{ url_for('rel_hosp.producao') }}">Acessar →</a>
+    {% else %}
+      <span class="btn" aria-disabled="true">Indisponível</span>
+    {% endif %}
+  </article>
+
+  <article class="report-card">
+    <h3>Pronto-socorro</h3>
+    <p>Atendimentos por classificação de risco e desfecho, com tempo médio de
+       permanência. Exportável em CSV.</p>
+    {% if 'rel_hosp.relatorio_ps' in available_endpoints %}
+      <a class="btn" href="{{ url_for('rel_hosp.relatorio_ps') }}">Acessar →</a>
+    {% else %}
+      <span class="btn" aria-disabled="true">Indisponível</span>
+    {% endif %}
+  </article>
 </div>
 {% endblock %}
