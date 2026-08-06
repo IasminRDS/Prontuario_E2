@@ -15,6 +15,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
 
+from utils.datas import por_extenso
+
 AZUL = colors.HexColor("#003F88")
 AZUL2 = colors.HexColor("#0060C0")
 AZULC = colors.HexColor("#E8F0FB")
@@ -204,7 +206,9 @@ def gerar_encaminhamento(enc, paciente, medico, unidade):
     if paciente.alergias:
         dados_pac.append(
             [
-                Paragraph("⚠ Alergias", e["label"]),
+                # Sem o "⚠" (U+26A0), fora do WinAnsi das fontes padrão do
+                # reportlab: saía como quadrado preto.
+                Paragraph("ALERGIAS", e["label"]),
                 Paragraph(paciente.alergias, e["valor"]),
                 Paragraph("", e["label"]),
                 Paragraph("", e["valor"]),
@@ -308,7 +312,7 @@ def gerar_encaminhamento(enc, paciente, medico, unidade):
     s.append(
         Paragraph(
             f'{unidade.municipio if unidade and unidade.municipio else "Local"}, '
-            f'{datetime.now().strftime("%d de %B de %Y")}',
+            f'{por_extenso(datetime.now())}',
             e["centro"],
         )
     )

@@ -214,7 +214,9 @@ def gerar_alta(internacao, paciente, medico, unidade):
         al = Table(
             [
                 [
-                    Paragraph("⚠ Alergias conhecidas:", e["label"]),
+                    # Sem o "⚠" (U+26A0), que não existe no WinAnsi das fontes
+                    # padrão do reportlab e virava um quadrado preto.
+                    Paragraph("ALERGIAS CONHECIDAS:", e["label"]),
                     Paragraph(paciente.alergias, e["valor"]),
                 ]
             ],

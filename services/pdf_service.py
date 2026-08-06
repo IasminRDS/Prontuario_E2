@@ -14,6 +14,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
 
+from utils.datas import por_extenso
+
 # ── Paleta SUS ──
 AZUL_SUS = colors.HexColor("#003F88")
 AZUL_MEDIO = colors.HexColor("#0060C0")
@@ -198,7 +200,10 @@ def gerar_prontuario(prontuario, paciente, medico, unidade):
         ],
     ]
     if paciente.alergias:
-        dados.append(["⚠ Alergias", paciente.alergias, "", ""])
+        # Sem glifo: o "⚠" (U+26A0) não existe no WinAnsi das fontes padrão do
+        # reportlab e saía como um quadrado preto — justamente na linha de
+        # alergia, que é a que não pode ficar ilegível.
+        dados.append(["ALERGIAS", paciente.alergias, "", ""])
 
     tbl = Table(
         [
@@ -239,7 +244,9 @@ def gerar_prontuario(prontuario, paciente, medico, unidade):
     if prontuario.frequencia_cardiaca:
         vitais.append(("FC", str(prontuario.frequencia_cardiaca), "bpm"))
     if prontuario.saturacao_o2:
-        vitais.append(("SpO₂", f"{prontuario.saturacao_o2:.0f}", "%"))
+        # "SpO2" e não "SpO₂": o subscrito (U+2082) também está fora do WinAnsi
+        # e saía como quadrado preto no lugar do 2.
+        vitais.append(("SpO2", f"{prontuario.saturacao_o2:.0f}", "%"))
     if prontuario.peso:
         vitais.append(("Peso", f"{prontuario.peso:.1f}", "kg"))
     if prontuario.altura:
@@ -428,7 +435,7 @@ def gerar_receituario(prontuario, paciente, medico, unidade):
     story.append(
         Paragraph(
             f'{unidade.municipio if unidade and unidade.municipio else ""}, '
-            f'{datetime.now().strftime("%d de %B de %Y")}',
+            f'{por_extenso(datetime.now())}',
             e["assinatura"],
         )
     )
@@ -513,7 +520,7 @@ def gerar_atestado(paciente, medico, unidade, dias, cid=None, observacao=None):
     story.append(
         Paragraph(
             f'{unidade.municipio if unidade and unidade.municipio else "Local"}, '
-            f'{datetime.now().strftime("%d de %B de %Y")}',
+            f'{por_extenso(datetime.now())}',
             ParagraphStyle(
                 "data",
                 fontName="Helvetica",
