@@ -162,14 +162,42 @@ def pode(*permissoes, usuario=None):
     return any(p in concedidas for p in permissoes)
 
 
+def registrar_negacao(permissoes, motivo):
+    """Log de negação de acesso, com o que permite investigar depois.
+
+    Negação isolada é rotina — alguém clicou onde não devia. Negação em série,
+    do mesmo usuário ou do mesmo IP, é tentativa de mapear o que o sistema
+    expõe, e é o indicador MAIS PRECOCE de acesso indevido que existe: aparece
+    antes de qualquer dado vazar. Sem este registro, o primeiro sinal seria o
+    incidente já consumado.
+
+    Vai para o log da aplicação e não para `audit_logs` de propósito: a trilha
+    de auditoria registra o que ACONTECEU com dado clínico, e aqui nada
+    aconteceu. Misturar as duas coisas polui a trilha que responde ao titular.
+    """
+    from flask import current_app, request
+
+    current_app.logger.warning(
+        "ACESSO NEGADO: usuario=%s perfil=%s ip=%s rota=%s exigia=%s (%s)",
+        getattr(current_user, "id", None),
+        getattr(current_user, "perfil", None),
+        request.headers.get("X-Forwarded-For", request.remote_addr),
+        request.endpoint,
+        ",".join(permissoes) if permissoes else "-",
+        motivo,
+    )
+
+
 def requer_permissao(*permissoes):
     """Decorator de rota. 401 se anônimo, 403 se autenticado sem permissão."""
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if not getattr(current_user, "is_authenticated", False):
+                registrar_negacao(permissoes, "sessão anônima")
                 abort(401)
             if not pode(*permissoes):
+                registrar_negacao(permissoes, "perfil sem a permissão")
                 abort(403)
             return f(*args, **kwargs)
         return wrapper
