@@ -88,8 +88,15 @@ def lista_paciente(paciente_id):
         .order_by(Encaminhamento.data_solicitacao.desc())
         .all()
     )
-    return render_template("encaminhamentos/lista.html",
-                           paciente=paciente, encaminhamentos=encaminhamentos)
+    # A tela separa o que ainda tramita do que já se encerrou. A separação vem
+    # daqui e não do template: é regra de domínio.
+    encerrados = ("realizado", "cancelado", "negado")
+    ativos = [e for e in encaminhamentos if e.status not in encerrados]
+    historico = [e for e in encaminhamentos if e.status in encerrados]
+
+    return render_template("encaminhamentos/lista.html", paciente=paciente,
+                           encaminhamentos=encaminhamentos,
+                           ativos=ativos, historico=historico)
 
 
 @encaminhamentos_bp.get("/<int:id>")

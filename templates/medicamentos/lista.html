@@ -1,6 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Exames — {{ paciente.nome_exibicao }}{% endblock %}
-{% block page_title %}Exames do Paciente{% endblock %}
+{% block title %}Prescrições — {{ paciente.nome_exibicao }}{% endblock %}
+{% block page_title %}Prescrições do Paciente{% endblock %}
+
+{# Esta tela era mais uma CÓPIA da lista de exames: título "Exames do Paciente",
+   colunas de exame, e lendo `pendentes`/`concluidos`, que a rota nunca passou —
+   ela passa `ativas` e `historico`. Resultado: quem abria as prescrições de um
+   paciente via uma tela de exames permanentemente vazia. #}
 
 {% block topbar_actions %}
   <a href="{{ url_for('pacientes.perfil', id=paciente.id) }}" class="btn btn-secondary">
@@ -10,11 +15,11 @@
     Voltar
   </a>
   {% if current_user.is_medico() or current_user.is_admin() %}
-  <a href="{{ url_for('exames.solicitar', paciente_id=paciente.id) }}" class="btn btn-primary">
+  <a href="{{ url_for('medicamentos.prescrever', paciente_id=paciente.id) }}" class="btn btn-primary">
     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
-    Solicitar Exames
+    Nova Prescrição
   </a>
   {% endif %}
 {% endblock %}
@@ -29,52 +34,54 @@
     </div>
     <div class="ms-auto flex gap-16">
       <div style="text-align:center">
-        <div style="font-size:1.4rem;font-weight:700;color:var(--sus-amarelo)">{{ pendentes|length }}</div>
-        <div style="font-size:.72rem;color:var(--cinza-400)">Pendentes</div>
+        <div style="font-size:1.4rem;font-weight:700;color:var(--sus-verde)">{{ ativas|length }}</div>
+        <div style="font-size:.72rem;color:var(--cinza-400)">Ativas</div>
       </div>
       <div style="text-align:center">
-        <div style="font-size:1.4rem;font-weight:700;color:var(--sus-verde)">{{ concluidos|length }}</div>
-        <div style="font-size:.72rem;color:var(--cinza-400)">Com resultado</div>
+        <div style="font-size:1.4rem;font-weight:700;color:var(--cinza-500)">{{ historico|length }}</div>
+        <div style="font-size:.72rem;color:var(--cinza-400)">Encerradas</div>
       </div>
     </div>
   </div>
 </div>
 
-{% if pendentes %}
+{% macro tabela_prescricoes(lista, titulo) %}
+{% if lista %}
 <div class="card mb-20">
-  <div class="card-header">
-    <svg width="16" height="16" fill="none" stroke="var(--sus-amarelo)" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    <h3>Aguardando Resultado</h3>
-  </div>
+  <div class="card-header"><h3>{{ titulo }}</h3></div>
   <div class="table-wrapper">
     <table class="tabela">
       <thead>
-        <tr><th>Exame</th><th>Categoria</th><th>Urgência</th><th>Solicitado em</th><th>Médico</th><th>Status</th><th></th></tr>
+        <tr><th>Data</th><th>Medicamentos</th><th>Médico</th>
+            <th>Validade</th><th>Status</th><th></th></tr>
       </thead>
       <tbody>
-        {% for e in pendentes %}
-        {% set slabel, scor = e.status_label %}
-        {% set ulabel, ucor = e.urgencia_label %}
+        {% for p in lista %}
+        {% set slabel, scor = p.status_label %}
         <tr>
-          <td class="fw-500">{{ e.tipo_exame.nome }}</td>
-          <td><span class="badge badge-cinza">{{ e.tipo_exame.categoria or '—' }}</span></td>
-          <td><span class="badge badge-{{ ucor }}">{{ ulabel }}</span></td>
-          <td class="font-mono" style="font-size:.8rem">{{ e.data_solicitacao.strftime('%d/%m/%Y') }}</td>
-          <td style="font-size:.85rem">{{ e.medico.nome if e.medico else '—' }}</td>
+          <td class="font-mono" style="font-size:.8rem">
+            {{ p.criado_em.strftime('%d/%m/%Y') if p.criado_em else '—' }}
+          </td>
+          <td>
+            {% for item in p.itens %}
+              <div style="font-size:.85rem">
+                <span class="fw-500">{{ item.nome_exibicao }}</span>
+                {% if item.dose %}<span style="color:var(--cinza-600)"> — {{ item.dose }}</span>{% endif %}
+                {% if item.frequencia %}<span style="color:var(--cinza-500)">, {{ item.frequencia }}</span>{% endif %}
+                {% if item.via %}<span class="badge badge-cinza">{{ item.via }}</span>{% endif %}
+              </div>
+            {% else %}
+              <span style="color:var(--cinza-400)">Sem itens</span>
+            {% endfor %}
+          </td>
+          <td style="font-size:.85rem">{{ p.medico.nome if p.medico else '—' }}</td>
+          <td style="font-size:.82rem">
+            {{ (p.validade_dias|string + ' dias') if p.validade_dias else '—' }}
+          </td>
           <td><span class="badge badge-{{ scor }}">{{ slabel }}</span></td>
           <td>
-            <div class="flex gap-8">
-              <a href="{{ url_for('exames.registrar_resultado', id=e.id) }}"
-                 class="btn btn-sm btn-primary">Resultado</a>
-              <form method="POST" action="{{ url_for('exames.cancelar', id=e.id) }}"
-                    onsubmit="return confirm('Cancelar exame?')">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <button type="submit" class="btn btn-sm btn-secondary">Cancelar</button>
-              </form>
-            </div>
+            <a href="{{ url_for('medicamentos.visualizar', id=p.id) }}"
+               class="btn btn-sm btn-secondary">Ver</a>
           </td>
         </tr>
         {% endfor %}
@@ -83,62 +90,19 @@
   </div>
 </div>
 {% endif %}
+{% endmacro %}
 
-{% if concluidos %}
-<div class="card">
-  <div class="card-header">
-    <svg width="16" height="16" fill="none" stroke="var(--sus-verde)" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    <h3>Resultados Disponíveis</h3>
-  </div>
-  <div class="table-wrapper">
-    <table class="tabela">
-      <thead>
-        <tr><th>Exame</th><th>Resultado</th><th>Interpretação</th><th>Data resultado</th><th>Médico</th></tr>
-      </thead>
-      <tbody>
-        {% for e in concluidos %}
-        <tr>
-          <td class="fw-500">{{ e.tipo_exame.nome }}</td>
-          <td style="font-size:.85rem">
-            {% if e.resultado_valor %}
-              <span class="font-mono fw-600">{{ e.resultado_valor }}</span>
-              {% if e.resultado_unidade %} {{ e.resultado_unidade }}{% endif %}
-              {% if e.valor_referencia %}
-                <div style="font-size:.72rem;color:var(--cinza-400)">Ref: {{ e.valor_referencia }}</div>
-              {% endif %}
-            {% else %}
-              {{ (e.resultado_texto or '—')[:60] }}{% if e.resultado_texto and e.resultado_texto|length > 60 %}…{% endif %}
-            {% endif %}
-          </td>
-          <td>
-            {% if e.interpretacao %}
-              <span class="badge badge-{% if e.interpretacao=='normal' %}verde{% elif e.interpretacao=='critico' %}vermelho{% else %}amarelo{% endif %}">
-                {{ e.interpretacao|capitalize }}
-              </span>
-            {% else %}—{% endif %}
-          </td>
-          <td class="font-mono" style="font-size:.8rem">
-            {{ e.data_resultado.strftime('%d/%m/%Y') if e.data_resultado else '—' }}
-          </td>
-          <td style="font-size:.82rem">{{ e.medico.nome if e.medico else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
+{{ tabela_prescricoes(ativas, 'Ativas') }}
+{{ tabela_prescricoes(historico, 'Histórico') }}
 
-{% if not exames %}
+{% if not ativas and not historico %}
 <div class="card">
   <div class="card-body" style="text-align:center;padding:48px;color:var(--cinza-400)">
-    Nenhum exame solicitado para este paciente.
+    Nenhuma prescrição registrada para este paciente.
     {% if current_user.is_medico() or current_user.is_admin() %}
     <div style="margin-top:16px">
-      <a href="{{ url_for('exames.solicitar', paciente_id=paciente.id) }}" class="btn btn-primary">
-        Solicitar primeiro exame
+      <a href="{{ url_for('medicamentos.prescrever', paciente_id=paciente.id) }}" class="btn btn-primary">
+        Criar primeira prescrição
       </a>
     </div>
     {% endif %}

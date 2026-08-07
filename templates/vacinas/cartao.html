@@ -36,18 +36,24 @@
     </div>
     <div class="ms-auto" style="text-align:right">
       <div style="font-size:.75rem;color:var(--cinza-400)">Total de doses</div>
-      <div style="font-size:1.8rem;font-weight:700;color:var(--sus-verde)">{{ aplicadas|length }}</div>
+      <div style="font-size:1.8rem;font-weight:700;color:var(--sus-verde)">{{ doses|length }}</div>
     </div>
   </div>
 </div>
 
-{% if vacinas_ref %}
+{# Este bloco lia `vacinas_ref` e `doses_por_vacina`, que a rota nunca passou —
+   e como o `{% if %}` dava falso, o cartão por imunobiológico simplesmente não
+   aparecia: o titular via só o histórico, sem saber que esquema estava
+   incompleto. A rota já entrega `esquema`, com a vacina, as doses aplicadas e
+   as previstas; é dele que a grade abaixo é montada. #}
+{% if esquema %}
 <!-- Cartão por vacina -->
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px">
-  {% for vac in vacinas_ref %}
-    {% set doses = doses_por_vacina.get(vac.id, []) %}
-    {% set completa = doses|length >= vac.doses_total %}
-    <div class="card" style="border-left:4px solid {% if completa %}var(--sus-verde){% elif doses %}var(--sus-amarelo){% else %}var(--cinza-300){% endif %}">
+  {% for linha in esquema %}
+    {% set vac = linha.vacina %}
+    {% set doses_vac = linha.doses %}
+    {% set completa = linha.completo %}
+    <div class="card" style="border-left:4px solid {% if completa %}var(--sus-verde){% elif doses_vac %}var(--sus-amarelo){% else %}var(--cinza-300){% endif %}">
       <div class="card-header" style="padding:12px 18px">
         <div style="flex:1">
           <div style="font-weight:600;font-size:.9rem">{{ vac.nome }}</div>
@@ -58,27 +64,29 @@
         <div style="text-align:right">
           {% if completa %}
             <span class="badge badge-verde">✓ Completa</span>
-          {% elif doses %}
-            <span class="badge badge-amarelo">{{ doses|length }}/{{ vac.doses_total }} doses</span>
+          {% elif doses_vac %}
+            <span class="badge badge-amarelo">{{ linha.aplicadas }}/{{ linha.previstas }} doses</span>
           {% else %}
             <span class="badge badge-cinza">Não aplicada</span>
           {% endif %}
         </div>
       </div>
-      {% if doses %}
+      {% if doses_vac %}
       <div style="padding:0 18px 12px">
-        {% for d in doses|sort(attribute='dose_numero') %}
+        {# `dose` e não `dose_numero`: o model guarda a dose como texto
+           ("1ª", "reforço"), e a coluna numérica nunca existiu. #}
+        {% for d in doses_vac|sort(attribute='data_aplicacao') %}
         <div style="display:flex;align-items:center;justify-content:space-between;
                     padding:6px 0;border-top:1px solid var(--cinza-100)">
           <div>
             <span style="font-size:.75rem;font-weight:600;color:var(--sus-azul)">
-              Dose {{ d.dose_numero }}
+              {{ d.dose or 'Dose' }}
             </span>
             <span class="font-mono" style="font-size:.78rem;color:var(--cinza-600);margin-left:8px">
               {{ d.data_aplicacao.strftime('%d/%m/%Y') }}
             </span>
-            {% if d.lote %}
-              <span style="font-size:.72rem;color:var(--cinza-400)"> · Lote {{ d.lote }}</span>
+            {% if d.unidade %}
+              <span style="font-size:.72rem;color:var(--cinza-400)"> · {{ d.unidade }}</span>
             {% endif %}
           </div>
           <form method="POST"
@@ -100,7 +108,7 @@
 {% endif %}
 
 <!-- Histórico completo -->
-{% if aplicadas %}
+{% if doses %}
 <div class="card">
   <div class="card-header">
     <svg width="16" height="16" fill="none" stroke="var(--sus-azul)" viewBox="0 0 24 24">
@@ -112,30 +120,29 @@
   <div class="table-wrapper">
     <table class="tabela">
       <thead>
+        {# As colunas são as que `VacinaAplicada` tem. A tabela pedia lote, via
+           e local de aplicação, que não são colunas do model, e tratava
+           `profissional` e `unidade` como relações quando são texto simples. #}
         <tr>
           <th>Data</th>
           <th>Vacina</th>
           <th>Dose</th>
-          <th>Lote</th>
-          <th>Via</th>
-          <th>Local</th>
           <th>Aplicado por</th>
           <th>Unidade</th>
+          <th>Observação</th>
         </tr>
       </thead>
       <tbody>
-        {% for a in aplicadas %}
+        {% for a in doses %}
         <tr>
           <td class="font-mono" style="font-size:.82rem">{{ a.data_aplicacao.strftime('%d/%m/%Y') }}</td>
-          <td class="fw-500">{{ a.vacina.nome }}</td>
+          <td class="fw-500">{{ a.nome_vacina or '—' }}</td>
           <td style="text-align:center">
-            <span class="badge badge-azul">{{ a.dose_numero }}ª</span>
+            <span class="badge badge-azul">{{ a.dose or '—' }}</span>
           </td>
-          <td class="font-mono" style="font-size:.78rem">{{ a.lote or '—' }}</td>
-          <td>{{ a.via or '—' }}</td>
-          <td>{{ a.local_aplicacao or '—' }}</td>
-          <td style="font-size:.82rem">{{ a.profissional.nome if a.profissional else '—' }}</td>
-          <td style="font-size:.78rem;color:var(--cinza-400)">{{ a.unidade.nome if a.unidade else '—' }}</td>
+          <td style="font-size:.82rem">{{ a.profissional or '—' }}</td>
+          <td style="font-size:.78rem;color:var(--cinza-400)">{{ a.unidade or '—' }}</td>
+          <td style="font-size:.8rem;color:var(--cinza-600)">{{ a.observacao or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>

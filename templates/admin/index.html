@@ -5,18 +5,22 @@
 
 {% block content %}
 
+{# Os três contadores liam `total_usuarios`, `ativos` e `inativos`; a rota passa
+   `usuarios`, `total_ativos` e `total_inativos`. Com o `or 0` de antes, o painel
+   exibia ZERO em tudo, sempre — número errado é pior que campo vazio, porque
+   ninguém desconfia de um zero. #}
 <div class="kpi-grid">
   <div class="kpi">
     <div class="label">Total de Usuários</div>
-    <div class="value">{{ total_usuarios or 0 }}</div>
+    <div class="value">{{ usuarios|length }}</div>
   </div>
   <div class="kpi">
     <div class="label">Ativos</div>
-    <div class="value">{{ ativos or 0 }}</div>
+    <div class="value">{{ total_ativos }}</div>
   </div>
   <div class="kpi">
     <div class="label">Inativos</div>
-    <div class="value">{{ inativos or 0 }}</div>
+    <div class="value">{{ total_inativos }}</div>
   </div>
 </div>
 
@@ -72,12 +76,20 @@
 
   <section class="card">
     <h3>Atividade Recente</h3>
-    {% if auditoria and auditoria|length > 0 %}
+    {# Lia `auditoria`, que a rota nunca passou — a seção dizia "nenhum registro
+       de auditoria ainda" mesmo com a trilha cheia. E `a.data` não é coluna: o
+       instante chama-se `criado_em`. Como o template usava `or '-'`, a data
+       sairia como traço mesmo depois de corrigido o nome da lista. #}
+    {% if logs_recentes %}
       <ul class="audit-list">
-        {% for a in auditoria %}
+        {% for a in logs_recentes %}
           <li>
-            <strong>{{ a.acao or 'Ação' }}</strong><br>
-            <span class="muted">{{ a.usuario or 'Sistema' }} • {{ a.data or '-' }}</span>
+            <strong>{{ a.acao or 'Ação' }}</strong>
+            <span class="muted">em {{ a.tabela }}</span><br>
+            <span class="muted">
+              {{ a.usuario.nome if a.usuario else 'Sistema' }}
+              • {{ a.criado_em.strftime('%d/%m/%Y %H:%M') if a.criado_em else '—' }}
+            </span>
           </li>
         {% endfor %}
       </ul>

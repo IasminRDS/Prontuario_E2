@@ -25,14 +25,32 @@ from tests.conftest import PERFIS, autenticar
 #
 # Reduzir esta lista é trabalho pendente; aumentá-la exige justificar por quê.
 PENDENCIAS = {
-    # A AIH da tela tem sete campos que o model não possui. Completar exige
-    # decidir o schema de faturamento — não é renomeação.
+    # --- Faturamento: exige decidir o schema, não é renomeação --------------
+    # A AIH e a APAC são documentos do SUS com formato definido. As telas pedem
+    # campos que os models não têm; inventar coluna aqui é pior que a lacuna.
     "templates/faturamento/aih_form.html": {
         "competencia", "cid_secundario", "procedimento_secundario",
         "dias_permanencia", "valor_sh", "valor_sp", "observacoes", "comp_atual",
+        "data_internacao", "data_saida", "intern_sel",
     },
-    "templates/faturamento/aih_lista.html": {"comp"},
+    "templates/faturamento/aih_lista.html": {
+        "comp", "competencia", "dias_permanencia", "total_valor",
+    },
     "templates/faturamento/apac_form.html": {"comp_atual"},
+    "templates/faturamento/apac_lista.html": {
+        "cid", "competencia", "procedimento",
+    },
+    # --- Estoque -----------------------------------------------------------
+    # `categorias` e `lote` não vêm da rota. `lote` provavelmente nem é coluna
+    # de `itens_estoque`: controle de lote é decisão de produto, e a farmácia
+    # hospitalar precisa dele para validade — não dá para adivinhar.
+    "templates/estoque/index.html": {"categorias", "lote"},
+    # --- Cirurgia ----------------------------------------------------------
+    # `cid` é um dos seis campos que a rota antiga tentava gravar e para os
+    # quais NÃO existe coluna em `models/cirurgia.py`. Junto com `codigo_tuss`,
+    # é provavelmente necessário para faturamento — mas o caminho é migration,
+    # não campo no template.
+    "templates/cirurgia/relatorio_form.html": {"cid"},
     # Telas de relatório e formulários cujas rotas não passam o contexto que o
     # template espera.
     "templates/encaminhamentos/painel.html": {"filtro_esp"},
@@ -81,10 +99,19 @@ def acessos_indefinidos(app, ids_reais):
             self._anotar()
             return iter(())
 
+        # `__bool__` e `__len__` TAMBÉM registram. Antes devolviam falso em
+        # silêncio, e com isso o detector não enxergava o caso mais comum:
+        # nome indefinido usado só em `{% if x %}` ou `{{ x|length }}`. O
+        # `{% if %}` dá falso, o bloco inteiro não renderiza, e a tela fica
+        # vazia sem que nada seja anotado — inclusive o `{% for %}` lá dentro,
+        # que é o que o detector conseguia ver. Um detector com essa lacuna
+        # relata conformidade sem verificá-la, que é o defeito da seção 9.4.2.
         def __bool__(self):
+            self._anotar()
             return False
 
         def __len__(self):
+            self._anotar()
             return 0
 
     from tests.test_integridade_rotas import _rotas_get, _url_concreta

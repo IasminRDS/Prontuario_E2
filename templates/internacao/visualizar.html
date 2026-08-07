@@ -179,7 +179,10 @@
           <td class="font-mono" style="font-size:.8rem">
             {{ c.data_agendada.strftime('%d/%m/%Y %H:%M') if c.data_agendada else '—' }}
           </td>
-          <td style="font-size:.84rem">{{ c.cirurgiao.nome if c.cirurgiao else '—' }}</td>
+          {# `medico`, não `cirurgiao`: é assim que o model chama a relação, e o
+             próprio comentário de `medico_id` a define como cirurgião
+             principal. Com o nome errado a coluna mostrava sempre "—". #}
+          <td style="font-size:.84rem">{{ c.medico.nome if c.medico else '—' }}</td>
           <td><span class="badge badge-{{ scor }}">{{ slbl }}</span></td>
           <td>
             <a href="{{ url_for('cirurgia.visualizar', id=c.id) }}" class="btn btn-sm btn-secondary">Ver</a>
