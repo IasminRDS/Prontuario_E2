@@ -32,7 +32,14 @@ def _valor(coluna):
     if isinstance(tipo, sa.Float):
         return 1.5
     if isinstance(tipo, sa.DateTime):
-        return dt.datetime.now()
+        # Meio-dia de hoje, e não `now()`: instante fixo deixa a semeadura
+        # determinística. Com `now()`, uma linha semeada perto da virada do dia
+        # cai de um lado ou do outro de qualquer janela de relatório, e o teste
+        # passa ou falha conforme a hora em que roda.
+        #
+        # Isto não cobre coluna nulável COM default — essa o seeder pula, e vale
+        # o default do model (`utcnow`).
+        return dt.datetime.combine(dt.date.today(), dt.time(12, 0))
     if isinstance(tipo, sa.Date):
         return dt.date.today()
     if isinstance(tipo, sa.Time):
