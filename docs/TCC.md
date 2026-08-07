@@ -268,7 +268,7 @@ Esse arranjo produz uma tensão que é, antes de tudo, um problema de gestão. D
 lado, o prontuário longitudinal — a capacidade de recuperar o histórico completo
 de um cidadão independentemente de onde foi atendido — é a principal promessa
 clínica da informatização. De outro, dado de saúde é classificado como **dado
-pessoal sensível** pela Lei nº 13.709/2018 (LGPD, art. 5º, II), exigindo
+pessoal sensível** pela Lei nº 13.709/2018 (BRASIL, 2018, art. 5º, II), exigindo
 tratamento restrito, finalidade determinada e rastreabilidade. Ampliar o acesso
 melhora o cuidado; restringi-lo protege o titular. A arquitetura do sistema é o
 instrumento pelo qual a organização decide onde essa fronteira é traçada — e essa
@@ -326,7 +326,8 @@ existir do prontuário eletrônico em rede. A governança precisa distinguir o q
 **cadastro** (nacional) do que é **registro clínico** (territorial) — decisão
 organizacional que a arquitetura precisa refletir.
 
-**Rastreabilidade como obrigação legal e gerencial.** O art. 37 da LGPD determina
+**Rastreabilidade como obrigação legal e gerencial.** O art. 37 da LGPD
+(BRASIL, 2018) determina
 que o controlador mantenha registro das operações de tratamento. Em saúde, essa
 exigência tem contrapartida concreta: o titular tem direito de saber quem acessou
 seu prontuário. Um registro de auditoria incompleto não é apenas uma lacuna
@@ -377,6 +378,60 @@ constitui contribuição relevante, conforme discutido na seção 11.4.
 
 ## 4. FUNDAMENTAÇÃO TEÓRICA
 
+<!--
+ANCORAGEM BIBLIOGRÁFICA — O QUE FALTA NESTA SEÇÃO
+
+Até esta revisão o texto inteiro não tinha NENHUMA citação no corpo, embora a
+lista de referências trouxesse onze obras. Isso é defeito formal grave: a NBR
+10520 exige a citação no texto, e a NBR 6023 pressupõe que a lista corresponda
+ao que foi citado. Lista sem chamada no texto sugere bibliografia montada e não
+usada — é das primeiras coisas que uma banca confere.
+
+JÁ ANCORADO nesta revisão (obras que já estavam na sua lista):
+  4.1  domínios do COBIT ............................ (ISACA, 2018)
+  4.4  falha fechada / fail-safe defaults ........... Saltzer e Schroeder (1975)
+  10.1 dez heurísticas ............................... Nielsen (1994)
+  1, 2.2, 4.5  artigos da LGPD ...................... (BRASIL, 2018)
+
+AINDA SEM FONTE — cada item abaixo é uma afirmação conceitual que hoje se
+sustenta apenas na redação própria. Leia antes de citar:
+
+  4.1  A definição de governança de TI como "estruturas, processos e mecanismos
+       relacionais" NÃO é do COBIT — é de Van Grembergen e De Haes. Ou você cita
+       a fonte correta, ou reescreve a definição com base no COBIT, que já está
+       na lista. Não atribua a frase ao COBIT como está.
+
+  4.2  As cinco propriedades (confidencialidade, integridade, disponibilidade,
+       autenticidade, não repúdio) estão com definição própria. A ancoragem
+       natural é a ABNT NBR ISO/IEC 27000/27001/27002. É a seção que mais ganha
+       com uma norma no lugar de definição autoral.
+
+  4.3  O quadro comparativo das estratégias de multi-tenancy é o item mais
+       exposto: apresenta um julgamento (isolamento x custo x consulta entre
+       inquilinos) sem nenhuma fonte. Procure artigo revisado por pares sobre
+       "multi-tenant data architecture".
+
+  4.4  A descrição do RLS deve citar a documentação do PostgreSQL, que já está
+       na lista — falta preencher o ano da versão consultada.
+
+  4.5  As três funções da trilha de auditoria e as duas propriedades
+       (completude, integridade) estão sem fonte.
+
+  1    O contexto do prontuário eletrônico no SUS não cita nada. É onde a banca
+       espera literatura nacional (SciELO, repositório da CAPES).
+
+REFERÊNCIAS ÓRFÃS — estão na lista e NUNCA aparecem no corpo. Ou você as usa,
+ou as remove; lista com obra não citada tem o mesmo problema, ao contrário:
+
+  - Decreto nº 8.727/2016 (nome social). O sistema IMPLEMENTA nome social
+    (`nome_social` / `nome_exibicao`), então há onde citar de verdade: na
+    seção 7.2, ao descrever a entidade Paciente.
+  - Resolução CFM nº 1.821/2007. Caberia na seção 1 ou 2, no contexto
+    normativo do prontuário eletrônico.
+  - ABNT NBR 6023 e NBR 6028. São normas de formatação DESTE documento, não
+    fontes do argumento. O usual é não listá-las como referência.
+-->
+
 ### 4.1 Governança de Tecnologia da Informação
 
 Governança de TI designa o conjunto de estruturas, processos e mecanismos
@@ -386,7 +441,7 @@ gestão de TI por tratar de **decisão e responsabilização** — quem decide, 
 quais critérios, e como se comprova que a decisão foi cumprida.
 
 O modelo COBIT organiza esses elementos em domínios de avaliação, direcionamento,
-monitoramento e execução. Dois princípios orientaram este trabalho:
+monitoramento e execução (ISACA, 2018). Dois princípios orientaram este trabalho:
 
 **Controle interno preferencialmente automatizado.** Controle dependente de
 conduta humana degrada com rotatividade e pressão operacional. Um controle
@@ -464,7 +519,10 @@ Quatro condições determinam se o mecanismo constitui proteção efetiva:
    padrão. Como a aplicação é proprietária das tabelas, sem `FORCE` as políticas
    existiriam sem efeito.
 2. **Falha fechada** — na ausência de escopo definido, a política não libera
-   nada. Aplicação que não exibe dado algum é defeito imediatamente perceptível;
+   nada. É a aplicação do princípio dos *fail-safe defaults* de Saltzer e
+   Schroeder (1975), segundo o qual a decisão padrão de um mecanismo de proteção
+   deve ser a negação, e o acesso deve decorrer de permissão explícita.
+   Aplicação que não exibe dado algum é defeito imediatamente perceptível;
    aplicação que exibe dado de todo o território é incidente que pode permanecer
    despercebido indefinidamente.
 3. **Escopo reposto por transação** — o escopo é definido com
@@ -478,7 +536,8 @@ Quatro condições determinam se o mecanismo constitui proteção efetiva:
 ### 4.5 Auditoria e rastreabilidade
 
 Trilha de auditoria em sistema de saúde cumpre três funções distintas:
-responsabilização individual, atendimento a direito do titular (LGPD, art. 9º) e
+responsabilização individual, atendimento a direito do titular (BRASIL, 2018,
+art. 9º) e
 apuração de incidentes.
 
 Duas propriedades condicionam sua utilidade. **Completude:** trilha que registra
@@ -1090,7 +1149,7 @@ produção não foi medido e é declarado como limitação (seção 11).
 
 ### 10.1 Método
 
-Aplicou-se **inspeção heurística** segundo as dez heurísticas de Nielsen.
+Aplicou-se **inspeção heurística** segundo as dez heurísticas de Nielsen (1994).
 Registra-se como limitação metodológica que a inspeção foi conduzida pela própria
 equipe de desenvolvimento, sem participação de avaliadores independentes nem de
 usuários finais. Os resultados indicam conformidade com princípios de projeto, não
