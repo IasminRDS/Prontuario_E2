@@ -37,9 +37,9 @@ CAMPOS A COMPLETAR estão marcados com colchetes.
 {{espaco}}
 {{espaco}}
 
-# GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE
+# CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE
 
-## implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento em banco de dados, controle de acesso e auditoria encadeada
+## isolamento em banco de dados, controle de acesso e auditoria encadeada
 
 {{espaco}}
 {{espaco}}
@@ -70,9 +70,9 @@ BOM JESUS DA LAPA — BA
 {{espaco}}
 {{espaco}}
 
-**GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE:**
-implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento
-em banco de dados, controle de acesso e auditoria encadeada
+**CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO
+ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE:**
+isolamento em banco de dados, controle de acesso e auditoria encadeada
 
 {{espaco}}
 {{espaco}}
@@ -102,9 +102,9 @@ BOM JESUS DA LAPA — BA
 
 **IASMIN RIBEIRO DE SOUZA**
 
-**GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE:**
-implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento
-em banco de dados, controle de acesso e auditoria encadeada
+**CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO
+ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE:**
+isolamento em banco de dados, controle de acesso e auditoria encadeada
 
 Trabalho de Conclusão de Curso apresentado como requisito parcial para obtenção do
 título de Tecnólogo em Gestão da Tecnologia da Informação pelo Instituto Federal
@@ -141,18 +141,19 @@ _______________________________________________________________
 Sistemas de prontuário eletrônico concentram dados pessoais sensíveis e, em redes
 públicas de saúde, precisam conciliar duas exigências opostas: permitir o cuidado
 longitudinal, que atravessa unidades, e impedir o acesso indevido entre elas. Este
-trabalho apresenta a implementação e a avaliação crítica de uma plataforma de
-prontuário eletrônico multi-tenant, na qual múltiplas unidades compartilham a
-mesma aplicação e a mesma instância de banco de dados com isolamento lógico dos
-dados. A pesquisa é aplicada, de abordagem qualitativa, conduzida como estudo de
-caso com construção de artefato. Adotou-se como premissa metodológica que a
+trabalho relata a construção, do início, de uma plataforma de prontuário
+eletrônico multi-tenant — na qual múltiplas unidades compartilham a mesma
+aplicação e a mesma instância de banco de dados com isolamento lógico dos dados —
+e a verificação empírica dos controles de governança nela implementados. A
+pesquisa é aplicada, de abordagem qualitativa, conduzida como estudo de caso com
+construção de artefato. Adotou-se como premissa metodológica que a
 inspeção de código é insuficiente para verificar controles de segurança,
 recorrendo-se à instrumentação e ao exercício efetivo do sistema. Foram
 implementados isolamento territorial por política de segurança em nível de linha
 no banco de dados, controle de acesso por permissão nomeada combinado a escopo
 territorial, trilha de auditoria encadeada por resumo criptográfico e rotina de
 cópia de segurança com validação automatizada de restauração. A verificação
-empírica identificou falhas nos próprios controles projetados, entre elas a
+empírica identificou falhas nos controles projetados pela própria autora, entre elas a
 ausência de cobertura da política de isolamento em cinco tabelas clínicas centrais
 e um teste de segurança que reportava conformidade sem verificá-la. O desempenho
 foi medido com volume sintético de 50 mil pacientes, observando-se redução de
@@ -173,17 +174,18 @@ Row-Level Security. LGPD. Prontuário Eletrônico.
 Electronic health record systems concentrate sensitive personal data and, in
 public health networks, must reconcile two opposing requirements: enabling
 longitudinal care across facilities while preventing improper access between them.
-This work presents the implementation and critical evaluation of a multi-tenant
-electronic health record platform, in which multiple facilities share the same
-application and database instance with logical data isolation. The research is
+This work reports the ground-up construction of a multi-tenant electronic health
+record platform — in which multiple facilities share the same application and
+database instance with logical data isolation — and the empirical verification of
+the governance controls built into it. The research is
 applied and qualitative, conducted as a case study with artifact construction. The
 methodological premise adopted was that code inspection is insufficient to verify
 security controls, resorting instead to instrumentation and effective exercise of
 the system. Territorial isolation through row-level security policies in the
 database, access control combining named permissions with territorial scope, a
 hash-chained audit trail, and a backup routine with automated restore validation
-were implemented. Empirical verification identified failures in the designed
-controls themselves, including the absence of isolation policy coverage in five
+were implemented. Empirical verification identified failures in the author's own
+designed controls, including the absence of isolation policy coverage in five
 core clinical tables and a security test that reported compliance without
 verifying it. Performance was measured with a synthetic volume of 50,000 patients,
 showing a reduction from 185.9 ms to 0.96 ms in the patient suggestion query and
@@ -282,14 +284,21 @@ infraestrutura, e que essas propriedades permaneçam válidas após alterações
 futuras no código. Sistemas críticos não se sustentam pela intenção de quem os
 escreveu, mas por controles que continuem operando quando a equipe mudar.
 
-Este trabalho apresenta a implementação e a avaliação de uma plataforma de
-prontuário eletrônico **multi-tenant**, na qual múltiplas unidades de saúde
-compartilham a mesma aplicação e a mesma instância de banco de dados, mantendo
-isolamento lógico de seus dados. O objeto de análise não é o software em si, mas
-o conjunto de controles de governança nele materializados — e, de forma
-igualmente relevante, as falhas desses controles identificadas durante a
-avaliação e o que elas revelam sobre a diferença entre implementar um mecanismo
-de segurança e efetivamente cobrir uma superfície com ele.
+Este trabalho relata a construção de uma plataforma de prontuário eletrônico
+**multi-tenant**, na qual múltiplas unidades de saúde compartilham a mesma
+aplicação e a mesma instância de banco de dados, mantendo isolamento lógico de
+seus dados. A plataforma não preexistia à pesquisa: foi projetada e escrita ao
+longo dela, e é esse o motivo pelo qual seus controles puderam ser abertos,
+instrumentados e postos à prova em profundidade — condição raramente disponível
+quando se avalia sistema de terceiro.
+
+O objeto de análise, porém, não é o software em si, mas o conjunto de controles
+de governança nele materializados — e, de forma igualmente relevante, as falhas
+desses controles identificadas durante a verificação e o que elas revelam sobre
+a diferença entre implementar um mecanismo de segurança e efetivamente cobrir
+uma superfície com ele. Que essas falhas estivessem em controles projetados pela
+própria autora não é circunstância a atenuar: é o que dá ao relato a franqueza
+que uma avaliação externa dificilmente obteria.
 
 ---
 
@@ -345,10 +354,10 @@ TI e objetivos organizacionais, gestão de riscos), **Segurança da Informação
 
 ### 3.1 Objetivo geral
 
-Implementar e avaliar criticamente um sistema de prontuário eletrônico
-multi-tenant, analisando de que modo mecanismos de isolamento de dados, controle
-de acesso, auditoria e continuidade contribuem para a governança de TI de uma
-organização de saúde.
+Construir um sistema de prontuário eletrônico multi-tenant e verificar
+empiricamente seus controles, analisando de que modo mecanismos de isolamento de
+dados, controle de acesso, auditoria e continuidade contribuem para a governança
+de TI de uma organização de saúde.
 
 ### 3.2 Objetivos específicos
 
@@ -647,7 +656,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 10 |
 | Telas (*templates*) | 129 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 276, em 26 arquivos |
+| Casos de teste automatizados | 279, em 26 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -812,7 +821,7 @@ depender da memória de quem o implantou.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **276 casos de teste**, provenientes de 183
+A suíte automatizada compreende **279 casos de teste**, provenientes de 186
 funções distribuídas em 26 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -876,9 +885,10 @@ maturidade mais significativa que a ausência de relato de falhas.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
 
-**Achado.** A documentação do sistema afirmava que as políticas de RLS cobriam
-toda tabela com escopo territorial e que toda tabela clínica nova nasceria
-protegida. A verificação demonstrou que **cinco tabelas clínicas centrais** —
+**Achado.** A documentação escrita durante a própria construção do sistema
+afirmava que as políticas de RLS cobriam toda tabela com escopo territorial e que
+toda tabela clínica nova nasceria protegida. A verificação demonstrou que
+**cinco tabelas clínicas centrais** —
 cirurgias, encaminhamentos, atendimentos de pronto-socorro, evoluções de
 internação e itens de prescrição — **não possuíam a coluna `unidade_id`** e,
 portanto, estavam integralmente fora de qualquer política.
@@ -1133,7 +1143,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 276 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 279 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de dez migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1341,19 +1351,20 @@ privilégio `CREATEDB` ao papel da aplicação.
 
 ## 14. CONCLUSÃO
 
-Este trabalho apresentou a implementação e a avaliação de um sistema de prontuário
-eletrônico multi-tenant, analisando como mecanismos de isolamento de dados,
-controle de acesso, auditoria e continuidade se articulam como instrumentos de
-governança de Tecnologia da Informação em uma organização de saúde.
+Este trabalho relatou a construção de um sistema de prontuário eletrônico
+multi-tenant e a verificação empírica de seus controles, analisando como
+mecanismos de isolamento de dados, controle de acesso, auditoria e continuidade
+se articulam como instrumentos de governança de Tecnologia da Informação em uma
+organização de saúde.
 
 Quanto ao problema de pesquisa, verificou-se que a associação entre arquitetura
 multi-tenant e controles aplicados na camada de dados contribui efetivamente para
 a confiabilidade e a proteção da informação, sob uma condição que a experiência
 tornou explícita: **a contribuição decorre da cobertura verificada do mecanismo,
-não de sua existência.** O sistema possuía Row-Level Security corretamente
-implementado — com `FORCE`, falha fechada e escopo reposto por transação — e ainda
-assim mantinha cinco tabelas clínicas centrais integralmente fora de proteção. O
-mecanismo estava certo; o alcance, não.
+não de sua existência.** O sistema construído nesta pesquisa possuía Row-Level
+Security corretamente implementado — com `FORCE`, falha fechada e escopo reposto
+por transação — e ainda assim mantinha cinco tabelas clínicas centrais
+integralmente fora de proteção. O mecanismo estava certo; o alcance, não.
 
 Um segundo achado, de natureza distinta, reforça a mesma tese por outro caminho.
 A correção que passou a registrar as leituras de prontuário — exigência do art. 37
