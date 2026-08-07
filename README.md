@@ -101,8 +101,17 @@ contraste verificado nos dois temas e VLibras.
 
 ## Segurança e conformidade
 
-- **RBAC granular por permissão** (`recurso:ação`) — 26 permissões e 7 perfis. O
-  backend é a autoridade; o template apenas espelha para esconder controles.
+- **Isolamento multi-tenant no banco (Row-Level Security)** — o filtro por
+  unidade não vive só na aplicação: 15 tabelas carregam política do PostgreSQL
+  com `FORCE`, derivada do metadata do ORM. Uma consulta nova que esqueça o
+  filtro não enxerga registro de outro município. Falha fechada: sem escopo
+  definido, nada é liberado. Dez tabelas ainda não têm a coluna de escopo e
+  dependem só do filtro em Python — a lista está no `AGENTS.md`, e
+  `flask hardening-check` a confronta com o banco.
+- **RBAC granular por permissão** (`recurso:ação`) — 26 permissões e 7 perfis,
+  ortogonais ao escopo territorial: a permissão diz *o que* se pode fazer, o
+  escopo diz *sobre quais registros*. O backend é a autoridade; o template
+  apenas espelha para esconder controles.
 - **Verificação em duas etapas (TOTP)** — o segredo só é gravado depois que o
   usuário prova um código válido, então ninguém se tranca fora da própria conta.
 - **Login federado gov.br** (OIDC), com simulador explícito quando não há
@@ -112,6 +121,9 @@ contraste verificado nos dois temas e VLibras.
   depende de permissão do banco.
 - **LGPD** — registro de consentimento, trilha de "quem acessou meu prontuário"
   exposta ao titular no Portal do Cidadão, e exportação de dados auditada.
+- **Backup verificado, não presumido** — `flask backup-validar` restaura a cópia
+  num schema temporário e compara as contagens com a origem, saindo com erro se
+  divergir. Backup que nunca foi restaurado é um arquivo, não um backup.
 - **Documentos verificáveis** — cada PDF emitido recebe um código e a impressão
   digital SHA-256 do arquivo, conferíveis publicamente em `/verificar/<código>`
   sem precisar de conta.
@@ -180,12 +192,21 @@ Acesse `http://localhost:5000`.
 
 | | |
 |---|---|
-| Módulos (blueprints) | 43 |
-| Rotas | 205 |
-| Models | 27 arquivos, 40 tabelas |
-| Templates | 126 |
+| Módulos (blueprints) | 44 |
+| Rotas | 211 |
+| Models | 29 arquivos, 42 tabelas |
+| Templates | 129 |
+| Migrations | 10, exercitadas do zero e em reversa no CI |
+| Testes | 183 funções → 276 casos, em 26 arquivos, nos dois bancos |
+| Tabelas sob RLS | 15 |
 | Permissões RBAC | 26, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |
+
+Os valores acima saem de contagem sobre o repositório, não de estimativa. Estão
+detalhados, com a análise de segurança e o que a verificação empírica achou de
+defeito, em [docs/TCC.md](docs/TCC.md) — a monografia que documenta o sistema.
+O `.docx` correspondente é gerado por `python scripts/gerar_tcc_docx.py`, e não
+editado à mão: monografia editada nos dois lugares diverge nos dois.
 
 ---
 

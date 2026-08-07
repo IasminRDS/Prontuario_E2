@@ -42,6 +42,50 @@ flask criar-admin   # pergunta nome, e-mail e senha
 python app.py
 ```
 
+### Comandos operacionais
+
+```bash
+flask backup-validar backups/<arquivo>.dump   # restaura num schema e confere
+flask backup-validar --apenas-restore <arq>   # para arquivo antigo
+flask hardening-check                         # confere o banco, sai 1 se falhar
+flask seed-volume --pacientes 50000           # carga para medir; --limpar remove
+```
+
+`backup-validar` restaura o dump num schema temporário e compara as contagens com
+a origem — backup que nunca foi restaurado é um arquivo, não um backup. Restaura
+em *schema* e não em banco novo porque `CREATE DATABASE` exige `CREATEDB`, que o
+papel da aplicação não tem e não deve ter.
+
+`hardening-check` verifica o que a aplicação **não** garante sozinha: `FORCE`
+ativo, papel sem `BYPASSRLS`, ausência de escopo pré-definido no ambiente e
+propriedade da tabela de auditoria. É a fronteira entre garantia da aplicação e
+dependência de infraestrutura, em forma executável.
+
+`seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
+produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é
+informada — o planejador nem considera índice em tabela pequena.
+
+## Documentação
+
+`docs/TCC.md` é a monografia e é a **fonte**; `docs/TCC.docx` é gerado dela:
+
+```bash
+python scripts/gerar_tcc_docx.py
+```
+
+Nunca edite o `.docx` — a próxima geração descarta a edição, e enquanto isso os
+dois arquivos afirmam coisas diferentes. O conversor é próprio porque a ABNT
+pede o que um conversor genérico não faz: capa e pré-textuais fora do sumário,
+número de página que conta desde a folha de rosto mas só aparece na introdução,
+e legenda acima do quadro com fonte abaixo. As convenções do markdown
+(`{{sumario}}`, `Quadro — título`, `Fonte: ...`) estão na docstring do script.
+
+**Todo número citado na monografia é medido, não estimado.** Antes de alterar
+uma contagem, meça: `pytest` para os testes, `app.url_map` para as rotas,
+`db.metadata` para tabelas e colunas. Número herdado de uma versão anterior é
+como a afirmação de cobertura de RLS que estava errada — parece verdade porque
+já esteve.
+
 O `criar-admin` não é opcional: o `seed` cria apenas um médico, e sem ele
 `/admin/`, `/configuracoes/`, `/unidades/` e `/backup/` ficam inalcançáveis. A
 senha é pedida pelo terminal com confirmação — não vai por argumento, que
@@ -55,9 +99,11 @@ pytest
 ```
 
 A suíte **não toca o banco de desenvolvimento**: em PostgreSQL cria um schema
-próprio (`teste_automatizado`) e o destrói ao final, com o `search_path` preso a
-ele; em SQLite usa um arquivo temporário. Para apontar outro banco, use
-`TEST_DATABASE_URL`.
+próprio (`teste_automatizado_<pid>`) e o destrói ao final, com o `search_path`
+preso a ele; em SQLite usa um arquivo temporário, também com o PID no nome. O PID
+não é capricho: com nome fixo, duas suítes rodando ao mesmo tempo se destroem, e
+o sintoma é `UndefinedTable: não existe a relação "users"` em dezenas de testes
+sem relação com a mudança. Para apontar outro banco, use `TEST_DATABASE_URL`.
 
 Dois testes seguram a maior parte dos regressos deste projeto:
 `test_integridade_rotas.py` renderiza **toda** rota GET com dado semeado — é o
@@ -65,6 +111,26 @@ que pega template lendo atributo inexistente, formulário sem CSRF e link para
 endpoint que não existe; e `test_auditoria_estatica.py` garante que rota nova
 nasce com `@login_required` e, se escreve, com RBAC. Rota de autosserviço é
 exceção e precisa entrar explicitamente na lista `AUTOSSERVICO`.
+
+### Os detectores
+
+Quatro testes caçam a mesma classe de defeito em camadas diferentes: aquele que
+**não gera erro**, só deixa de funcionar. Todos nasceram de defeito real.
+
+| Teste | Pega |
+|---|---|
+| `test_templates_undefined.py` | variável que o template lê e a rota não fornece — o Jinja rende string vazia sem acusar |
+| `test_contrato_front_api.py` | `fetch` para rota inexistente e chave que o JavaScript lê e o JSON não traz |
+| `test_contrato_formularios.py` | campo que o formulário envia e a rota nunca lê: o usuário preenche e o dado é descartado |
+| `test_pdf_conteudo.py` | dado ausente no PDF, mês em inglês e glifo fora da fonte |
+
+Os três últimos carregam uma lista `PENDENCIAS` que **reprova nos dois sentidos**:
+achado novo falha, e achado já corrigido que continue na lista também. Sem isso a
+lista vira decoração.
+
+`test_rls_negacao.py` faz a pergunta inversa da suíte de RLS: não que a política
+exista, mas que ela **negue**. Vai direto ao banco, sem passar pelo filtro em
+Python, porque o que se mede é a defesa que resta quando o filtro falha.
 
 O CI (`.github/workflows/ci.yml`) roda a suíte nos **dois** bancos e aplica as
 migrations num banco vazio — o `pytest` monta o schema com `create_all`, então
@@ -88,9 +154,30 @@ As 27 capitais são semeadas por padrão; a relação completa (5.570) vem do IB
 
 A aplicação já filtra por unidade em Python. O RLS coloca a mesma regra **dentro
 do banco**, para que uma consulta nova que esqueça o filtro não enxergue registro
-de outro município. As políticas cobrem toda tabela com `unidade_id`, e a lista
-sai do metadata (`utils/rls.tabelas_protegidas`) — tabela clínica nova nasce
-protegida.
+de outro município. A lista sai do metadata (`utils/rls.tabelas_protegidas`), e a
+política alcança **toda tabela que tenha a coluna `unidade_id`** — hoje são 15.
+
+**A frase acima já esteve errada, e o erro custou caro.** Ela dizia que "tabela
+clínica nova nasce protegida", o que é falso: nasce protegida a tabela que
+NASCER COM A COLUNA. Durante uma auditoria descobriu-se que cinco tabelas
+clínicas centrais — cirurgias, encaminhamentos, atendimentos_ps,
+evolucoes_internacao e itens_prescricao — não tinham `unidade_id` e estavam
+inteiramente fora de qualquer política, enquanto a documentação afirmava
+cobertura total. O mecanismo estava certo; o alcance é que não era o anunciado.
+
+**Dez tabelas continuam sem a coluna** e, portanto, sem política:
+
+    administracoes_med      itens_prescricao_hosp   documentos_assinados
+    vacinas_aplicadas       consentimentos_lgpd     faturamento_aih
+    agenda_eventos          envios_rnds             faturamento_apac
+    candidatos_duplicata
+
+Para elas o isolamento depende só do filtro em Python — que é exatamente do que
+o RLS existia para não depender. Algumas são sensíveis (`consentimentos_lgpd`
+prova a base legal do tratamento; `vacinas_aplicadas` alimenta o cartão do
+Portal do Cidadão; `administracoes_med` é registro clínico). **Antes de afirmar
+cobertura, rode `flask hardening-check`** — ele confronta o banco com o
+metadata em vez de repetir o que está escrito aqui.
 
 Quatro detalhes que decidem se isto é proteção ou teatro:
 
