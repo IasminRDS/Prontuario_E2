@@ -37,9 +37,9 @@ CAMPOS A COMPLETAR estão marcados com colchetes.
 {{espaco}}
 {{espaco}}
 
-# CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE
+# CONSTRUÇÃO DE UM PRONTUÁRIO ELETRÔNICO MULTI-TENANT
 
-## isolamento em banco de dados, controle de acesso e auditoria encadeada
+## avaliação empírica de controles de segurança, isolamento de dados e auditoria
 
 {{espaco}}
 {{espaco}}
@@ -53,7 +53,7 @@ CAMPOS A COMPLETAR estão marcados com colchetes.
 
 BOM JESUS DA LAPA — BA
 
-[ANO]
+....
 
 ---
 
@@ -70,9 +70,8 @@ BOM JESUS DA LAPA — BA
 {{espaco}}
 {{espaco}}
 
-**CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO
-ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE:**
-isolamento em banco de dados, controle de acesso e auditoria encadeada
+**CONSTRUÇÃO DE UM PRONTUÁRIO ELETRÔNICO MULTI-TENANT:**
+avaliação empírica de controles de segurança, isolamento de dados e auditoria
 
 {{espaco}}
 {{espaco}}
@@ -83,7 +82,7 @@ isolamento em banco de dados, controle de acesso e auditoria encadeada
 > Tecnologia Baiano, Campus Bom Jesus da Lapa, como requisito parcial para
 > obtenção do título de Tecnólogo em Gestão da Tecnologia da Informação.
 >
-> Orientador(a): [NOME DO(A) ORIENTADOR(A)]
+> Orientador(a): ....
 
 {{espaco}}
 {{espaco}}
@@ -94,7 +93,7 @@ isolamento em banco de dados, controle de acesso e auditoria encadeada
 
 BOM JESUS DA LAPA — BA
 
-[ANO]
+....
 
 ---
 
@@ -102,9 +101,8 @@ BOM JESUS DA LAPA — BA
 
 **IASMIN RIBEIRO DE SOUZA**
 
-**CONSTRUÇÃO E VERIFICAÇÃO EMPÍRICA DE CONTROLES DE GOVERNANÇA EM UM PRONTUÁRIO
-ELETRÔNICO MULTI-TENANT PARA A REDE PÚBLICA DE SAÚDE:**
-isolamento em banco de dados, controle de acesso e auditoria encadeada
+**CONSTRUÇÃO DE UM PRONTUÁRIO ELETRÔNICO MULTI-TENANT:**
+avaliação empírica de controles de segurança, isolamento de dados e auditoria
 
 Trabalho de Conclusão de Curso apresentado como requisito parcial para obtenção do
 título de Tecnólogo em Gestão da Tecnologia da Informação pelo Instituto Federal
@@ -118,7 +116,7 @@ Aprovado em ______ de ____________________ de __________.
 
 _______________________________________________________________
 
-[Nome do(a) Orientador(a)] — Presidente
+.... — Presidente
 
 Instituto Federal Baiano — Campus Bom Jesus da Lapa
 
@@ -126,13 +124,13 @@ Instituto Federal Baiano — Campus Bom Jesus da Lapa
 
 _______________________________________________________________
 
-[Nome do Membro 1 da Banca Examinadora]
+....
 
 &nbsp;
 
 _______________________________________________________________
 
-[Nome do Membro 2 da Banca Examinadora]
+....
 
 ---
 
@@ -656,7 +654,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 10 |
 | Telas (*templates*) | 129 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 279, em 26 arquivos |
+| Casos de teste automatizados | 290, em 27 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -821,8 +819,8 @@ depender da memória de quem o implantou.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **279 casos de teste**, provenientes de 186
-funções distribuídas em 26 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **290 casos de teste**, provenientes de 194
+funções distribuídas em 27 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1022,6 +1020,58 @@ não é invalidada.
 após carregar entidades apresenta a mesma latência. O padrão foi documentado no
 código para que a correção não seja desfeita por desconhecimento.
 
+#### 9.4.8 Auditoria de escrita ausente ou não atômica na interface programável
+
+**Achado.** A correção descrita em 9.4.4 tratou as rotas de **leitura**. A
+verificação posterior das rotas de **escrita** da interface programável (API
+JSON) revelou dois defeitos distintos e de sinais opostos, em sete rotas.
+
+Em três rotas de paciente — criação, alteração e desativação — a confirmação da
+transação ocorria **antes** do registro de auditoria, que por omissão apenas
+anexa o evento à sessão. A transação da escrita já estava encerrada, e o evento
+era anexado a uma sessão nova que nada confirmava. O disparo efetivo da rota de
+criação retornou código 201, com o paciente persistido e **nenhum** evento de
+auditoria gravado.
+
+Em quatro rotas de prontuário — criação, alteração, assinatura e exclusão — o
+registro era efetuado por um decorador executado **antes** da função da rota, em
+transação própria. Havia rastro, mas ele registrava a *intenção* e não o *fato*:
+uma mutação que falhasse depois deixaria na trilha a afirmação de que o
+prontuário fora assinado. Adicionalmente, a chamada de auditoria posicionada
+após a confirmação constituía código morto — um segundo evento nunca persistido,
+cuja presença no código sugeria cobertura.
+
+**Análise.** O primeiro caso é omissão de registro; o segundo é registro sem
+atomicidade. Ambos contradizem a garantia declarada nas seções 7.4 e 8.2 deste
+trabalho — "o evento é gravado na mesma transação da mutação" —, e a
+contradição não era perceptível por leitura do código, pois em ambos os casos
+havia uma chamada de auditoria visível na rota.
+
+A gravidade não é uniforme: entre as ações sem rastro atômico estavam a
+assinatura e a exclusão de prontuário, que são precisamente as que a trilha
+existe para documentar.
+
+**Correção.** O registro passou a ocorrer dentro da transação da mutação, antes
+da confirmação, com `flush` intermediário nas criações para que o identificador
+do registro criado conste do evento — sem ele, a trilha registrava que algo fora
+criado sem dizer o quê. Os decoradores de auditoria anteriores à execução foram
+removidos.
+
+**Lição de governança.** É o mesmo achado de 9.4.1 em outro controle: o
+mecanismo estava implementado e a documentação afirmava cobertura, mas o alcance
+efetivo era menor que o declarado. A recorrência sugere que a verificação de
+cobertura não deve ser um exame pontual, e sim um teste permanente — foi o que
+se adotou, com um verificador que reprova qualquer rota que registre auditoria
+após encerrar a transação.
+
+**Achado colateral.** O exercício da rota de criação em ambos os bancos de dados
+revelou que a data de nascimento era repassada ao mapeador como texto, sem
+conversão. O driver do PostgreSQL efetua a coerção silenciosamente; o do SQLite
+a recusa. A funcionalidade operava em um dos dois sistemas suportados e falhava
+no outro, e em nenhum deles a data era validada. É argumento empírico a favor da
+decisão metodológica de executar a suíte sobre os dois bancos: um defeito de
+portabilidade não se manifesta onde se desenvolve.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1143,7 +1193,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 279 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 290 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de dez migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1451,18 +1501,18 @@ documentação: trabalhos acadêmicos: apresentação. Rio de Janeiro: ABNT, 201
 BRASIL. **Lei nº 13.709, de 14 de agosto de 2018**. Lei Geral de Proteção de
 Dados Pessoais (LGPD). Brasília, DF: Presidência da República, 2018. Disponível
 em: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm.
-Acesso em: [DATA].
+Acesso em: ....
 
 BRASIL. **Decreto nº 8.727, de 28 de abril de 2016**. Dispõe sobre o uso do nome
 social e o reconhecimento da identidade de gênero de pessoas travestis e
 transexuais no âmbito da administração pública federal direta, autárquica e
 fundacional. Brasília, DF: Presidência da República, 2016. Disponível em:
 https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2016/decreto/d8727.htm.
-Acesso em: [DATA].
+Acesso em: ....
 
 BRASIL. Ministério da Saúde. **Rede Nacional de Dados em Saúde (RNDS)**.
-Brasília, DF: Ministério da Saúde, [ANO]. Disponível em:
-https://www.gov.br/saude/pt-br/composicao/seidigi/rnds. Acesso em: [DATA].
+Brasília, DF: Ministério da Saúde, ..... Disponível em:
+https://www.gov.br/saude/pt-br/composicao/seidigi/rnds. Acesso em: ....
 
 CONSELHO FEDERAL DE MEDICINA. **Resolução CFM nº 1.821/2007**. Aprova as normas
 técnicas concernentes à digitalização e uso dos sistemas informatizados para a
@@ -1489,13 +1539,13 @@ NIELSEN, Jakob. **Usability engineering**. San Francisco: Morgan Kaufmann, 1993.
 
 NIELSEN, Jakob. **10 usability heuristics for user interface design**. Nielsen
 Norman Group, 1994. Disponível em:
-https://www.nngroup.com/articles/ten-usability-heuristics/. Acesso em: [DATA].
+https://www.nngroup.com/articles/ten-usability-heuristics/. Acesso em: ....
 
 ### Documentação técnica
 
 THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL documentation**: row
-security policies. [S. l.]: PostgreSQL, [ANO]. Disponível em:
-https://www.postgresql.org/docs/current/ddl-rowsecurity.html. Acesso em: [DATA].
+security policies. [S. l.]: PostgreSQL, ..... Disponível em:
+https://www.postgresql.org/docs/current/ddl-rowsecurity.html. Acesso em: ....
 
 <!--
 SUGESTÕES DE LEITURA COMPLEMENTAR — não incluídas na lista acima porque só devem

@@ -76,8 +76,8 @@ ORIGEM = RAIZ / "docs" / "TCC.md"
 DESTINO = RAIZ / "docs" / "TCC.docx"
 
 AUTORA = "Iasmin Ribeiro de Souza"
-TITULO = ("Construção e verificação empírica de controles de governança em um "
-          "prontuário eletrônico multi-tenant para a rede pública de saúde")
+TITULO = ("Construção de um prontuário eletrônico multi-tenant: avaliação "
+          "empírica de controles de segurança, isolamento de dados e auditoria")
 
 # A primeira seção textual. Tudo antes dela é pré-textual: sem numeração de
 # página visível, sem estilo de título (para não entrar no sumário).
