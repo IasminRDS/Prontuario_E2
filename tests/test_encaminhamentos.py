@@ -150,3 +150,71 @@ def test_formulario_e_o_de_encaminhamento(solicitante):
     assert 'name="especialidade"' in html, "o formulário não pede a especialidade"
     assert 'name="motivo"' in html, "o formulário não pede o motivo"
     assert 'name="discriminadores"' not in html, "voltou a ser a triagem"
+
+
+# --- vocabulário de prioridade -------------------------------------------
+#
+# O vocabulário já esteve escrito em cinco lugares com três conteúdos: a rota
+# gravava `prioritario`, o model não sabia rotulá-lo e o painel o exibia cru e
+# cinza, e o PDF conhecia um `urgente` que a rota nunca grava — de modo que o
+# encaminhamento de emergência era impresso como "EMERGENCIA", sem acento, pelo
+# fallback de `.upper()`. Nenhuma dessas divergências gera erro: elas apenas
+# exibem a informação errada, que é a classe de defeito que esta suíte caça.
+
+def _consumidores():
+    """Cada mapa que precisa cobrir o vocabulário, e como se lê seu rótulo."""
+    from routes.regulacao import PRIORIDADES as REGULACAO
+    from services.pdf_encaminhamento import (PRIORIDADE_CORES,
+                                             PRIORIDADE_LABELS as PDF_LABELS)
+
+    return {
+        "regulação (badge da fila)": REGULACAO,
+        "PDF (rótulo impresso)": PDF_LABELS,
+        "PDF (cor impressa)": PRIORIDADE_CORES,
+    }
+
+
+def test_todo_consumidor_cobre_o_vocabulario_gravado(app):
+    """Nenhum mapa pode ficar para trás quando uma prioridade for acrescentada.
+
+    Reprova nos dois sentidos: chave que a rota grava e o consumidor não conhece,
+    e chave que o consumidor conhece e a rota nunca grava — a segunda é o que
+    deixou `urgente` no PDF por tempo indeterminado, parecendo cobertura.
+    """
+    from models.encaminhamento import Encaminhamento
+    from routes.encaminhamentos import PRIORIDADES
+
+    gravadas = set(PRIORIDADES)
+    assert gravadas == set(Encaminhamento.PRIORIDADE_LABELS), (
+        "o model deixou de rotular alguma prioridade que a rota grava")
+
+    for nome, mapa in _consumidores().items():
+        assert set(mapa) == gravadas, (
+            f"{nome}: conhece {sorted(set(mapa) - gravadas)} a mais e "
+            f"{sorted(gravadas - set(mapa))} a menos que a rota grava")
+
+
+def test_ordem_de_gravidade_e_a_mesma_nas_duas_filas(app):
+    """Encaminhamento e regulação mostram a mesma fila; ordená-las diferente
+    faria o mesmo caso aparecer em posições distintas conforme a tela."""
+    from routes.encaminhamentos import ORDEM_DE_GRAVIDADE as FILA_SOLICITANTE
+    from routes.regulacao import ORDEM_DE_GRAVIDADE as FILA_REGULADOR
+
+    assert FILA_SOLICITANTE == FILA_REGULADOR
+    assert FILA_SOLICITANTE["emergencia"] < FILA_SOLICITANTE["urgencia"]
+    assert FILA_SOLICITANTE["urgencia"] < FILA_SOLICITANTE["prioritario"]
+    assert FILA_SOLICITANTE["prioritario"] < FILA_SOLICITANTE["eletivo"]
+
+
+def test_rotulo_de_prioridade_nunca_sai_cru(app, dados_clinicos):
+    """`prioridade_label` devolvendo a chave crua é o sintoma visível: o painel
+    exibe "prioritario" em minúscula e cinza, no meio de rótulos acentuados."""
+    from models.encaminhamento import Encaminhamento
+    from routes.encaminhamentos import PRIORIDADES
+
+    with app.app_context():
+        for chave in PRIORIDADES:
+            enc = Encaminhamento(prioridade=chave)
+            rotulo, tom = enc.prioridade_label
+            assert rotulo != chave, f"{chave} sai cru no painel"
+            assert tom != "cinza", f"{chave} cai no tom de fallback"

@@ -26,7 +26,11 @@ encaminhamentos_bp = Blueprint(
     "encaminhamentos", __name__, url_prefix="/encaminhamentos"
 )
 
-PRIORIDADES = ("emergencia", "urgencia", "prioritario", "eletivo")
+# O vocabulário e a ordem de gravidade vêm do model — ver a nota lá sobre por
+# que ele não é declarado aqui, embora seja esta rota que o valida na escrita.
+PRIORIDADES = Encaminhamento.PRIORIDADES
+ORDEM_DE_GRAVIDADE = {p: i for i, p in enumerate(PRIORIDADES)}
+
 SITUACOES = ("solicitado", "autorizado", "negado", "agendado", "realizado", "cancelado")
 
 ESPECIALIDADES = (
@@ -55,9 +59,7 @@ def painel():
         query = query.filter(Encaminhamento.prioridade == prioridade)
 
     ordem = db.case(
-        {"emergencia": 0, "urgencia": 1, "prioritario": 2, "eletivo": 3},
-        value=Encaminhamento.prioridade,
-        else_=9,
+        ORDEM_DE_GRAVIDADE, value=Encaminhamento.prioridade, else_=9,
     )
     encaminhamentos = (
         query.order_by(ordem, Encaminhamento.data_solicitacao.asc())
@@ -167,6 +169,7 @@ def novo(paciente_id=None):
         paciente_sel=db.session.get(Paciente, paciente_id) if paciente_id else None,
         especialidades=ESPECIALIDADES,
         prioridades=PRIORIDADES,
+        rotulos_prioridade=Encaminhamento.PRIORIDADE_LABELS,
     )
 
 

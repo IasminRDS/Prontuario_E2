@@ -60,11 +60,25 @@ class Encaminhamento(db.Model):
         'cancelado': ('Cancelado', 'vermelho')
     }
 
+    # Vocabulário de prioridade, DA MAIS GRAVE PARA A MENOS. A ordem é
+    # significativa: as filas de encaminhamento e de regulação ordenam por ela.
+    #
+    # Este dicionário é a autoridade sobre quais prioridades existem. Fica no
+    # model, e não na rota que as valida, porque é o único lugar que services e
+    # templates alcançam sem import circular — e o vocabulário já esteve escrito
+    # em cinco lugares, com três conteúdos diferentes: a rota gravava
+    # `prioritario`, o painel não sabia rotulá-lo e o mostrava cru e cinza, e o
+    # PDF conhecia um `urgente` que a rota nunca grava, imprimindo "EMERGENCIA"
+    # sem acento pelo fallback.
     PRIORIDADE_LABELS = {
-        'eletivo': ('Eletivo', 'verde'),
+        'emergencia': ('Emergência', 'vermelho'),
         'urgencia': ('Urgência', 'amarelo'),
-        'emergencia': ('Emergência', 'vermelho')
+        'prioritario': ('Prioritário', 'azul'),
+        'eletivo': ('Eletivo', 'verde'),
     }
+
+    #: Chaves aceitas, na ordem de gravidade acima.
+    PRIORIDADES = tuple(PRIORIDADE_LABELS)
 
     @property
     def status_label(self):

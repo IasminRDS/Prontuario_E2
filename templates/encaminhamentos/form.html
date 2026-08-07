@@ -11,12 +11,9 @@
    aparece de propósito: a rota a resolve pela unidade do usuário, porque quem
    encaminha encaminha de onde está — deixar escolher abriria margem para
    registrar origem errada. #}
-{% set rotulo_prioridade = {
-     'emergencia': 'Emergência',
-     'urgencia': 'Urgência',
-     'prioritario': 'Prioritário',
-     'eletivo': 'Eletivo',
-   } %}
+{# Os rótulos vêm do model (`rotulos_prioridade`), não de um mapa local: um mapa
+   por template é como o vocabulário de prioridade acabou escrito em cinco
+   lugares com três conteúdos diferentes. #}
 <div class="form-narrow">
 <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -66,7 +63,7 @@
           <select name="prioridade" id="prioridade" class="form-control">
             {% for p in prioridades %}
             <option value="{{ p }}" {% if p == 'eletivo' %}selected{% endif %}>
-              {{ rotulo_prioridade.get(p, p|capitalize) }}
+              {{ rotulos_prioridade[p][0] }}
             </option>
             {% endfor %}
           </select>

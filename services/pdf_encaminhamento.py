@@ -15,6 +15,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
 
+from models.encaminhamento import Encaminhamento
 from utils.datas import por_extenso
 
 AZUL = colors.HexColor("#003F88")
@@ -25,15 +26,21 @@ CINZA = colors.HexColor("#2C3140")
 CBORDA = colors.HexColor("#D8DDE6")
 CFUNDO = colors.HexColor("#F7F8FA")
 
-PRIORIDADE_CORES = {
-    "eletivo": colors.HexColor("#5A6478"),
-    "prioritario": colors.HexColor("#F5A623"),
-    "urgente": colors.HexColor("#C0392B"),
-}
+# O vocabulário vem do model. Escrito à mão, este mapa conhecia um `urgente` que
+# a rota nunca grava e não conhecia `emergencia` nem `urgencia`, que ela grava
+# sempre: o documento de um encaminhamento de emergência saía com "EMERGENCIA",
+# sem acento, pelo fallback de `.upper()` — e em cinza, a cor de menor gravidade.
 PRIORIDADE_LABELS = {
-    "eletivo": "ELETIVO",
-    "prioritario": "PRIORITÁRIO",
-    "urgente": "URGENTE",
+    chave: rotulo.upper()
+    for chave, (rotulo, _tom) in Encaminhamento.PRIORIDADE_LABELS.items()
+}
+
+# O tom do model é nome de classe CSS; aqui é preciso a cor impressa.
+PRIORIDADE_CORES = {
+    "emergencia": colors.HexColor("#C0392B"),
+    "urgencia": colors.HexColor("#F5A623"),
+    "prioritario": colors.HexColor("#0060C0"),
+    "eletivo": colors.HexColor("#5A6478"),
 }
 
 

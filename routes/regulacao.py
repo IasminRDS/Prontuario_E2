@@ -22,12 +22,18 @@ regulacao_bp = Blueprint("regulacao", __name__, url_prefix="/regulacao")
 # Estados possíveis de um encaminhamento na regulação.
 SITUACOES = ("solicitado", "autorizado", "negado", "agendado", "realizado")
 
+# Esta tela usa os tons do DSGov (`badge--red`), e o painel de encaminhamentos
+# usa os tons legados em português (`badge-vermelho`). São duas folhas de estilo,
+# não um descuido — por isso aqui se traduz o tom, mas NÃO o vocabulário: as
+# chaves e os rótulos continuam vindo do model, que é a autoridade sobre eles.
+_TOM_DSGOV = {"vermelho": "red", "amarelo": "amber", "azul": "blue",
+              "verde": "slate"}
+
 PRIORIDADES = {
-    "emergencia": ("Emergência", "red"),
-    "urgencia": ("Urgência", "amber"),
-    "prioritario": ("Prioritário", "blue"),
-    "eletivo": ("Eletivo", "slate"),
+    chave: (rotulo, _TOM_DSGOV[tom])
+    for chave, (rotulo, tom) in Encaminhamento.PRIORIDADE_LABELS.items()
 }
+ORDEM_DE_GRAVIDADE = {p: i for i, p in enumerate(Encaminhamento.PRIORIDADES)}
 
 
 @regulacao_bp.get("/")
@@ -48,9 +54,7 @@ def index():
 
     # Ordena por gravidade e depois por antiguidade: quem espera mais, primeiro.
     ordem_prioridade = db.case(
-        {"emergencia": 0, "urgencia": 1, "prioritario": 2, "eletivo": 3},
-        value=Encaminhamento.prioridade,
-        else_=9,
+        ORDEM_DE_GRAVIDADE, value=Encaminhamento.prioridade, else_=9,
     )
     fila = (
         query.order_by(ordem_prioridade, Encaminhamento.data_solicitacao.asc())
