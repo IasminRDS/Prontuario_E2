@@ -10,6 +10,20 @@ from datetime import datetime, date
 from io import BytesIO, StringIO
 import csv
 
+
+def _hoje():
+    """Data de hoje no MESMO fuso em que as colunas são gravadas.
+
+    Os models usam `datetime.utcnow()` como padrão; os relatórios montavam a
+    janela com `date.today()`, que é hora local. Em UTC-3, todo registro criado
+    entre 21h e meia-noite nasce com data UTC do dia seguinte e ficava FORA da
+    janela do próprio dia — o relatório omitia, sem erro nenhum, as últimas três
+    horas de movimento de cada dia. Num pronto-socorro, que opera 24h, isso é
+    subnotificação sistemática.
+    """
+    return datetime.utcnow().date()
+
+
 rel_hosp_bp = Blueprint("rel_hosp", __name__, url_prefix="/relatorios/hospital")
 
 
@@ -56,14 +70,14 @@ def ocupacao():
     ocupados = sum(r["ocupados"] for r in resumo.values())
     taxa = round(ocupados / total * 100) if total else 0
     internacoes_mes = Internacao.query.filter(
-        Internacao.data_entrada >= date.today().replace(day=1),
+        Internacao.data_entrada >= _hoje().replace(day=1),
         Internacao.unidade_id == current_user.unidade_id,
     ).count()
     permanencia_media = None
     altas = Internacao.query.filter(
         Internacao.status == "alta",
         Internacao.unidade_id == current_user.unidade_id,
-        Internacao.data_alta >= date.today().replace(day=1),
+        Internacao.data_alta >= _hoje().replace(day=1),
     ).all()
     if altas:
         permanencia_media = round(sum(i.dias_internado for i in altas) / len(altas), 1)
@@ -84,9 +98,9 @@ def ocupacao():
 @login_required
 def producao():
     data_ini = request.args.get(
-        "data_ini", date.today().replace(day=1).strftime("%Y-%m-%d")
+        "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
     )
-    data_fim = request.args.get("data_fim", date.today().strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
     exportar = request.args.get("exportar", "")
     try:
         di = datetime.strptime(data_ini, "%Y-%m-%d")
@@ -145,7 +159,7 @@ def producao():
             BytesIO(buf.getvalue().encode("utf-8-sig")),
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"producao_hospitalar_{date.today()}.csv",
+            download_name=f"producao_hospitalar_{_hoje()}.csv",
         )
 
     return render_template(
@@ -160,9 +174,9 @@ def producao():
 @login_required
 def relatorio_ps():
     data_ini = request.args.get(
-        "data_ini", date.today().replace(day=1).strftime("%Y-%m-%d")
+        "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
     )
-    data_fim = request.args.get("data_fim", date.today().strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
     exportar = request.args.get("exportar", "")
     try:
         di = datetime.strptime(data_ini, "%Y-%m-%d")
@@ -220,7 +234,7 @@ def relatorio_ps():
             BytesIO(buf.getvalue().encode("utf-8-sig")),
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"relatorio_ps_{date.today()}.csv",
+            download_name=f"relatorio_ps_{_hoje()}.csv",
         )
 
     return render_template(

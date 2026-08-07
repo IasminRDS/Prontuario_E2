@@ -23,6 +23,20 @@ from datetime import datetime, date
 from io import BytesIO, StringIO
 import csv
 
+
+def _hoje():
+    """Data de hoje no MESMO fuso em que as colunas são gravadas.
+
+    Os models usam `datetime.utcnow()` como padrão; os relatórios montavam a
+    janela com `date.today()`, que é hora local. Em UTC-3, todo registro criado
+    entre 21h e meia-noite nasce com data UTC do dia seguinte e ficava FORA da
+    janela do próprio dia — o relatório omitia, sem erro nenhum, as últimas três
+    horas de movimento de cada dia. Num pronto-socorro, que opera 24h, isso é
+    subnotificação sistemática.
+    """
+    return datetime.utcnow().date()
+
+
 relatorios_bp = Blueprint("relatorios", __name__, url_prefix="/relatorios")
 
 
@@ -55,10 +69,10 @@ def pacientes():
     elif tem_cns == "0":
         q = q.filter(db.or_(Paciente.cns.is_(None), Paciente.cns == ""))
     if idade_min:
-        d_max = date.today() - relativedelta(years=int(idade_min))
+        d_max = _hoje() - relativedelta(years=int(idade_min))
         q = q.filter(Paciente.data_nascimento <= d_max)
     if idade_max:
-        d_min = date.today() - relativedelta(years=int(idade_max) + 1)
+        d_min = _hoje() - relativedelta(years=int(idade_max) + 1)
         q = q.filter(Paciente.data_nascimento >= d_min)
 
     q = q.order_by(Paciente.nome)
@@ -132,7 +146,7 @@ def _csv_pacientes(pacientes):
         BytesIO(buf.getvalue().encode("utf-8-sig")),
         mimetype="text/csv",
         as_attachment=True,
-        download_name=f"pacientes_{date.today()}.csv",
+        download_name=f"pacientes_{_hoje()}.csv",
     )
 
 
@@ -141,9 +155,9 @@ def _csv_pacientes(pacientes):
 @login_required
 def atendimentos():
     data_ini = request.args.get(
-        "data_ini", date.today().replace(day=1).strftime("%Y-%m-%d")
+        "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
     )
-    data_fim = request.args.get("data_fim", date.today().strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
     tipo = request.args.get("tipo", "")
     exportar = request.args.get("exportar", "")
 
@@ -179,7 +193,7 @@ def atendimentos():
             BytesIO(buf.getvalue().encode("utf-8-sig")),
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"atendimentos_{date.today()}.csv",
+            download_name=f"atendimentos_{_hoje()}.csv",
         )
 
     # Totais por tipo
@@ -202,9 +216,9 @@ def atendimentos():
 @login_required
 def producao():
     data_ini = request.args.get(
-        "data_ini", date.today().replace(day=1).strftime("%Y-%m-%d")
+        "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
     )
-    data_fim = request.args.get("data_fim", date.today().strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
     exportar = request.args.get("exportar", "")
 
     try:
@@ -265,7 +279,7 @@ def producao():
             BytesIO(buf.getvalue().encode("utf-8-sig")),
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"producao_{date.today()}.csv",
+            download_name=f"producao_{_hoje()}.csv",
         )
 
     return render_template(
@@ -289,9 +303,9 @@ def producao():
 @login_required
 def triagem():
     data_ini = request.args.get(
-        "data_ini", date.today().replace(day=1).strftime("%Y-%m-%d")
+        "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
     )
-    data_fim = request.args.get("data_fim", date.today().strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
     exportar = request.args.get("exportar", "")
 
     try:
@@ -347,7 +361,7 @@ def triagem():
             BytesIO(buf.getvalue().encode("utf-8-sig")),
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"triagem_{date.today()}.csv",
+            download_name=f"triagem_{_hoje()}.csv",
         )
 
     return render_template(

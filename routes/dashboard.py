@@ -23,6 +23,20 @@ except Exception:
     Agendamento = None
 
 
+
+def _hoje():
+    """Data de hoje no MESMO fuso em que as colunas são gravadas.
+
+    Os models usam `datetime.utcnow()` como padrão; os relatórios montavam a
+    janela com `date.today()`, que é hora local. Em UTC-3, todo registro criado
+    entre 21h e meia-noite nasce com data UTC do dia seguinte e ficava FORA da
+    janela do próprio dia — o relatório omitia, sem erro nenhum, as últimas três
+    horas de movimento de cada dia. Num pronto-socorro, que opera 24h, isso é
+    subnotificação sistemática.
+    """
+    return datetime.utcnow().date()
+
+
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/")
 
 
@@ -46,7 +60,7 @@ def _count(model, coluna_data=None, hoje_only=False, inicio=None):
         q = model.query
         if coluna_data is not None:
             if hoje_only:
-                q = q.filter(func.date(coluna_data) == date.today())
+                q = q.filter(func.date(coluna_data) == _hoje())
             elif inicio is not None:
                 q = q.filter(func.date(coluna_data) >= inicio)
         return int(q.count())
@@ -55,7 +69,7 @@ def _count(model, coluna_data=None, hoje_only=False, inicio=None):
 
 
 def _serie_atendimentos_7dias():
-    fim = date.today()
+    fim = _hoje()
     dias = [fim - timedelta(days=i) for i in range(6, -1, -1)]
     labels = [d.strftime("%d/%m") for d in dias]
     valores = [0] * 7
@@ -119,7 +133,7 @@ def index():
     atendimentos_mes = _count(
         Atendimento,
         getattr(Atendimento, "data_atendimento", None) or getattr(Atendimento, "criado_em", None),
-        inicio=date.today().replace(day=1)
+        inicio=_hoje().replace(day=1)
     )
     agenda_hoje = _count(
         Agendamento,
@@ -137,7 +151,7 @@ def index():
 
     return render_template(
         "dashboard/index.html",
-        data_hoje=date.today().strftime("%d/%m/%Y"),
+        data_hoje=_hoje().strftime("%d/%m/%Y"),
         total_pacientes=total_pacientes,
         atendimentos_hoje=atendimentos_hoje,
         atendimentos_mes=atendimentos_mes,
