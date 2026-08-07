@@ -120,6 +120,23 @@ def _tabela_info(dados, e, col_widths=None):
     return t
 
 
+
+def _resultado_do_exame(ex):
+    """Resultado legível de um exame, vindo das colunas que existem.
+
+    O model separa `resultado_texto` (laudo descritivo) de `resultado_valor` +
+    `resultado_unidade` (numérico). Exame laboratorial preenche o par numérico;
+    exame de imagem preenche o texto. O sumário de alta precisa dos dois casos.
+    """
+    if getattr(ex, "resultado_texto", None):
+        return ex.resultado_texto.strip()
+    valor = getattr(ex, "resultado_valor", None)
+    if valor:
+        unidade = getattr(ex, "resultado_unidade", None)
+        return f"{valor} {unidade}".strip() if unidade else str(valor).strip()
+    return ""
+
+
 def gerar_alta(internacao, paciente, medico, unidade):
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -375,8 +392,15 @@ def gerar_alta(internacao, paciente, medico, unidade):
             st = status_map.get(ex.status, ex.status)
             bloco.append(
                 Paragraph(
+                    # `ex.resultado` não existe: o model guarda o resultado em
+                    # três colunas — `resultado_texto`, `resultado_valor` e
+                    # `resultado_unidade`. O acesso levantava AttributeError e
+                    # derrubava a geração do sumário de alta inteiro, mas só
+                    # quando havia exame no período: com o exame fora da janela,
+                    # o laço não executava e o defeito ficava invisível.
                     f'• {ex.tipo_exame.nome if ex.tipo_exame else "Exame"} — {st}'
-                    + (f": {ex.resultado[:80]}" if ex.resultado else ""),
+                    + (f": {_resultado_do_exame(ex)[:80]}"
+                       if _resultado_do_exame(ex) else ""),
                     e["corpo"],
                 )
             )
