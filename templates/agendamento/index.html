@@ -37,13 +37,25 @@
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
                 <td><span class="badge badge--slate">{{ (a.tipo or 'consulta') | capitalize }}</span></td>
+                {# O rótulo e o tom vêm de `status_label`, do model. A cadeia de
+                   `elif` que havia aqui testava "realizado", que o model não
+                   tem, e não cobria "confirmado" nem "atendido", que ele tem:
+                   os dois caíam no cinza de fallback com o texto cru.
+
+                   A tradução de tom existe porque esta tela usa as classes do
+                   DSGov (`badge--blue`) e o model fala os tons em português,
+                   consumidos pelas telas legadas (`badge-azul`). São duas
+                   folhas de estilo, como em `routes/regulacao.py` — traduz-se o
+                   tom, nunca o vocabulário. #}
                 <td>
-                  {% if a.status == 'agendado' %}<span class="badge badge--blue">Agendado</span>
-                  {% elif a.status == 'realizado' %}<span class="badge badge--green">Realizado</span>
-                  {% elif a.status == 'faltou' %}<span class="badge badge--amber">Faltou</span>
-                  {% elif a.status == 'cancelado' %}
-                    <span class="badge badge--red" title="{{ a.motivo_cancel or '' }}">Cancelado</span>
-                  {% else %}<span class="badge badge--slate">{{ (a.status or '—') | capitalize }}</span>{% endif %}
+                  {% set rotulo, tom = a.status_label %}
+                  {% set tons = {'azul': 'blue', 'verde': 'green',
+                                 'amarelo': 'amber', 'vermelho': 'red',
+                                 'cinza': 'slate'} %}
+                  <span class="badge badge--{{ tons.get(tom, 'slate') }}"
+                        {% if a.status == 'cancelado' and a.motivo_cancel %}title="{{ a.motivo_cancel }}"{% endif %}>
+                    {{ rotulo }}
+                  </span>
                 </td>
                 <td class="actions">
                   <a class="btn btn--sm btn--ghost" href="{{ url_for('agendamento.editar', id=a.id) }}">

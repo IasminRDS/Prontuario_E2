@@ -92,13 +92,18 @@ PENDENCIAS = {
     # triagem mais recente do paciente; sem triagem, não fica nada — e
     # relatorios_hosp/ps.html agrupa por `AtendimentoPS.classificacao`.
     "templates/ps/entrada.html -> ps.entrada": {"classificacao", "modo_chegada"},
-    # Cadastro de usuário: o "ativo" do formulário é ignorado e o usuário nasce
-    # sempre com o padrão do model.
+    # --- FALSO POSITIVO da análise estática, não defeito.
+    # O campo existe no arquivo mas é renderizado só no OUTRO modo da tela, e
+    # a rota que o recebe de fato o lê. O detector é estático e não avalia o
+    # `{% if %}` que decide isso; deixar registrado evita que alguém "corrija"
+    # duas vezes o que já funciona.
+    #
+    # `ativo` está dentro de `{% if usuario %}` — só aparece na edição, e
+    # `admin.editar_usuario` lê (`user.ativo = "ativo" in request.form`).
     "templates/admin/usuario_form.html -> admin.novo_usuario": {"ativo"},
-    # O agendamento nasce e é editado sem que o status escolhido seja lido.
+    # `status` está dentro de `{% if edicao %}` — só aparece na edição, e
+    # `agendamento.editar` passou a lê-lo.
     "templates/agendamento/form.html -> agendamento.novo": {"status"},
-    "templates/agendamento/form.html -> agendamento.editar": {"status"},
-    "templates/vacinas/vacina_form.html -> vacinas.nova_vacina": {"descricao"},
 }
 
 
@@ -206,3 +211,56 @@ def test_pendencias_de_formulario_nao_apodrecem(campos_descartados):
             resolvidos.append(f"  {chave}: {campo}")
     assert not resolvidos, (
         "já é lido pela rota — remova de PENDENCIAS:\n" + "\n".join(resolvidos))
+
+
+# --- os achados desta análise, agora como teste de comportamento -----------
+
+def test_edicao_de_agendamento_grava_a_situacao(app, dados_clinicos, sem_csrf):
+    """Mudar "Situação" na edição e salvar precisa mudar o registro.
+
+    O seletor aparecia na tela, a rota não lia o campo, e a mensagem de sucesso
+    aparecia igual: a pessoa marcava "realizado", via "Agendamento atualizado!"
+    e o registro continuava "agendado". Contrato de formulário quebrado não
+    gera erro — ele confirma uma coisa e grava outra.
+    """
+    from extensions import db
+    from models.agendamento import Agendamento
+    from tests.conftest import PERFIS, autenticar
+
+    cliente = autenticar(app, PERFIS["admin"][1])
+
+    with app.app_context():
+        ag = Agendamento.query.order_by(Agendamento.id.asc()).first()
+        assert ag is not None, "sem agendamento semeado"
+        ag.status = "agendado"
+        db.session.commit()
+        ident, paciente_id = ag.id, ag.paciente_id
+        quando = ag.data_hora.strftime("%Y-%m-%dT%H:%M")
+
+    resposta = cliente.post(f"/agendamento/{ident}/editar", data={
+        "paciente_id": paciente_id,
+        "data_hora": quando,
+        "tipo": "consulta",
+        "status": "atendido",
+    }, follow_redirects=True)
+    assert resposta.status_code == 200
+
+    with app.app_context():
+        assert db.session.get(Agendamento, ident).status == "atendido", (
+            "a situação escolhida na edição não foi gravada")
+
+
+def test_formulario_de_vacina_oferece_lote_e_validade(app, dados_clinicos):
+    """O caso inverso: a rota lê o campo e o formulário nunca o enviava.
+
+    `vacinas.nova_vacina` lê `lote` e `validade` — e chega a VALIDAR a data —
+    mas o formulário não tinha os campos. Toda vacina nascia sem lote e sem
+    validade, e é disso que depende o controle de vencimento.
+    """
+    from tests.conftest import PERFIS, autenticar
+
+    cliente = autenticar(app, PERFIS["admin"][1])
+    html = cliente.get("/vacinas/catalogo/nova").get_data(as_text=True)
+    for campo in ("lote", "validade"):
+        assert f'name="{campo}"' in html, (
+            f"a rota lê {campo!r} e o formulário não envia")

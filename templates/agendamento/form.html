@@ -70,10 +70,16 @@
         {% if edicao %}
           <div class="field col-6">
             <label class="field__label" for="status">Situação</label>
+            {# As opções vêm de `STATUS_LABELS`, não de uma lista escrita aqui.
+               A lista literal oferecia "realizado", que o model NÃO conhece —
+               ele tem "confirmado" e "atendido" —, e escondia esses dois. Como
+               a rota valida contra o model, escolher "Realizado" era descartado
+               em silêncio: quarta vez que este projeto tem o mesmo vocabulário
+               escrito em dois lugares com conteúdos diferentes. #}
             <select class="select" id="status" name="status">
-              {% for s in ['agendado', 'realizado', 'faltou', 'cancelado'] %}
-                <option value="{{ s }}" {% if agendamento.status == s %}selected{% endif %}>
-                  {{ s | capitalize }}
+              {% for valor, (rotulo, _tom) in agendamento.STATUS_LABELS.items() %}
+                <option value="{{ valor }}" {% if agendamento.status == valor %}selected{% endif %}>
+                  {{ rotulo }}
                 </option>
               {% endfor %}
             </select>

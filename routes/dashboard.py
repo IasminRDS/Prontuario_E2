@@ -48,7 +48,19 @@ def _degradar(padrao):
     transação inteira, e sem o rollback os painéis SEGUINTES falham em cascata —
     a tela responde 200 com tudo zerado, sem nenhum sinal de erro. Em SQLite a
     sessão sobrevive sozinha, e foi por isso que a falta passou despercebida.
+
+    **E REGISTRA.** Degradar em silêncio transforma painel quebrado em painel
+    zerado, e zero é um número plausível: ninguém desconfia dele. O mesmo
+    raciocínio de `utils/rls.py`, que loga o escopo irresolúvel em vez de deixar
+    o operador diante de um sistema misteriosamente vazio. Sem esta linha, o
+    primeiro sinal de que o dashboard parou de contar seria alguém estranhar o
+    movimento do dia — se estranhasse.
     """
+    from flask import current_app
+
+    if current_app:
+        current_app.logger.exception(
+            "painel do dashboard falhou e será exibido como %r", padrao)
     db.session.rollback()
     return padrao
 

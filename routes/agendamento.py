@@ -130,6 +130,13 @@ def editar(id):
             ag.data_hora   = data_hora
             ag.tipo        = request.form.get('tipo', ag.tipo)
             ag.observacoes = request.form.get('observacoes', '').strip() or None
+            # O seletor "Situação" aparece na edição e a rota NÃO o lia: mudar
+            # de agendado para realizado, salvar e ver a mensagem de sucesso não
+            # mudava nada. Validar contra STATUS_LABELS pelo mesmo motivo das
+            # outras rotas — o valor vem do cliente e pode ser qualquer coisa.
+            novo_status = request.form.get('status')
+            if novo_status in Agendamento.STATUS_LABELS:
+                ag.status = novo_status
             auditar_aqui("agendamentos", "update")
             db.session.commit()
             flash('Agendamento atualizado!', 'success')
