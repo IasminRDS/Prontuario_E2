@@ -21,11 +21,35 @@ CAMPOS A COMPLETAR estão marcados com colchetes.
 
 ### CURSO SUPERIOR DE TECNOLOGIA EM GESTÃO DA TECNOLOGIA DA INFORMAÇÃO
 
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+
 **IASMIN RIBEIRO DE SOUZA**
+
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
 
 # GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE
 
 ## implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento em banco de dados, controle de acesso e auditoria encadeada
+
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
 
 BOM JESUS DA LAPA — BA
 
@@ -35,11 +59,24 @@ BOM JESUS DA LAPA — BA
 
 ## FOLHA DE ROSTO
 
+{{espaco}}
+{{espaco}}
+{{espaco}}
+
 **IASMIN RIBEIRO DE SOUZA**
+
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
 
 **GOVERNANÇA DE TECNOLOGIA DA INFORMAÇÃO APLICADA À PROTEÇÃO DE DADOS EM SAÚDE:**
 implementação e avaliação de um prontuário eletrônico multi-tenant com isolamento
 em banco de dados, controle de acesso e auditoria encadeada
+
+{{espaco}}
+{{espaco}}
+{{espaco}}
 
 > Trabalho de Conclusão de Curso apresentado ao Curso Superior de Tecnologia em
 > Gestão da Tecnologia da Informação do Instituto Federal de Educação, Ciência e
@@ -47,6 +84,13 @@ em banco de dados, controle de acesso e auditoria encadeada
 > obtenção do título de Tecnólogo em Gestão da Tecnologia da Informação.
 >
 > Orientador(a): [NOME DO(A) ORIENTADOR(A)]
+
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
+{{espaco}}
 
 BOM JESUS DA LAPA — BA
 
@@ -177,29 +221,36 @@ Security. Data Protection. Electronic Health Record.
 
 ---
 
+## LISTA DE QUADROS
+
+{{lista-de-quadros}}
+
+---
+
+## LISTA DE TABELAS
+
+{{lista-de-tabelas}}
+
+---
+
+## LISTA DE FIGURAS
+
+{{lista-de-figuras}}
+
+---
+
 ## SUMÁRIO
 
-| | Seção | Página |
-|---|---|---|
-| 1 | INTRODUÇÃO | |
-| 2 | PROBLEMA E JUSTIFICATIVA | |
-| 3 | OBJETIVOS | |
-| 4 | FUNDAMENTAÇÃO TEÓRICA | |
-| 5 | METODOLOGIA | |
-| 6 | ARQUITETURA DO SISTEMA | |
-| 7 | IMPLEMENTAÇÃO | |
-| 8 | SEGURANÇA DA INFORMAÇÃO — ANÁLISE | |
-| 9 | TESTES E VALIDAÇÃO | |
-| 10 | VALIDAÇÃO DE USABILIDADE | |
-| 11 | RESULTADOS | |
-| 12 | LIMITAÇÕES | |
-| 13 | TRABALHOS FUTUROS | |
-| 14 | CONCLUSÃO | |
-| | REFERÊNCIAS | |
-| | APÊNDICE A — Relação com as disciplinas do curso | |
-| | APÊNDICE B — Glossário | |
+{{sumario}}
 
-<!-- A paginação é gerada pelo editor de texto na formatação final. -->
+<!--
+O sumário e as três listas acima são CAMPOS do Word: preenchem-se sozinhos ao
+abrir o .docx, com a página correta depois da diagramação final. Se o editor
+não atualizar na abertura, selecione tudo (Ctrl+A) e tecle F9.
+
+Sumário digitado à mão desatualiza na primeira quebra de página que mudar, e
+o erro só aparece na versão impressa.
+-->
 
 ---
 
@@ -344,6 +395,8 @@ contínua.
 
 ### 4.2 Segurança da Informação
 
+Quadro — Propriedades da segurança da informação e sua materialização no sistema
+
 | Propriedade | Definição operacional | Materialização no sistema |
 |---|---|---|
 | **Confidencialidade** | Acesso restrito a quem é autorizado | RLS no banco, RBAC por perfil, escopo territorial |
@@ -351,6 +404,8 @@ contínua.
 | **Disponibilidade** | Informação acessível quando necessária | Backup em formato *custom* com validação automatizada de restauração |
 | **Autenticidade** | Certeza sobre a origem da ação | Autenticação com hash de senha (*scrypt*), sessão com atributos de segurança, registro de autoria em cada mutação |
 | **Não repúdio** | Impossibilidade de negar autoria | Trilha de auditoria com usuário, ação, IP e encadeamento por hash |
+
+Fonte: elaborado pela autora (2026).
 
 A propriedade de **não repúdio** merece qualificação. O encadeamento por hash
 torna a trilha *tamper-evident* — adulteração se torna detectável, porque alterar
@@ -365,11 +420,15 @@ Multi-tenancy designa a arquitetura em que uma única instância de aplicação 
 múltiplos inquilinos com isolamento entre seus dados. As estratégias usuais
 apresentam o seguinte quadro comparativo:
 
+Quadro — Estratégias de isolamento em arquitetura multi-tenant
+
 | Estratégia | Isolamento | Custo operacional | Consulta entre inquilinos | Adequação ao caso |
 |---|---|---|---|---|
 | Banco por inquilino | Máximo | Alto — *n* bancos, *n* migrações, *n* backups | Muito custosa | Inadequada: inviabiliza o prontuário longitudinal |
 | *Schema* por inquilino | Alto | Médio-alto — *n* schemas por migração | Custosa | Inadequada: mesma limitação, com complexidade adicional |
 | **Coluna discriminadora** | Médio, dependente de aplicação | Baixo — um banco, uma migração | Natural | **Adotada** |
+
+Fonte: elaborado pela autora (2026).
 
 A escolha pela coluna discriminadora (`unidade_id`) decorre de um requisito
 organizacional, não de conveniência de implementação: o cuidado longitudinal
@@ -479,6 +538,8 @@ sido percebidos por revisão de código**, conforme detalhado na seção 9.4.
 O sistema organiza-se em quatro camadas, com o fluxo de uma requisição
 percorrendo-as na seguinte ordem:
 
+Figura — Camadas da arquitetura e ponto de aplicação de cada controle
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ 1. USUÁRIO — navegador                                       │
@@ -512,6 +573,8 @@ percorrendo-as na seguinte ordem:
 │    · Trilha de auditoria encadeada por hash                  │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+Fonte: elaborado pela autora (2026).
 
 ### 6.2 Fluxo de uma requisição
 
@@ -565,6 +628,28 @@ triagem, internação, pronto-socorro, cirurgia, prescrição, exames, encaminha
 e regulação, imunização, faturamento, vigilância epidemiológica, estoque e
 farmácia, auditoria, administração), acompanhados de camadas transversais de
 autorização, auditoria, escopo territorial e identidade de pacientes.
+
+A dimensão do artefato é registrada abaixo porque condiciona a leitura dos
+resultados: a cobertura de um controle sobre 42 tabelas e 211 rotas é uma
+afirmação de natureza diferente da mesma cobertura sobre meia dúzia de telas de
+demonstração. Os valores foram obtidos por contagem automatizada sobre o
+código-fonte e sobre o *metadata* do mapeador objeto-relacional, e não por
+estimativa.
+
+Quadro — Dimensão do artefato construído
+
+| Elemento | Quantidade |
+|---|---|
+| Módulos funcionais (*blueprints*) | 44 |
+| Rotas expostas | 211 — 152 aceitam GET; 103, método de mutação |
+| Tabelas no modelo de dados | 42, com 504 colunas e 106 chaves estrangeiras |
+| Tabelas sob política de RLS | 15 |
+| Migrações de esquema versionadas | 10 |
+| Telas (*templates*) | 129 |
+| Permissões nomeadas · perfis | 26 · 7 |
+| Casos de teste automatizados | 276, em 26 arquivos |
+
+Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
 ### 7.2 Banco de dados
 
@@ -671,6 +756,8 @@ requerer sua flexibilização.
 
 ### 8.1 Matriz de riscos e controles
 
+Quadro — Matriz de riscos, controles aplicados e benefício gerencial
+
 | Risco | Controle aplicado | Benefício gerencial |
 |---|---|---|
 | Consulta que omite filtro expõe dados de outra unidade | Política de RLS com `FORCE` no banco, derivada do *metadata* | Reduz dependência da disciplina individual; o controle opera mesmo em código novo |
@@ -685,6 +772,8 @@ requerer sua flexibilização.
 | Ataque por força bruta na autenticação | Limitação de tentativas por janela | Mitiga acesso por tentativa exaustiva |
 | Configuração de produção aplicada incorretamente | Ambiente exigido explicitamente, sem valor padrão | Configuração inválida impede a inicialização em vez de degradar silenciosamente |
 | Divergência entre modelo de dados e controles | Lista de tabelas protegidas derivada do *metadata* | Reduz risco de tabela nova nascer desprotegida |
+
+Fonte: elaborado pela autora (2026).
 
 ### 8.2 Fronteira entre garantias da aplicação e dependências de infraestrutura
 
@@ -723,8 +812,15 @@ depender da memória de quem o implantou.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **282 testes**, executados sobre PostgreSQL e
-sobre SQLite. Dois testes estruturais sustentam a maior parte da proteção contra
+A suíte automatizada compreende **276 casos de teste**, provenientes de 183
+funções distribuídas em 26 arquivos — a diferença corresponde às funções
+parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
+integralmente sobre os dois sistemas gerenciadores de banco de dados
+utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
+SQLite, com 33 casos não aplicáveis, correspondentes às verificações de RLS e de
+dialeto, que não possuem equivalente naquele sistema.
+
+Dois testes estruturais sustentam a maior parte da proteção contra
 regressões: a renderização de todas as rotas de leitura com dados reais, e a
 verificação estática de que toda rota nasce com autenticação e, quando efetua
 escrita, com autorização declarada.
@@ -1019,8 +1115,14 @@ efetivamente transmitidos.
 
 O isolamento territorial passou a ser aplicado em duas camadas independentes: o
 filtro da aplicação e a política do banco de dados. Após as correções descritas
-em 9.4.1, a cobertura abrange todas as tabelas clínicas com escopo territorial,
-com verificação automatizada da efetividade das políticas.
+em 9.4.1, quinze tabelas estão sob política, com verificação automatizada de sua
+efetividade. **A cobertura não é total, e essa constatação é resultado.** Dez
+tabelas permanecem sem a coluna de escopo e, portanto, fora de qualquer política
+— entre elas o registro de consentimento LGPD, a aplicação de imunobiológicos e a
+administração de medicamentos. Para essas, o isolamento continua dependendo
+apenas do filtro da aplicação. Diferentemente do estado inicial, porém, a lacuna
+está identificada, quantificada e detectável por comando, em vez de afirmada como
+inexistente pela documentação.
 
 O controle de acesso combina permissão nomeada e escopo territorial como
 dimensões independentes, com decisão no servidor.
@@ -1031,9 +1133,10 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 282 testes executa em ambos os sistemas de banco de dados. A sequência
-de migrações foi exercitada a partir de banco vazio e também no sentido inverso,
-com reversão completa e reaplicação.
+A suíte de 276 casos de teste executa sem falhas em ambos os sistemas de banco de
+dados. A sequência de dez migrações foi exercitada a partir de banco vazio e
+também no sentido inverso, com reversão completa até o estado inicial e
+reaplicação.
 
 A coluna de escopo territorial tornou-se obrigatória nas cinco tabelas clínicas
 corrigidas, após o preenchimento retroativo ser exercitado com 9.565 registros:
@@ -1056,11 +1159,15 @@ que é o da unidade de maior movimento.
 **Consultas de busca**, sob escopo de unidade, antes e depois da criação de índices
 escolhidos a partir dos planos de execução observados:
 
+Tabela — Tempo de execução das consultas de busca antes e depois da indexação
+
 | Consulta | Antes | Depois | Plano após |
 |---|---|---|---|
 | Listagem paginada de pacientes | 40,1 ms | 0,19 ms | varredura sequencial e ordenação → varredura por índice |
 | Contagem para paginação | 16,0 ms | 6,7 ms | varredura sequencial → varredura apenas de índice |
 | Sugestão de paciente (`ILIKE`) | 185,9 ms | 0,96 ms | varredura sequencial e ordenação → varredura por índice |
+
+Fonte: dados da pesquisa (2026), medidos com 50 mil pacientes sintéticos.
 
 A sugestão de paciente é o caso determinante: a consulta é disparada a cada
 caractere digitado, e executava varredura completa da tabela. Com volume de
@@ -1070,11 +1177,15 @@ considera índice em tabela pequena, pois a varredura integral é menos custosa.
 
 **Rotas de relatório**, medidas por número de consultas emitidas e tempo total:
 
+Tabela — Consultas emitidas e tempo total das rotas de relatório
+
 | Rota | Antes | Depois |
 |---|---|---|
 | Relatório de pacientes | 4.616 ms | 113 ms |
 | Ocupação de leitos | 106 consultas · 190 ms | 17 consultas · 78 ms |
 | Listagem de pacientes | 44 consultas · 123 ms | 24 consultas · 67 ms |
+
+Fonte: dados da pesquisa (2026), medidos com 50 mil pacientes sintéticos.
 
 As três causas foram distintas e ilustrativas. O relatório de pacientes
 materializava a base inteira para renderizar uma tabela — corrigido com paginação,
@@ -1264,7 +1375,8 @@ acompanhados de verificação automatizada de sua **efetividade**, e não apenas
 sua presença.
 
 Os objetivos específicos foram atendidos, com as ressalvas explicitamente
-registradas: o isolamento foi implementado e sua cobertura corrigida; o controle
+registradas: o isolamento foi implementado e sua cobertura ampliada e
+quantificada, ainda que não integral; o controle
 de acesso foi implementado com distinção entre permissão e escopo, corrigindo-se
 confusão identificada entre perfil administrativo e alcance territorial; a
 auditoria foi implementada com encadeamento por hash e passou a registrar
@@ -1394,6 +1506,8 @@ com definição própria, e uma banca costuma cobrar ancoragem bibliográfica.
 
 ## APÊNDICE A — Relação com as disciplinas do curso
 
+Quadro — Correspondência entre as disciplinas do curso e o trabalho
+
 | Disciplina | Aplicação no trabalho |
 |---|---|
 | **Fundamentos da Tecnologia da Informação** | Compreensão do papel dos sistemas de informação como infraestrutura de processos organizacionais em saúde |
@@ -1410,7 +1524,11 @@ com definição própria, e uma banca costuma cobrar ancoragem bibliográfica.
 | **Regulamentação e Ética Aplicada** | LGPD (arts. 5º, 9º, 11 e 37), sigilo profissional, direito do titular à transparência de acessos |
 | **Pesquisa Orientada ao TCC** | Classificação metodológica, estudo de caso aplicado, análise crítica de resultados |
 
+Fonte: elaborado pela autora (2026).
+
 ## APÊNDICE B — Glossário
+
+Quadro — Glossário dos termos técnicos empregados
 
 | Termo | Definição |
 |---|---|
@@ -1425,3 +1543,5 @@ com definição própria, e uma banca costuma cobrar ancoragem bibliográfica.
 | **CNES** | Cadastro Nacional de Estabelecimentos de Saúde |
 | **AIH** | Autorização de Internação Hospitalar |
 | **Preenchimento retroativo** | Atribuição de valor a coluna nova em registros preexistentes |
+
+Fonte: elaborado pela autora (2026).
