@@ -10,6 +10,9 @@
     Nova Internação
   </a>
   <a href="{{ url_for('internacao.leitos') }}" class="btn btn-secondary">Gerenciar Leitos</a>
+  {# `internacao.novo_setor` cria o setor E os leitos numerados dele de uma vez,
+     e nenhuma tela apontava para ela: não havia como abrir um setor novo. #}
+  <a href="{{ url_for('internacao.novo_setor') }}" class="btn btn-secondary">Novo Setor</a>
 {% endblock %}
 
 {% block content %}

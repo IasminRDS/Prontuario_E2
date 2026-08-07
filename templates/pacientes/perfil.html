@@ -32,6 +32,12 @@
     Atestado
   </a>
   {% endif %}
+  {# Duas rotas que existiam sem porta: o histórico de triagens do paciente e o
+     QR Code de identificação, que a tela de leitura por câmera consome. #}
+  <a href="{{ url_for('triagem.historico_paciente', paciente_id=paciente.id) }}"
+     class="btn btn-secondary">Histórico de triagem</a>
+  <a href="{{ url_for('pdf.qrcode_paciente', paciente_id=paciente.id) }}"
+     class="btn btn-secondary" target="_blank" rel="noopener">QR Code</a>
 {% endblock %}
 
 {% block content %}

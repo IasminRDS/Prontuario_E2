@@ -80,8 +80,30 @@
           </td>
           <td><span class="badge badge-{{ scor }}">{{ slabel }}</span></td>
           <td>
-            <a href="{{ url_for('medicamentos.visualizar', id=p.id) }}"
-               class="btn btn-sm btn-secondary">Ver</a>
+            <div class="flex gap-8">
+              <a href="{{ url_for('medicamentos.visualizar', id=p.id) }}"
+                 class="btn btn-sm btn-secondary">Ver</a>
+              {# `medicamentos.atualizar_status` redireciona justamente para cá,
+                 e nenhuma tela a chamava: prescrição ativa não tinha como ser
+                 suspensa nem concluída. #}
+              {% if current_user.is_medico() or current_user.is_admin() %}
+              <form method="POST"
+                    action="{{ url_for('medicamentos.atualizar_status', id=p.id) }}"
+                    style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <select name="status" class="form-control"
+                        style="padding:4px 8px;font-size:.78rem;height:auto"
+                        onchange="this.form.submit()">
+                  <option value="">Alterar…</option>
+                  {% for valor, (rotulo, _tom) in p.STATUS_LABELS.items() %}
+                    {% if valor != p.status %}
+                      <option value="{{ valor }}">{{ rotulo }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}

@@ -104,20 +104,11 @@ def editar_usuario(id):
     return render_template("admin/usuario_form.html", usuario=user, unidades=unidades)
 
 
-@admin_bp.route("/usuarios/<int:id>/toggle")
-@login_required
-@admin_requerido
-def toggle_usuario(id):
-    user = User.query.get_or_404(id)
-    if user.id == current_user.id:
-        flash("Você não pode desativar sua própria conta.", "warning")
-        return redirect(url_for("admin.index"))
-    user.ativo = not user.ativo
-    acao = "activate" if user.ativo else "delete"
-    auditar_aqui("users", acao)
-    db.session.commit()
-    flash(f'Usuário {"ativado" if user.ativo else "desativado"}.', "info")
-    return redirect(url_for("admin.index"))
+# `toggle_usuario` vivia aqui e foi removido: `ativar_usuario` e
+# `desativar_usuario` o substituíram — e o fizeram de propósito, como diz a
+# docstring de `ativar_usuario`, para o clique dizer o que faz. Ele continuava
+# registrado, respondendo em GET, sem tela nenhuma apontando para ele. Rota de
+# mutação alcançável por GET e não referenciada é superfície sem dono.
 
 
 @admin_bp.post("/usuarios/<int:id>/ativar")

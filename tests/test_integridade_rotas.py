@@ -236,3 +236,93 @@ def test_nenhum_template_orfao():
     assert not orfaos, (
         "template que nenhuma rota renderiza e nenhum outro herda — ou ligue, "
         "ou apague:\n" + "\n".join(orfaos))
+
+
+# Rotas que NÃO devem ser alcançáveis pela navegação, com o motivo de cada uma.
+# É o espelho de `TEMPLATES_SEM_ROTA_ACEITOS`: lá, tela sem rota; aqui, rota sem
+# tela. As duas listas juntas são o que impede o sistema de acumular pontas
+# soltas — nenhuma delas quebra nada, e é justamente por isso que sobrevivem.
+ROTAS_SEM_PORTA_ACEITAS = {
+    # --- Interface programável (JSON), consumida por cliente e não por link ---
+    "pacientes.listar_pacientes_api",
+    "prontuario.criar_prontuario",
+    "prontuario.atualizar_prontuario",
+    "prontuario.excluir_prontuario",
+    "prontuario.assinar_prontuario",
+    "atendimento.criar_atendimento",
+    "auth.govbr_status",
+    # --- Chamadas assíncronas do próprio front, montadas em JavaScript -------
+    # `test_contrato_front_api.py` é quem garante que estas existem e respondem
+    # o que o JS lê; aqui elas entram porque não têm (nem devem ter) link.
+    "agenda.api_listar_eventos",
+    "agenda.api_criar_evento",
+    "agenda.api_status_evento",
+    "agendamento.api_horarios",
+    "estoque.api_buscar",
+    "internacao.api_listar_leitos",
+    "internacao.api_criar_leito",
+    "internacao.api_status_leito",
+    "medicamentos.buscar",
+    "pacientes.buscar",
+    "pacientes.buscar_codigo",
+    "pacientes.atualizar_paciente",
+    "pacientes.desativar_paciente",
+    # --- Compatibilidade: URL antiga que redireciona para a tela nova --------
+    "leitos.index",
+    "pacientes.index_alias",
+}
+
+_ENDPOINT = re.compile(r"""url_for\(\s*['"]([a-zA-Z_0-9.]+)['"]""")
+# O menu lateral registra o endpoint como string simples, sem `url_for`.
+_ENDPOINT_NAV = re.compile(r"""_i\(\s*['"]([a-zA-Z_0-9.]+)['"]""")
+
+
+def test_nenhuma_rota_sem_porta_de_entrada(app):
+    """Toda rota é alcançável por link, formulário, menu ou `fetch`.
+
+    Rota que existe e ninguém alcança passa em todos os outros testes: responde
+    200, não quebra nada, e nenhum usuário consegue usá-la. Foi assim que o
+    cadastro de usuário, a criação de setor e o cancelamento de cirurgia
+    ficaram inacessíveis pela interface.
+
+    A comparação é por FUNÇÃO e não por endpoint: `add_url_rule` com
+    `endpoint=` cria apelidos para a mesma tela, e basta um deles estar citado
+    para a tela estar ligada.
+    """
+    import pathlib
+
+    raiz = pathlib.Path(__file__).resolve().parent.parent
+
+    citados = set()
+    alvos = list((raiz / "templates").rglob("*.html"))
+    alvos += list((raiz / "static").rglob("*.js"))
+    for pasta in ("routes", "utils", "services"):
+        alvos += list((raiz / pasta).rglob("*.py"))
+    alvos.append(raiz / "app.py")
+    for arquivo in alvos:
+        texto = arquivo.read_text(encoding="utf-8", errors="replace")
+        citados.update(_ENDPOINT.findall(texto))
+        citados.update(_ENDPOINT_NAV.findall(texto))
+
+    # Apelidos: agrupa os endpoints que compartilham a mesma função de view.
+    por_funcao = {}
+    for endpoint, funcao in app.view_functions.items():
+        por_funcao.setdefault(funcao, set()).add(endpoint)
+    apelidos = {}
+    for endpoints in por_funcao.values():
+        for endpoint in endpoints:
+            apelidos[endpoint] = endpoints
+
+    sem_porta = []
+    for regra in sorted(app.url_map.iter_rules(), key=str):
+        endpoint = regra.endpoint
+        if endpoint == "static" or endpoint in ROTAS_SEM_PORTA_ACEITAS:
+            continue
+        if apelidos.get(endpoint, {endpoint}) & citados:
+            continue
+        metodos = ",".join(sorted(regra.methods - {"HEAD", "OPTIONS"}))
+        sem_porta.append(f"  {endpoint} [{metodos}] {regra}")
+
+    assert not sem_porta, (
+        "rota que nenhuma tela alcança — ou ligue, ou apague, ou declare em "
+        "ROTAS_SEM_PORTA_ACEITAS com o motivo:\n" + "\n".join(sem_porta))

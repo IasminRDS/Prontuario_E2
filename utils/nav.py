@@ -72,6 +72,13 @@ GRUPOS = (
            "Indicadores e relatórios gerenciais.", ["reports:read"]),
         _i("importacao.csv_form", "Importar CSV", "upload",
            "Importação de pacientes em lote (validação estrita).", ["patient:create"]),
+        # A tela detalhada da importação de pacientes — a que documenta os
+        # campos obrigatórios e o formato da data — existia sem entrada no
+        # menu. As duas enviam para `importacao.csv_importar`; a diferença é a
+        # orientação, e era justamente a orientada que ninguém alcançava.
+        _i("importacao.pacientes", "Importar pacientes", "user-plus",
+           "Importação de pacientes com o formato dos campos documentado.",
+           ["patient:create"]),
         _i("exportacao.index", "Exportação", "download-cloud",
            "Exportação de dados e backup — auditados (LGPD).",
            perfis=["Administrador", "Recepcao", "SuperAdmin"]),
@@ -132,6 +139,12 @@ GRUPOS = (
            "Cópia de segurança do banco.", ["admin:full"]),
         _i("pdf.ferramentas", "Ferramentas PDF", "files",
            "Compactar, proteger e reorganizar documentos.", ["clinical:read"]),
+        # A tela existia e não estava no menu: os documentos emitidos, com o
+        # código e a impressão digital que `/verificar/<código>` confere, só
+        # eram alcançáveis por URL digitada à mão.
+        _i("documentos.listar", "Documentos emitidos", "file-check",
+           "Documentos assinados, com código de verificação pública.",
+           ["clinical:read"]),
     )),
     # Fica por último de propósito: é o que menos se acessa no dia a dia.
     Grupo("Conta", (

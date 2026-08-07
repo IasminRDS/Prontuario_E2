@@ -49,6 +49,25 @@
                   <a class="btn btn--sm btn--ghost" href="{{ url_for('agendamento.editar', id=a.id) }}">
                     {{ icon('pencil') }} Editar
                   </a>
+                  {# `agendamento.atualizar_status` redireciona para esta tela e
+                     nenhuma tela a chamava: marcar comparecimento ou falta só
+                     era possível abrindo a edição inteira. #}
+                  {% if a.status == 'agendado' %}
+                  <form method="POST"
+                        action="{{ url_for('agendamento.atualizar_status', id=a.id) }}"
+                        style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <select name="status" class="select select--sm"
+                            onchange="this.form.submit()">
+                      <option value="">Situação…</option>
+                      {% for valor, (rotulo, _tom) in a.STATUS_LABELS.items() %}
+                        {% if valor != a.status %}
+                          <option value="{{ valor }}">{{ rotulo }}</option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                  </form>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

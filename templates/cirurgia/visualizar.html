@@ -19,6 +19,18 @@
   {% elif cir.status == 'em_andamento' %}
     <a href="{{ url_for('cirurgia.finalizar', id=cir.id) }}" class="btn btn--primary">Finalizar</a>
   {% endif %}
+  {# `cirurgia.cancelar` existia e nenhuma tela chamava: cirurgia agendada não
+     tinha como ser cancelada, e o leito da sala ficava ocupado. A rota também
+     libera a sala. Só faz sentido antes de concluída. #}
+  {% if cir.status in ('agendada', 'em_andamento') %}
+    <form method="post" action="{{ url_for('cirurgia.cancelar', id=cir.id) }}"
+          onsubmit="return confirm('Cancelar esta cirurgia? A sala volta a ficar livre.')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="text" name="motivo" class="input" placeholder="Motivo do cancelamento"
+             required style="max-width:220px" />
+      <button class="btn btn--danger">Cancelar cirurgia</button>
+    </form>
+  {% endif %}
 {% endblock %}
 
 {% block content %}

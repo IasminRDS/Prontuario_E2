@@ -23,6 +23,11 @@
   <button class="btn" type="submit">Filtrar</button>
   <a class="btn btn-light" href="{{ url_for('estoque.index') }}">Limpar</a>
 
+  {# `estoque.alertas` reúne o que está crítico e o que está vencendo. Existia
+     sem porta de entrada — a informação que mais justifica abrir o módulo era a
+     única inalcançável. #}
+  <a class="btn btn-light" href="{{ url_for('estoque.alertas') }}">Alertas</a>
+
   {% if 'estoque.novo' in available_endpoints %}
     <a class="btn" href="{{ url_for('estoque.novo') }}" style="margin-left:auto;">+ Novo item</a>
   {% endif %}

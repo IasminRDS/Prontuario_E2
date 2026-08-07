@@ -3,6 +3,18 @@
 {% block title %}Administração{% endblock %}
 {% block page_title %}Administração{% endblock %}
 
+{# `admin.novo_usuario` existia, funcionava e nenhuma tela apontava para ela: não
+   havia como cadastrar usuário pela interface. A tela listava, editava, ativava
+   e desativava — só não deixava criar. #}
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.novo_usuario') }}" class="btn btn-primary">
+    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Novo usuário
+  </a>
+{% endblock %}
+
 {% block content %}
 
 {# Os três contadores liam `total_usuarios`, `ativos` e `inativos`; a rota passa
