@@ -41,3 +41,9 @@ Thumbs.db
 # Node (caso use futuramente)
 node_modules/
 .next/
+
+# Monografia gerada a partir de docs/TCC.md por
+# scripts/gerar_tcc_docx.py. A FONTE e o gerador sao versionados;
+# o binario nao, porque diff de .docx nao se le e o arquivo muda a
+# cada regeracao.
+docs/TCC.docx
