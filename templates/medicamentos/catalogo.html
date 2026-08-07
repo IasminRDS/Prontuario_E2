@@ -1,42 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Catálogo de Exames{% endblock %}
-{% block page_title %}Catálogo de Exames{% endblock %}
+{% block title %}Catálogo de Medicamentos{% endblock %}
+{% block page_title %}Catálogo de Medicamentos{% endblock %}
+
+{# Este arquivo e `exames/catalogo.html` estavam TROCADOS: cada um trazia o
+   conteúdo do outro. Como as duas rotas passam nomes diferentes (`meds` aqui,
+   `tipos` lá), o Jinja não acusava — apenas renderizava a tabela vazia, sob o
+   título do outro módulo. #}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('exames.novo_tipo') }}" class="btn btn-primary">
+  <a href="{{ url_for('medicamentos.novo_medicamento') }}" class="btn btn-primary">
     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
-    Novo Tipo
+    Novo
   </a>
-  <a href="{{ url_for('exames.pendentes') }}" class="btn btn-secondary">Pendentes</a>
 {% endblock %}
 
 {% block content %}
+<form method="GET" class="card mb-16">
+  <div class="card-body" style="display:flex;gap:10px">
+    <div class="search-bar" style="flex:1">
+      <svg class="ico" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nome genérico ou comercial...">
+    </div>
+    <button type="submit" class="btn btn-primary">Buscar</button>
+  </div>
+</form>
+
 <div class="card">
   <div class="table-wrapper">
     <table class="tabela">
       <thead>
-        <tr><th>Código</th><th>Nome</th><th>Categoria</th><th>Preparo</th><th>Status</th></tr>
+        <tr><th>Nome genérico</th><th>Comercial</th><th>Classe</th><th>Apresentação</th><th>Via</th><th>Controlado</th></tr>
       </thead>
       <tbody>
-        {% for t in tipos %}
+        {% for m in meds %}
         <tr>
-          <td class="font-mono fw-600" style="font-size:.82rem">{{ t.codigo }}</td>
-          <td class="fw-500">{{ t.nome }}</td>
-          <td><span class="badge badge-azul">{{ t.categoria or '—' }}</span></td>
-          <td style="font-size:.82rem;color:var(--cinza-500);max-width:240px;
-                     white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            {{ t.instrucoes or '—' }}
-          </td>
+          <td class="fw-500">{{ m.nome_generico }}</td>
+          <td style="font-size:.84rem;color:var(--cinza-600)">{{ m.nome_comercial or '—' }}</td>
+          <td style="font-size:.82rem">{{ m.classe or '—' }}</td>
+          <td style="font-size:.82rem">{{ m.apresentacao or '—' }}</td>
+          <td><span class="badge badge-cinza">{{ m.via_admin or '—' }}</span></td>
           <td>
-            {% if t.ativo %}<span class="badge badge-verde">Ativo</span>
-            {% else %}<span class="badge badge-cinza">Inativo</span>{% endif %}
+            {% if m.controlado %}
+              <span class="badge badge-vermelho">
+                Controlado{% if m.lista_rename %} {{ m.lista_rename }}{% endif %}
+              </span>
+            {% else %}
+              <span class="badge badge-verde">Comum</span>
+            {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--cinza-400)">
-          Nenhum tipo cadastrado.
+        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--cinza-400)">
+          {% if q %}Nenhum medicamento para esta busca.
+          {% else %}Nenhum medicamento cadastrado.{% endif %}
         </td></tr>
         {% endfor %}
       </tbody>

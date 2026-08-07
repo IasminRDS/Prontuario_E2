@@ -35,12 +35,10 @@ PENDENCIAS = {
     "templates/faturamento/apac_form.html": {"comp_atual"},
     # Telas de relatório e formulários cujas rotas não passam o contexto que o
     # template espera.
-    "templates/internacao/form.html": {"leitos_livres"},
     "templates/encaminhamentos/painel.html": {"filtro_esp"},
-    "templates/exames/catalogo.html": {"meds"},
-    "templates/exames/pendentes.html": {"exames"},
-    "templates/medicamentos/catalogo.html": {"tipos"},
-    "templates/ps/historico.html": {"data_s", "ats"},
+    # `ps/painel.html` espera `fila` como dicionário indexado por cor de
+    # Manchester, e a rota entrega uma lista. Não é renomeação: é desenho de
+    # tela diferente do que a rota serve.
     "templates/ps/painel.html": {"ORDEM_CORES"},
     # `Atendimento` não tem `status` — tem `tipo`. Definir o que a coluna
     # deveria significar é decisão de produto.

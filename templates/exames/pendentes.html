@@ -2,30 +2,46 @@
 {% block title %}Exames Pendentes{% endblock %}
 {% block page_title %}Fila de Exames Pendentes{% endblock %}
 
+{# A tela lia `exames`, nome que a rota nunca passou: a fila aparecia sempre
+   vazia, com a mensagem "Nenhum exame pendente" mesmo havendo exames. A rota
+   entrega DUAS filas — quem espera coleta e quem espera resultado — mais o
+   corte de atraso, e é isso que a tela mostra agora. #}
+
 {% block topbar_actions %}
   <a href="{{ url_for('exames.catalogo') }}" class="btn btn-secondary">Catálogo</a>
 {% endblock %}
 
-{% block content %}
-<div class="card">
+{% macro fila(titulo, itens, coluna_data, rotulo_data, vazio) %}
+<div class="card mb-16">
+  <div class="card-header">
+    <h3>{{ titulo }} ({{ itens|length }})</h3>
+  </div>
   <div class="table-wrapper">
     <table class="tabela">
       <thead>
-        <tr><th>Paciente</th><th>Exame</th><th>Urgência</th><th>Solicitado em</th><th>Médico</th><th>Status</th><th></th></tr>
+        <tr><th>Paciente</th><th>Exame</th><th>Urgência</th><th>{{ rotulo_data }}</th>
+            <th>Médico</th><th>Status</th><th></th></tr>
       </thead>
       <tbody>
-        {% for e in exames %}
+        {% for e in itens %}
         {% set slabel, scor = e.status_label %}
         {% set ulabel, ucor = e.urgencia_label %}
+        {% set marco = e[coluna_data] %}
+        {% set atrasado = marco and marco < corte_atraso %}
         <tr>
           <td>
             <a href="{{ url_for('pacientes.perfil', id=e.paciente_id) }}" class="fw-500">
               {{ e.paciente.nome_exibicao }}
             </a>
           </td>
-          <td>{{ e.tipo_exame.nome }}</td>
+          <td>{{ e.tipo_exame.nome if e.tipo_exame else '—' }}</td>
           <td><span class="badge badge-{{ ucor }}">{{ ulabel }}</span></td>
-          <td class="font-mono" style="font-size:.8rem">{{ e.data_solicitacao.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="font-mono" style="font-size:.8rem">
+            {{ marco.strftime('%d/%m/%Y %H:%M') if marco else '—' }}
+            {% if atrasado %}
+              <span class="badge badge-vermelho">há mais de {{ dias_atraso }} dias</span>
+            {% endif %}
+          </td>
           <td style="font-size:.85rem">{{ e.medico.nome if e.medico else '—' }}</td>
           <td><span class="badge badge-{{ scor }}">{{ slabel }}</span></td>
           <td>
@@ -35,11 +51,18 @@
         </tr>
         {% else %}
         <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--cinza-400)">
-          Nenhum exame pendente.
+          {{ vazio }}
         </td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endmacro %}
+
+{% block content %}
+{{ fila('Aguardando coleta', aguardando_coleta, 'data_solicitacao',
+        'Solicitado em', 'Nenhum exame aguardando coleta.') }}
+{{ fila('Aguardando resultado', aguardando_resultado, 'data_coleta',
+        'Coletado em', 'Nenhum exame aguardando resultado.') }}
 {% endblock %}

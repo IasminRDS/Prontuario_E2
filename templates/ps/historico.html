@@ -1,23 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Histórico PS{% endblock %}
 {% block page_title %}Histórico — Pronto-Socorro{% endblock %}
+{# A tela lia `ats` e `data_s`, nomes que a rota nunca passou: a lista aparecia
+   vazia e o cabeçalho em branco. E o seletor de data mandava `?data=`, que a
+   rota ignora — ela filtra por JANELA de dias (`dias`) e por desfecho. Os
+   controles abaixo são os que a rota realmente lê. #}
 {% block topbar_actions %}
-  <input type="date" value="{{ data_s }}" class="form-control" style="width:150px"
-         onchange="location.href='/ps/historico?data='+this.value">
+  <form method="GET" style="display:flex;gap:8px;align-items:center">
+    <select name="dias" class="form-control" style="width:150px"
+            onchange="this.form.submit()">
+      {% for d in [7, 30, 90, 180, 365] %}
+        <option value="{{ d }}" {% if dias == d %}selected{% endif %}>
+          Últimos {{ d }} dias
+        </option>
+      {% endfor %}
+    </select>
+    <select name="desfecho" class="form-control" style="width:160px"
+            onchange="this.form.submit()">
+      <option value="">Todos os desfechos</option>
+      {% for d in desfechos %}
+        <option value="{{ d }}" {% if desfecho == d %}selected{% endif %}>
+          {{ d|capitalize }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
   <a href="{{ url_for('ps.painel') }}" class="btn btn-secondary">Painel</a>
 {% endblock %}
 {% block content %}
 <div class="card">
   <div class="card-header">
-    <h3>{{ data_f.strftime('%d/%m/%Y') }}</h3>
-    <span style="font-size:.82rem;color:var(--cinza-400);margin-left:8px">{{ ats|length }} atendimento(s)</span>
+    <h3>{{ data_i.strftime('%d/%m/%Y') }} a {{ data_f.strftime('%d/%m/%Y') }}</h3>
+    <span style="font-size:.82rem;color:var(--cinza-400);margin-left:8px">
+      {{ paginacao.total }} atendimento(s)
+    </span>
     <a href="{{ url_for('rel_hosp.relatorio_ps') }}" class="btn btn-sm btn-secondary ms-auto">Relatório completo</a>
   </div>
   <div class="table-wrapper">
     <table class="tabela">
       <thead><tr><th>Hora</th><th>Paciente</th><th>Classificação</th><th>Médico</th><th>Desfecho</th><th>Tempo</th></tr></thead>
       <tbody>
-        {% for a in ats %}
+        {% for a in atendimentos %}
         {% set label, hex_cor, _ = a.cor_info %}
         <tr>
           <td class="font-mono" style="font-size:.8rem">{{ a.data_chegada.strftime('%H:%M') }}</td>

@@ -43,7 +43,10 @@
           <label class="form-label">Leito <span class="obrigatorio">*</span></label>
           <select name="leito_id" class="form-control" required>
             <option value="">— Selecione leito livre —</option>
-            {% for l in leitos_livres %}
+            {# `leitos`, não `leitos_livres`: os dois pontos de render da rota
+               passam com este nome. Com o nome errado o seletor de leito vinha
+               VAZIO, e internar era impossível pela tela — sem erro nenhum. #}
+            {% for l in leitos %}
             <option value="{{ l.id }}">{{ l.setor.nome }} — {{ l.numero }}</option>
             {% endfor %}
           </select>
