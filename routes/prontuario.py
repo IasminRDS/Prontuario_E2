@@ -10,8 +10,7 @@ from models.prontuario import Prontuario
 from models.paciente import Paciente
 from models.medico import Medico
 from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_paciente
-from utils.audit import audit_log, auditar_aqui, registrar
-from utils.audit import log_auditoria
+from utils.audit import auditar_aqui, log_auditoria, registrar
 from utils.rbac import requer_permissao
 from utils.terminologias import descricao_cid
 
@@ -405,7 +404,6 @@ def obter_prontuario(prontuario_id):
 
 @prontuario_bp.post("/")
 @login_required
-@audit_log(acao_default="create", tabela_default="prontuarios")
 @requer_permissao("clinical:write")
 def criar_prontuario():
     data = request.get_json(silent=True) or {}
@@ -464,16 +462,18 @@ def criar_prontuario():
     )
 
     db.session.add(novo)
+    # `flush` e não `commit`: o id fica disponível para a auditoria sem fechar a
+    # transação, então o evento e a escrita persistem juntos ou não persistem.
+    db.session.flush()
+    registrar("prontuarios", novo.id, "create",
+              f"Prontuário criado via {request.endpoint}")
     db.session.commit()
-
-    auditar_aqui("prontuarios", "create")
 
     return jsonify({"mensagem": "Prontuário criado com sucesso", "id": novo.id}), 201
 
 
 @prontuario_bp.put("/<int:prontuario_id>")
 @login_required
-@audit_log(acao_default="update", tabela_default="prontuarios")
 @requer_permissao("clinical:write")
 def atualizar_prontuario(prontuario_id):
     p = Prontuario.query.get_or_404(prontuario_id)
@@ -516,16 +516,14 @@ def atualizar_prontuario(prontuario_id):
     p.encaminhamento = data.get("encaminhamento", p.encaminhamento)
     p.retorno_dias = data.get("retorno_dias", p.retorno_dias)
 
-    db.session.commit()
-
     auditar_aqui("prontuarios", "update")
+    db.session.commit()
 
     return jsonify({"mensagem": "Prontuário atualizado com sucesso"}), 200
 
 
 @prontuario_bp.post("/<int:prontuario_id>/assinar")
 @login_required
-@audit_log(acao_default="sign", tabela_default="prontuarios")
 @requer_permissao("clinical:write")
 def assinar_prontuario(prontuario_id):
     p = Prontuario.query.get_or_404(prontuario_id)
@@ -540,9 +538,8 @@ def assinar_prontuario(prontuario_id):
         return jsonify({"mensagem": "Prontuário já estava assinado"}), 200
 
     p.assinar()
-    db.session.commit()
-
     auditar_aqui("prontuarios", "sign")
+    db.session.commit()
 
     return jsonify({"mensagem": "Prontuário assinado com sucesso"}), 200
 
@@ -550,15 +547,16 @@ def assinar_prontuario(prontuario_id):
 @prontuario_bp.delete("/<int:prontuario_id>")
 @login_required
 @requer_permissao("admin:full")
-@audit_log(acao_default="delete", tabela_default="prontuarios")
 def excluir_prontuario(prontuario_id):
     if current_user.perfil != "admin":
         return jsonify({"erro": "Apenas admin pode excluir prontuário"}), 403
 
     p = Prontuario.query.get_or_404(prontuario_id)
+    # Auditar ANTES do delete: depois dele o objeto já não tem o que descrever, e
+    # exclusão de prontuário sem rastro é justamente o que não pode acontecer.
+    auditar_aqui("prontuarios", "delete",
+                 f"Prontuário {prontuario_id} do paciente {p.paciente_id} excluído")
     db.session.delete(p)
     db.session.commit()
-
-    auditar_aqui("prontuarios", "delete")
 
     return jsonify({"mensagem": "Prontuário excluído com sucesso"}), 200

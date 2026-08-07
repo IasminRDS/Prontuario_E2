@@ -51,6 +51,22 @@ def _per_page() -> int:
 # =========================================================
 # Helpers
 # =========================================================
+def _data_iso(valor):
+    """Converte 'aaaa-mm-dd' em `date`. Devolve None se não converter.
+
+    As rotas JSON entregavam a string crua ao model. O driver do PostgreSQL
+    aceita e converte; o do SQLite recusa com `TypeError`, então criar paciente
+    pela API só funcionava em um dos dois bancos que este projeto suporta — e
+    nem ali a data era validada. A rota HTML já fazia isto; a JSON não.
+    """
+    if valor is None or isinstance(valor, date):
+        return valor
+    try:
+        return date.fromisoformat(str(valor).strip())
+    except ValueError:
+        return None
+
+
 def _idade_anos(data_nascimento):
     if not data_nascimento:
         return None
@@ -494,6 +510,9 @@ def criar_paciente():
         return jsonify({"erro": "Nome é obrigatório"}), 400
     if not data_nascimento:
         return jsonify({"erro": "Data de nascimento é obrigatória"}), 400
+    data_nascimento = _data_iso(data_nascimento)
+    if data_nascimento is None:
+        return jsonify({"erro": "Data de nascimento inválida (use aaaa-mm-dd)"}), 400
     if not sexo:
         return jsonify({"erro": "Sexo é obrigatório"}), 400
     if cpf and not validar_cpf(cpf):
@@ -552,9 +571,13 @@ def criar_paciente():
     )
 
     db.session.add(p)
+    # `flush` e não `commit`: o id fica disponível para a auditoria sem fechar a
+    # transação, então o evento e a escrita persistem juntos ou não persistem.
+    db.session.flush()
+    registrar("pacientes", p.id, "create",
+              f"Paciente {p.nome} criado via {request.endpoint}")
     db.session.commit()
 
-    auditar_aqui("pacientes", "create")
     return jsonify({"mensagem": "Paciente criado com sucesso", "id": p.id}), 201
 
 
@@ -591,7 +614,11 @@ def atualizar_paciente(paciente_id):
     p.cpf = novo_cpf or None
     p.cns = novo_cns or None
     p.rg = data.get("rg", p.rg)
-    p.data_nascimento = data.get("data_nascimento", p.data_nascimento)
+    if "data_nascimento" in data:
+        nova_data = _data_iso(data["data_nascimento"])
+        if nova_data is None:
+            return jsonify({"erro": "Data de nascimento inválida (use aaaa-mm-dd)"}), 400
+        p.data_nascimento = nova_data
     p.sexo = data.get("sexo", p.sexo)
     p.raca_cor = data.get("raca_cor", p.raca_cor)
     p.nome_mae = data.get("nome_mae", p.nome_mae)
@@ -615,8 +642,8 @@ def atualizar_paciente(paciente_id):
         if hasattr(Paciente, "municipio_ibge"):
             p.municipio_ibge = data.get("municipio_ibge", getattr(p, "municipio_ibge", None))
 
-    db.session.commit()
     auditar_aqui("pacientes", "update")
+    db.session.commit()
     return jsonify({"mensagem": "Paciente atualizado com sucesso"}), 200
 
 
@@ -630,6 +657,6 @@ def desativar_paciente(paciente_id):
         return jsonify({"erro": "Apenas admin pode desativar paciente"}), 403
 
     p.ativo = False
-    db.session.commit()
     auditar_aqui("pacientes", "delete")
+    db.session.commit()
     return jsonify({"mensagem": "Paciente desativado com sucesso"}), 200
