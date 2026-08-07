@@ -190,3 +190,49 @@ def test_nenhum_formulario_aninhado():
             else:
                 profundidade = max(0, profundidade - 1)
     assert not aninhados, "formulários aninhados:\n" + "\n".join(aninhados)
+
+
+# Template que nenhuma rota renderiza é peso morto que engana: alguém abre o
+# arquivo, conclui que a tela existe, e ela nunca foi ligada. Doze deles
+# acumularam-se assim — entre eles um `pacientes/index.html` de 169 linhas que
+# convivia com o `pacientes/listar.html` que a rota de fato usa, e um par de
+# `relatorio_form.html` copiado para duas pastas erradas.
+#
+# A lista abaixo existe para o caso legítimo: template criado junto com a rota
+# que ainda vai ligá-lo. Entrar nela exige justificar por quê.
+TEMPLATES_SEM_ROTA_ACEITOS = set()
+
+
+def test_nenhum_template_orfao():
+    """Todo template é renderizado por alguém, ou herdado por outro template."""
+    import pathlib
+
+    raiz = pathlib.Path(__file__).resolve().parent.parent
+    templates = raiz / "templates"
+
+    codigo = ""
+    for pasta in ("routes", "utils", "services"):
+        for arquivo in (raiz / pasta).rglob("*.py"):
+            codigo += arquivo.read_text(encoding="utf-8", errors="replace")
+    codigo += (raiz / "app.py").read_text(encoding="utf-8", errors="replace")
+
+    # `extends`, `include`, `import` e `from` referenciam template sem rota.
+    referenciados = set()
+    for arquivo in templates.rglob("*.html"):
+        texto = arquivo.read_text(encoding="utf-8", errors="replace")
+        referenciados.update(
+            m.group(1) for m in
+            re.finditer(r"{%-?\s*(?:extends|include|import|from)\s+['\"]([^'\"]+)",
+                        texto))
+
+    orfaos = []
+    for arquivo in sorted(templates.rglob("*.html")):
+        rel = arquivo.relative_to(templates).as_posix()
+        if rel in referenciados or rel in TEMPLATES_SEM_ROTA_ACEITOS:
+            continue
+        if rel not in codigo:
+            orfaos.append(f"  templates/{rel}")
+
+    assert not orfaos, (
+        "template que nenhuma rota renderiza e nenhum outro herda — ou ligue, "
+        "ou apague:\n" + "\n".join(orfaos))
