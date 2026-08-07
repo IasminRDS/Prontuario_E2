@@ -169,10 +169,13 @@
             </div>
           </div>
           <div class="flex gap-8">
-            {% if a.status == 'finalizado' %}
-              <span class="badge badge-verde">Finalizado</span>
+            {# O badge lia `a.status`, que `Atendimento` não tem: saía sempre
+               cinza e vazio. O que existe é `prontuario` — e ele responde à
+               pergunta útil, que é se o atendimento gerou registro clínico. #}
+            {% if a.prontuario %}
+              <span class="badge badge-verde">Com prontuário</span>
             {% else %}
-              <span class="badge badge-cinza">{{ a.status }}</span>
+              <span class="badge badge-cinza">Sem registro</span>
             {% endif %}
             {% if a.prontuario %}
               <a href="{{ url_for('prontuario.visualizar', id=a.prontuario.id) }}" class="btn btn-sm btn-secondary">Ver</a>

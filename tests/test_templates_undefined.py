@@ -58,10 +58,6 @@ PENDENCIAS = {
     # Manchester, e a rota entrega uma lista. Não é renomeação: é desenho de
     # tela diferente do que a rota serve.
     "templates/ps/painel.html": {"ORDEM_CORES"},
-    # `Atendimento` não tem `status` — tem `tipo`. Definir o que a coluna
-    # deveria significar é decisão de produto.
-    "templates/pacientes/perfil.html": {"status"},
-    "templates/relatorios/atendimentos.html": {"status"},
 }
 
 

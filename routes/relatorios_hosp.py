@@ -150,7 +150,7 @@ def producao():
 
     if exportar == "csv":
         buf = StringIO()
-        w = csv.writer(buf)
+        w = csv.writer(buf, delimiter=";")
         w.writerow(["Indicador", "Quantidade", "Período"])
         for label, val in dados:
             w.writerow([label, val, f"{data_ini} a {data_fim}"])
@@ -205,13 +205,17 @@ def relatorio_ps():
 
     if exportar == "csv":
         buf = StringIO()
-        w = csv.writer(buf)
+        w = csv.writer(buf, delimiter=";")
+        # Sem "Modo chegada": `AtendimentoPS` não tem essa coluna. O formulário
+        # de entrada do PS chega a ENVIAR o campo, a rota o descarta e o model
+        # nunca o teve — aqui ele derrubava a exportação inteira com
+        # AttributeError. `classificacao`, `desfecho` e `tempo_total_min` são
+        # propriedades do model e continuam válidos.
         w.writerow(
             [
                 "Data entrada",
                 "Paciente",
                 "Classificação",
-                "Modo chegada",
                 "Status",
                 "Desfecho",
                 "Tempo (min)",
@@ -223,7 +227,6 @@ def relatorio_ps():
                     a.data_chegada.strftime("%d/%m/%Y %H:%M"),
                     a.paciente.nome_exibicao,
                     a.classificacao,
-                    a.modo_chegada,
                     a.status,
                     a.desfecho or "",
                     a.tempo_total_min or "",

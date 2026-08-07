@@ -3,8 +3,15 @@
 {% block page_title %}Relatório de Produção{% endblock %}
 
 {% block topbar_actions %}
+{# `request.url ~ "&exportar=csv"` produzia URL invalida quando a tela era
+   aberta SEM filtro — sem `?` na origem, o `&` vira parte do caminho e o
+   link dava 404. E abrir sem filtro e justamente como se chega aqui pelo
+   indice de relatorios. `url_for` monta a query string do jeito certo nos
+   dois casos, e preserva os filtros que o usuario ja aplicou. #}
+{% set parametros_csv = request.args.to_dict() %}
+{% set _ = parametros_csv.update({'exportar': 'csv'}) %}
   <a href="{{ url_for('relatorios.index') }}" class="btn btn-secondary">Voltar</a>
-  <a href="{{ request.url }}&exportar=csv" class="btn btn-secondary">Exportar CSV</a>
+  <a href="{{ url_for(request.endpoint, **parametros_csv) }}" class="btn btn-secondary">Exportar CSV</a>
 {% endblock %}
 
 {% block content %}

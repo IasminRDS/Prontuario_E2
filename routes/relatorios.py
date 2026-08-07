@@ -107,7 +107,7 @@ def pacientes():
 
 def _csv_pacientes(pacientes):
     buf = StringIO()
-    w = csv.writer(buf)
+    w = csv.writer(buf, delimiter=";")
     w.writerow(
         [
             "Nome",
@@ -175,15 +175,19 @@ def atendimentos():
 
     if exportar == "csv":
         buf = StringIO()
-        w = csv.writer(buf)
-        w.writerow(["Data", "Paciente", "Tipo", "Status", "Médico", "Unidade"])
+        w = csv.writer(buf, delimiter=";")
+        # Sem coluna "Status": `Atendimento` não tem esse campo — tem `tipo`.
+        # No template o Jinja renderizava vazio e ninguém percebia; aqui o
+        # `csv.writer` levantava AttributeError e a exportação inteira devolvia
+        # 500. A varredura de rotas não pegava porque só exercita a URL sem o
+        # `?exportar=csv`, e é o parâmetro que decide o ramo.
+        w.writerow(["Data", "Paciente", "Tipo", "Médico", "Unidade"])
         for a in ats:
             w.writerow(
                 [
                     a.data_hora.strftime("%d/%m/%Y %H:%M"),
                     a.paciente.nome_exibicao,
                     a.tipo,
-                    a.status,
                     a.medico.nome if a.medico else "",
                     a.unidade.nome if a.unidade else "",
                 ]
@@ -260,7 +264,7 @@ def producao():
 
     if exportar == "csv":
         buf = StringIO()
-        w = csv.writer(buf)
+        w = csv.writer(buf, delimiter=";")
         w.writerow(["Indicador", "Quantidade"])
         for label, val in [
             ("Atendimentos", total_at),
@@ -330,7 +334,7 @@ def triagem():
 
     if exportar == "csv":
         buf = StringIO()
-        w = csv.writer(buf)
+        w = csv.writer(buf, delimiter=";")
         w.writerow(
             [
                 "Data",

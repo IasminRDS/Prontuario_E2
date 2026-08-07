@@ -3,8 +3,15 @@
 {% block page_title %}Relatório de Atendimentos{% endblock %}
 
 {% block topbar_actions %}
+{# `request.url ~ "&exportar=csv"` produzia URL invalida quando a tela era
+   aberta SEM filtro — sem `?` na origem, o `&` vira parte do caminho e o
+   link dava 404. E abrir sem filtro e justamente como se chega aqui pelo
+   indice de relatorios. `url_for` monta a query string do jeito certo nos
+   dois casos, e preserva os filtros que o usuario ja aplicou. #}
+{% set parametros_csv = request.args.to_dict() %}
+{% set _ = parametros_csv.update({'exportar': 'csv'}) %}
   <a href="{{ url_for('relatorios.index') }}" class="btn btn-secondary">Voltar</a>
-  <a href="{{ request.url }}&exportar=csv" class="btn btn-secondary">Exportar CSV</a>
+  <a href="{{ url_for(request.endpoint, **parametros_csv) }}" class="btn btn-secondary">Exportar CSV</a>
 {% endblock %}
 
 {% block content %}
@@ -49,14 +56,17 @@
   </div>
   <div class="table-wrapper">
     <table class="tabela">
-      <thead><tr><th>Data/Hora</th><th>Paciente</th><th>Tipo</th><th>Status</th><th>Médico</th></tr></thead>
+      {# Sem coluna "Status": `Atendimento` não tem esse campo, tem `tipo`. A
+         coluna exibia um badge cinza vazio em toda linha. Se o atendimento
+         precisar de ciclo de vida próprio, o caminho é migration com a coluna
+         e o vocabulário decidido — não um badge lendo atributo inexistente. #}
+      <thead><tr><th>Data/Hora</th><th>Paciente</th><th>Tipo</th><th>Médico</th></tr></thead>
       <tbody>
         {% for a in atendimentos %}
         <tr>
           <td class="font-mono" style="font-size:.8rem">{{ a.data_hora.strftime('%d/%m/%Y %H:%M') }}</td>
           <td><a href="{{ url_for('pacientes.perfil', id=a.paciente_id) }}" class="fw-500">{{ a.paciente.nome_exibicao }}</a></td>
           <td><span class="badge badge-azul">{{ a.tipo|capitalize }}</span></td>
-          <td><span class="badge badge-{% if a.status=='finalizado' %}verde{% elif a.status=='cancelado' %}vermelho{% else %}cinza{% endif %}">{{ a.status|capitalize }}</span></td>
           <td style="font-size:.84rem">{{ a.medico.nome if a.medico else '—' }}</td>
         </tr>
         {% else %}
