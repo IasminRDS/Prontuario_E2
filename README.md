@@ -193,11 +193,11 @@ Acesse `http://localhost:5000`.
 | | |
 |---|---|
 | Módulos (blueprints) | 44 |
-| Rotas | 211 |
+| Rotas | 210 |
 | Models | 29 arquivos, 42 tabelas |
-| Templates | 129 |
-| Migrations | 10, exercitadas do zero e em reversa no CI |
-| Testes | 194 funções → 290 casos, em 27 arquivos, nos dois bancos |
+| Templates | 117 |
+| Migrations | 12, exercitadas do zero e em reversa no CI |
+| Testes | 210 funções → 332 casos, em 29 arquivos, nos dois bancos |
 | Tabelas sob RLS | 15 |
 | Permissões RBAC | 26, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |
