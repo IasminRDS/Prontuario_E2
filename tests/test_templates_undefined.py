@@ -25,39 +25,12 @@ from tests.conftest import PERFIS, autenticar
 #
 # Reduzir esta lista é trabalho pendente; aumentá-la exige justificar por quê.
 PENDENCIAS = {
-    # --- Faturamento: exige decidir o schema, não é renomeação --------------
-    # A AIH e a APAC são documentos do SUS com formato definido. As telas pedem
-    # campos que os models não têm; inventar coluna aqui é pior que a lacuna.
-    "templates/faturamento/aih_form.html": {
-        "competencia", "cid_secundario", "procedimento_secundario",
-        "dias_permanencia", "valor_sh", "valor_sp", "observacoes", "comp_atual",
-        "data_internacao", "data_saida", "intern_sel",
-    },
-    "templates/faturamento/aih_lista.html": {
-        "comp", "competencia", "dias_permanencia", "total_valor",
-    },
-    "templates/faturamento/apac_form.html": {"comp_atual"},
-    "templates/faturamento/apac_lista.html": {
-        "cid", "competencia", "procedimento",
-    },
-    # --- Estoque -----------------------------------------------------------
-    # `categorias` e `lote` não vêm da rota. `lote` provavelmente nem é coluna
-    # de `itens_estoque`: controle de lote é decisão de produto, e a farmácia
-    # hospitalar precisa dele para validade — não dá para adivinhar.
-    "templates/estoque/index.html": {"categorias", "lote"},
     # --- Cirurgia ----------------------------------------------------------
     # `cid` é um dos seis campos que a rota antiga tentava gravar e para os
     # quais NÃO existe coluna em `models/cirurgia.py`. Junto com `codigo_tuss`,
     # é provavelmente necessário para faturamento — mas o caminho é migration,
     # não campo no template.
     "templates/cirurgia/relatorio_form.html": {"cid"},
-    # Telas de relatório e formulários cujas rotas não passam o contexto que o
-    # template espera.
-    "templates/encaminhamentos/painel.html": {"filtro_esp"},
-    # `ps/painel.html` espera `fila` como dicionário indexado por cor de
-    # Manchester, e a rota entrega uma lista. Não é renomeação: é desenho de
-    # tela diferente do que a rota serve.
-    "templates/ps/painel.html": {"ORDEM_CORES"},
 }
 
 

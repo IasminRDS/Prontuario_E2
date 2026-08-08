@@ -50,6 +50,10 @@ POR_PAGINA = 30
 def painel():
     situacao = (request.args.get("status") or "").strip()
     prioridade = (request.args.get("prioridade") or "").strip()
+    # O campo "Especialidade" existia no formulário e a rota nunca leu o
+    # parâmetro: digitar e clicar em Filtrar devolvia a lista inteira, e o valor
+    # digitado sumia do campo porque `filtro_esp` também não era passado.
+    especialidade = (request.args.get("especialidade") or "").strip()
     pagina = request.args.get("page", type=int) or 1
 
     query = Encaminhamento.query
@@ -57,6 +61,9 @@ def painel():
         query = query.filter(Encaminhamento.status == situacao)
     if prioridade in PRIORIDADES:
         query = query.filter(Encaminhamento.prioridade == prioridade)
+    if especialidade:
+        query = query.filter(
+            Encaminhamento.especialidade.ilike(f"%{especialidade}%"))
 
     ordem = db.case(
         ORDEM_DE_GRAVIDADE, value=Encaminhamento.prioridade, else_=9,
@@ -71,6 +78,7 @@ def painel():
         encaminhamentos=encaminhamentos,
         status=situacao,
         prioridade=prioridade,
+        filtro_esp=especialidade,
         prioridades=PRIORIDADES,
         situacoes=SITUACOES,
         agora=datetime.utcnow(),

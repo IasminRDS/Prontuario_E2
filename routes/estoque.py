@@ -26,7 +26,20 @@ def index():
     total_itens = len(itens)
     criticos_n  = sum(1 for i in itens if i.abaixo_minimo)
     zerados_n   = sum(1 for i in itens if i.quantidade <= 0)
+
+    # O seletor "Todas categorias" existia na tela e nunca teve opção nenhuma:
+    # a rota filtra por categoria e não passava a lista para preenchê-lo. Sai da
+    # base e não de uma constante, porque a categoria é texto livre no model.
+    categorias = sorted(
+        v[0] for v in ItemEstoque.query
+        .with_entities(ItemEstoque.categoria)
+        .filter_by(unidade_id=uid, ativo=True)
+        .distinct().all()
+        if v[0]
+    )
+
     return render_template('estoque/index.html', itens=itens, q=q, cat=cat,
+                           categorias=categorias,
                            criticos=criticos, total_itens=total_itens,
                            criticos_n=criticos_n, zerados_n=zerados_n)
 

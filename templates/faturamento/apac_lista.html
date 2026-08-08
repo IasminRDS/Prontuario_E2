@@ -24,8 +24,8 @@
       <tr>
         <td class="font-mono" style="font-size:.82rem">{{ a.numero_apac or '#'+a.id|string }}</td>
         <td class="fw-500">{{ a.paciente.nome_exibicao }}</td>
-        <td class="font-mono" style="font-size:.8rem">{{ a.procedimento or '—' }}</td>
-        <td class="font-mono" style="font-size:.8rem">{{ a.cid or '—' }}</td>
+        <td class="font-mono" style="font-size:.8rem">{{ a.procedimento_principal or '—' }}</td>
+        <td class="font-mono" style="font-size:.8rem">{{ a.cid_principal or '—' }}</td>
         <td class="font-mono" style="font-size:.82rem">{{ a.competencia or '—' }}</td>
         <td class="font-mono" style="font-size:.82rem">{{ ('R$ '+'%.2f'|format(a.valor_total)) if a.valor_total else '—' }}</td>
         <td><span class="badge badge-{{ scor }}">{{ slabel }}</span></td>

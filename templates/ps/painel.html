@@ -53,6 +53,37 @@
   </div>
 </div>{% endif %}{% endfor %}
 
+{# Quem chegou sem triagem vinculada não tem cor. Sem esta faixa, esses
+   pacientes não apareceriam em faixa nenhuma — a fila do PS esconderia quem
+   está esperando, que é o pior defeito possível nesta tela. #}
+{% if sem_classificacao %}
+<div class="card mb-16">
+  <div class="card-header" style="border-left:5px solid var(--cinza-400)">
+    <div style="width:10px;height:10px;border-radius:50%;background:var(--cinza-400)"></div>
+    <h3 style="color:var(--cinza-600)">Sem classificação de risco</h3>
+    <span style="font-size:.8rem;color:var(--cinza-400);margin-left:4px">{{ sem_classificacao|length }}</span>
+    <a href="{{ url_for('triagem.index') }}" class="btn btn-sm btn-secondary ms-auto">Triar</a>
+  </div>
+  <div class="table-wrapper">
+    <table class="tabela">
+      <thead><tr><th>Hora</th><th>Paciente</th><th>Queixa</th><th>Espera</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for a in sem_classificacao %}{% set slabel, scor = a.status_label %}
+        <tr>
+          <td class="font-mono fw-600">{{ a.data_chegada.strftime('%H:%M') }}</td>
+          <td class="fw-500"><a href="{{ url_for('pacientes.perfil', id=a.paciente_id) }}">{{ a.paciente.nome_exibicao }}</a>
+            <div style="font-size:.72rem;color:var(--cinza-400)">{{ a.paciente.idade }} anos</div></td>
+          <td style="font-size:.84rem">{{ a.motivo_consulta or '—' }}</td>
+          <td>{% set esp = a.tempo_espera_min %}<span class="badge badge-{% if esp>120 %}vermelho{% elif esp>60 %}amarelo{% else %}cinza{% endif %}">{{ esp }}min</span></td>
+          <td><span class="badge badge-{{ scor }}" style="font-size:.7rem">{{ slabel }}</span></td>
+          <td><a href="{{ url_for('ps.visualizar', id=a.id) }}" class="btn btn-sm btn-primary">Atender</a></td>
+        </tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% if stats.total == 0 %}
 <div class="card"><div class="card-body" style="text-align:center;padding:64px;color:var(--cinza-400)">
   Fila do PS vazia no momento.

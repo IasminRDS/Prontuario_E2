@@ -94,9 +94,14 @@
           <input type="date" name="data_saida" class="form-control" id="data_saida"
                  value="{{ aih.data_saida.strftime('%Y-%m-%d') if aih and aih.data_saida else (intern_sel.data_alta.strftime('%Y-%m-%d') if intern_sel and intern_sel.data_alta else '') }}">
         </div>
+        {# Somente leitura: `dias_permanencia` é derivado das duas datas acima,
+           e virou propriedade do model em vez de coluna. Pedir que alguém o
+           digite abriria a chance de divergir das datas — e divergindo, não há
+           como saber qual dos dois está certo. #}
         <div class="form-group">
           <label class="form-label">Dias de permanência</label>
-          <input type="number" name="dias_permanencia" class="form-control font-mono" id="dias_perm"
+          <input type="number" class="form-control font-mono" id="dias_perm" readonly
+                 title="Calculado a partir da internação e da saída"
                  value="{{ aih.dias_permanencia if aih else (intern_sel.dias_internado if intern_sel else '') }}">
         </div>
         <div class="form-group">

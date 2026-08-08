@@ -57,7 +57,9 @@
         <td>{{ i.categoria or '-' }}</td>
         <td>{{ qtd }}</td>
         <td>{{ minv }}</td>
-        <td>{{ i.lote or '-' }}</td>
+        {# `lote_atual` é o nome da coluna; `lote` não existe e a coluna exibia
+           traço em toda linha, mesmo com o lote preenchido. #}
+        <td>{{ i.lote_atual or '-' }}</td>
         <td>{{ i.validade or '-' }}</td>
         <td>
           {% if qtd <= 0 %}

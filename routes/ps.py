@@ -39,6 +39,10 @@ CLASSIFICACOES = ("vermelho", "laranja", "amarelo", "verde", "azul")
 # Ordem de atendimento: gravidade primeiro, depois tempo de espera.
 _PESO_RISCO = {"vermelho": 0, "laranja": 1, "amarelo": 2, "verde": 3, "azul": 4}
 
+#: Cores de Manchester da mais grave para a menos. A ordem é a do protocolo e é
+#: a mesma que ordena a fila — daí sair de `_PESO_RISCO` em vez de ser reescrita.
+ORDEM_CORES = tuple(sorted(_PESO_RISCO, key=_PESO_RISCO.get))
+
 
 def _classificacao(atendimento):
     """Cor Manchester do atendimento, vinda da triagem vinculada."""
@@ -83,9 +87,26 @@ def painel():
         mais_antigo = min(a.data_chegada for a in fila if a.data_chegada)
         espera_maxima = int((agora - mais_antigo).total_seconds() // 60)
 
+    # O painel mostra a fila AGRUPADA por cor de Manchester, e é assim que ele
+    # sempre foi escrito — lia `fila[cor]` e `ORDEM_CORES`, que a rota nunca
+    # passou. O `{% if fila[cor] %}` dava falso em todas as cores e a tela
+    # inteira aparecia vazia, mesmo com gente esperando.
+    #
+    # `sem_classificacao` NÃO é enfeite: `_classificacao` devolve None para quem
+    # chegou sem triagem vinculada, e sem esta faixa esses pacientes sumiriam do
+    # painel. Fila de pronto-socorro que esconde quem espera é o pior defeito
+    # possível nesta tela — pior que mostrar sem cor.
+    por_cor = {cor: [] for cor in ORDEM_CORES}
+    sem_classificacao = []
+    for atendimento in fila:
+        cor = cores.get(atendimento.id)
+        (por_cor[cor] if cor in por_cor else sem_classificacao).append(atendimento)
+
     return render_template(
         "ps/painel.html",
-        fila=fila,
+        fila=por_cor,
+        sem_classificacao=sem_classificacao,
+        ORDEM_CORES=ORDEM_CORES,
         em_atendimento=em_atendimento,
         em_observacao=em_observacao,
         cores=cores,
@@ -93,6 +114,8 @@ def painel():
         espera_maxima=espera_maxima,
         classificacoes=CLASSIFICACOES,
         stats={
+            **{cor: len(itens) for cor, itens in por_cor.items()},
+            "sem_classificacao": len(sem_classificacao),
             "total": len(abertos),
             "espera": len(fila),
             "atendimento": len(em_atendimento),

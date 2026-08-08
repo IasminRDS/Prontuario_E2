@@ -65,26 +65,9 @@ PENDENCIAS = {
     # campos de um domínio alheio caindo no vazio, e um `page_title` que
     # denuncia a tela de origem.
 
-    # --- a AIH e a APAC pedem campos que o model não tem. Completar exige
-    # decidir o schema de faturamento, não mexer no template.
-    "templates/faturamento/aih_form.html -> faturamento.aih_form": {
-        "carater_internacao", "cid_secundario", "competencia",
-        "data_internacao", "data_saida", "dias_permanencia", "motivo_saida",
-        "observacoes", "procedimento_secundario", "tipo_aih", "valor_sh",
-        "valor_sp",
-    },
-    "templates/faturamento/aih_form.html -> faturamento.aih_editar": {
-        "carater_internacao", "cid_secundario", "competencia",
-        "data_internacao", "data_saida", "dias_permanencia", "motivo_saida",
-        "observacoes", "procedimento_secundario", "tipo_aih", "valor_sh",
-        "valor_sp",
-    },
-    "templates/faturamento/apac_form.html -> faturamento.apac_form": {
-        "cid", "competencia", "justificativa", "procedimento", "tipo",
-    },
-    "templates/faturamento/apac_form.html -> faturamento.apac_editar": {
-        "cid", "competencia", "justificativa", "procedimento", "tipo",
-    },
+    # A AIH e a APAC estavam aqui com 34 campos descartados. O schema foi
+    # decidido e implementado em `e2f7b48c9d13`; o que sobrou não é campo
+    # descartado, é campo derivado ou renomeado — ver a docstring da migration.
 
     # --- campos soltos, cada um com sua decisão.
     # A entrada do PS descarta a classificação de risco escolhida na chegada e
