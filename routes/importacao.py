@@ -57,6 +57,24 @@ def modelo_csv():
     )
 
 
+def _delimitador(conteudo):
+    """Separador de campos do arquivo enviado, decidido pelo cabeçalho.
+
+    O leitor usava a vírgula, que é o padrão da biblioteca. O `modelo_csv`
+    acima gera o arquivo com PONTO E VÍRGULA — que é o separador de listas da
+    configuração regional brasileira e o que o Excel grava aqui. O resultado é
+    que **baixar o modelo, preencher e reenviar não funcionava**: o leitor via
+    uma coluna só, chamada "nome;data_nascimento;sexo", e a importação era
+    recusada por falta das colunas obrigatórias.
+
+    Decidir pelo cabeçalho, e não fixar o ponto e vírgula, porque planilha
+    exportada de outra origem pode vir com vírgula — e recusar arquivo válido é
+    tão ruim quanto aceitar arquivo ilegível.
+    """
+    cabecalho = conteudo.split("\n", 1)[0]
+    return ";" if cabecalho.count(";") > cabecalho.count(",") else ","
+
+
 @importacao_bp.post("/csv")
 @login_required
 @requer_permissao("patient:create")
@@ -67,7 +85,7 @@ def csv_importar():
         return redirect(url_for("importacao.csv_form"))
 
     conteudo = arquivo.read().decode("utf-8-sig", errors="ignore")
-    reader = csv.DictReader(io.StringIO(conteudo))
+    reader = csv.DictReader(io.StringIO(conteudo), delimiter=_delimitador(conteudo))
 
     colunas = set(reader.fieldnames or [])
     faltando = [c for c in OBRIGATORIAS if c not in colunas]

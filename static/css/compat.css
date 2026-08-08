@@ -551,3 +551,16 @@ textarea.form-control { min-height: 5rem; resize: vertical; }
 .warn { color: var(--amber-800); }
 .off { color: var(--slate-400); }
 .empty { padding: 2rem 1rem; text-align: center; color: var(--slate-400); font-size: 0.875rem; }
+
+/* Lista de linhas recusadas na importação de CSV. Uma linha por motivo, com
+   rolagem: um arquivo grande pode ter dezenas, e sem limite de altura elas
+   empurram o resto da tela para fora da vista. */
+.lista-problemas{
+  margin:0;
+  padding-left:18px;
+  max-height:220px;
+  overflow-y:auto;
+  font-size:.84rem;
+  color:var(--cinza-700);
+}
+.lista-problemas li{margin:2px 0}

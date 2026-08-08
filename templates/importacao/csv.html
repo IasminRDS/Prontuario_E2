@@ -26,6 +26,28 @@
         Ignorados: <strong>{{ resultado.ignorados }}</strong> |
         Erros: <strong>{{ resultado.erros }}</strong>
       </p>
+
+      {# A rota monta o motivo de CADA linha recusada — o comentário dela diz,
+         textualmente, que "o motivo volta para a tela em vez de virar um
+         contador anônimo". A tela mostrava só o contador, e o motivo era
+         calculado e descartado: quem importava 500 linhas e via "12 com erro"
+         tinha de conferir o arquivo inteiro à mão para descobrir quais. #}
+      {% if resultado.problemas %}
+      <div style="margin-top:12px">
+        <h5 style="margin:0 0 6px">Linhas recusadas</h5>
+        <ul class="lista-problemas">
+          {% for problema in resultado.problemas %}
+            <li>{{ problema }}</li>
+          {% endfor %}
+        </ul>
+        {% if resultado.erros > resultado.problemas|length %}
+          <p class="text-muted" style="margin:6px 0 0;font-size:.82rem">
+            Mostrando as primeiras {{ resultado.problemas|length }} de
+            {{ resultado.erros }} linhas recusadas.
+          </p>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}

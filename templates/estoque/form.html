@@ -1,6 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Novo Item{% endblock %}
-{% block page_title %}Cadastrar Item no Estoque{% endblock %}
+{% block title %}{{ "Editar Item" if item else "Novo Item" }}{% endblock %}
+{% block page_title %}{{ "Editar Item do Estoque" if item else "Cadastrar Item no Estoque" }}{% endblock %}
+
+{# Esta tela serve CADASTRO e EDIÇÃO, e não distinguia os dois: nenhum campo
+   tinha `value` ligado ao item. Editar abria o formulário em BRANCO, sob o
+   título "Cadastrar", e salvar apagava o que estava gravado. Editar item de
+   estoque era, na prática, impossível. #}
 {% block topbar_actions %}
   <a href="{{ url_for('estoque.index') }}" class="btn btn-secondary">Voltar</a>
 {% endblock %}
@@ -14,59 +19,73 @@
         <div class="form-grid form-grid-2">
           <div class="form-group" style="grid-column:1/-1">
             <label class="form-label">Nome <span class="obrigatorio">*</span></label>
-            <input type="text" name="nome" class="form-control" required placeholder="Ex: Paracetamol 500mg, Soro fisiológico 500mL">
+            <input type="text" name="nome" class="form-control" required
+                   value="{{ item.nome if item else '' }}"
+                   placeholder="Ex: Paracetamol 500mg, Soro fisiológico 500mL">
           </div>
           <div class="form-group">
             <label class="form-label">Categoria</label>
             <select name="categoria" class="form-control">
               {% for val, lbl in [('medicamento','Medicamento'),('material','Material'),('opme','OPME'),('dietetico','Dietético'),('outro','Outro')] %}
-              <option value="{{ val }}">{{ lbl }}</option>{% endfor %}
+              <option value="{{ val }}" {% if item and item.categoria == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Apresentação</label>
-            <input type="text" name="apresentacao" class="form-control" placeholder="Ex: comp. 500mg, frasco 100mL">
+            <input type="text" name="apresentacao" class="form-control"
+                   value="{{ item.apresentacao or '' if item else '' }}"
+                   placeholder="Ex: comp. 500mg, frasco 100mL">
           </div>
           <div class="form-group">
             <label class="form-label">Unidade de medida</label>
             <select name="unidade_medida" class="form-control">
               {% for v in ['un','cx','frasco','ampola','bisnaga','kg','g','L','mL'] %}
-              <option value="{{ v }}">{{ v }}</option>{% endfor %}
+              <option value="{{ v }}" {% if item and item.unidade_medida == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Código interno</label>
-            <input type="text" name="codigo_interno" class="form-control font-mono" placeholder="001">
+            <input type="text" name="codigo_interno" class="form-control font-mono"
+                   value="{{ item.codigo_interno or '' if item else '' }}" placeholder="001">
           </div>
+          {% if not item %}
+          {# Só no cadastro: na edição o saldo muda por MOVIMENTAÇÃO, que
+             deixa rastro em `mov_estoque`. É o que a docstring da rota diz. #}
           <div class="form-group">
             <label class="form-label">Quantidade inicial</label>
             <input type="number" name="quantidade" class="form-control" value="0" min="0" step="any">
           </div>
+          {% endif %}
           <div class="form-group">
             <label class="form-label">Estoque mínimo <span class="obrigatorio">*</span></label>
-            <input type="number" name="estoque_minimo" class="form-control" value="10" min="0" step="any" required>
+            <input type="number" name="estoque_minimo" class="form-control" min="0" step="any" required
+                   value="{{ item.estoque_minimo if item else 10 }}">
           </div>
           <div class="form-group">
             <label class="form-label">Estoque máximo</label>
-            <input type="number" name="estoque_maximo" class="form-control" min="0" step="any">
+            <input type="number" name="estoque_maximo" class="form-control" min="0" step="any"
+                   value="{{ item.estoque_maximo if item and item.estoque_maximo is not none else '' }}">
           </div>
           <div class="form-group">
             <label class="form-label">Lote</label>
-            <input type="text" name="lote_atual" class="form-control font-mono" placeholder="LOT20251001">
+            <input type="text" name="lote_atual" class="form-control font-mono"
+                   value="{{ item.lote_atual or '' if item else '' }}" placeholder="LOT20251001">
           </div>
           <div class="form-group">
             <label class="form-label">Validade</label>
-            <input type="date" name="validade" class="form-control">
+            <input type="date" name="validade" class="form-control"
+                   value="{{ item.validade.strftime('%Y-%m-%d') if item and item.validade else '' }}">
           </div>
           <div class="form-group">
             <label class="form-label">Preço unitário (R$)</label>
-            <input type="number" name="preco_unitario" class="form-control" min="0" step="0.01">
+            <input type="number" name="preco_unitario" class="form-control" min="0" step="0.01"
+                   value="{{ item.preco_unitario if item and item.preco_unitario is not none else '' }}">
           </div>
         </div>
       </div>
       <div class="card-footer" style="display:flex;justify-content:flex-end;gap:12px">
         <a href="{{ url_for('estoque.index') }}" class="btn btn-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary">Cadastrar</button>
+        <button type="submit" class="btn btn-primary">{{ "Salvar" if item else "Cadastrar" }}</button>
       </div>
     </div>
   </form>

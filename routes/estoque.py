@@ -79,7 +79,11 @@ def novo():
         except Exception as e:
             db.session.rollback()
             flash(f'Erro: {e}', 'danger')
-    return render_template('estoque/form.html')
+    # `item=None` explícito: o mesmo template serve cadastro e edição, e é por
+    # ele que a tela decide entre campo vazio e valor gravado. Omitir aqui faria
+    # o Jinja tratar como indefinido — que é falso, e funcionaria por acidente
+    # até alguém trocar a comparação.
+    return render_template('estoque/form.html', item=None)
 
 # Mesma permissão que `novo` e `movimentar` deste módulo — era a única escrita
 # de estoque sem nenhuma.
