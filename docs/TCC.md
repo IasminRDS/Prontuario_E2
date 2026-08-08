@@ -152,8 +152,10 @@ no banco de dados, controle de acesso por permissão nomeada combinado a escopo
 territorial, trilha de auditoria encadeada por resumo criptográfico e rotina de
 cópia de segurança com validação automatizada de restauração. A verificação
 empírica identificou falhas nos controles projetados pela própria autora, entre elas a
-ausência de cobertura da política de isolamento em cinco tabelas clínicas centrais
-e um teste de segurança que reportava conformidade sem verificá-la. O desempenho
+ausência de cobertura da política de isolamento em cinco tabelas clínicas centrais,
+um teste de segurança que reportava conformidade sem verificá-la e um verificador
+afetado pelo mesmo defeito que se destinava a detectar, cuja correção mais que
+dobrou o número de achados. O desempenho
 foi medido com volume sintético de 50 mil pacientes, observando-se redução de
 185,9 ms para 0,96 ms na consulta de sugestão de pacientes e de 4.616 ms para
 113 ms no relatório de pacientes. Conclui-se que a contribuição do mecanismo de
@@ -184,8 +186,10 @@ database, access control combining named permissions with territorial scope, a
 hash-chained audit trail, and a backup routine with automated restore validation
 were implemented. Empirical verification identified failures in the author's own
 designed controls, including the absence of isolation policy coverage in five
-core clinical tables and a security test that reported compliance without
-verifying it. Performance was measured with a synthetic volume of 50,000 patients,
+core clinical tables, a security test that reported compliance without
+verifying it, and a detector affected by the very defect it was built to find,
+whose correction more than doubled the number of findings.
+Performance was measured with a synthetic volume of 50,000 patients,
 showing a reduction from 185.9 ms to 0.96 ms in the patient suggestion query and
 from 4,616 ms to 113 ms in the patient report. It is concluded that the
 contribution of the isolation mechanism derives from its verified coverage rather
@@ -588,12 +592,27 @@ Concretamente, foram construídos verificadores automatizados que:
   correspondente efetivamente lê;
 - geram os documentos em PDF do sistema e extraem seu texto para conferir o
   conteúdo produzido;
+- geram os arquivos em formato CSV de cada exportação e examinam codificação,
+  separador de campos, cabeçalho e alinhamento entre colunas e linhas;
+- conciliam telas e rotas nos dois sentidos: nenhum modelo de tela sem rota que
+  o renderize, nenhuma rota sem caminho que a alcance na interface;
+- verificam que o registro de auditoria acompanha a transação da escrita que o
+  originou, e não uma transação posterior;
 - verificam, no catálogo do PostgreSQL, se as políticas de RLS estão
   efetivamente ativas nas tabelas esperadas.
 
 A adoção desse método é justificada pelos resultados: **defeitos com impacto
 direto sobre a proteção de dados foram identificados por essa via e não haviam
 sido percebidos por revisão de código**, conforme detalhado na seção 9.4.
+
+Registra-se uma qualificação que a própria execução do método impôs. Um
+verificador é um artefato de software e está sujeito aos defeitos que se propõe
+a detectar; quando falha, sua falha se apresenta como ausência de achados, que é
+indistinguível de conformidade. Ocorreu neste trabalho, e está relatado em
+9.4.9. Disso decorre a prática adotada na sequência: **todo verificador foi
+confrontado com pelo menos um defeito descoberto por outro caminho**, e a
+divergência entre o que ele relatava e o que se sabia existir foi tratada como
+evidência sobre o instrumento, não sobre o sistema.
 
 ---
 
@@ -1131,6 +1150,227 @@ no outro, e em nenhum deles a data era validada. É argumento empírico a favor 
 decisão metodológica de executar a suíte sobre os dois bancos: um defeito de
 portabilidade não se manifesta onde se desenvolve.
 
+#### 9.4.9 O verificador afetado pelo defeito que verificava
+
+**Achado.** O detector de acessos indefinidos descrito em 5.2 substitui o objeto
+que o motor de modelos usa para representar variável ausente por um objeto que
+registra cada acesso. Esse objeto reimplementava os métodos de conversão para
+texto, de iteração, de teste lógico e de contagem. Os dois primeiros
+registravam; os dois últimos não — devolviam falso e zero em silêncio.
+
+A consequência é específica e severa: nome ausente usado apenas em condicional
+(`{% if x %}`) ou em contagem (`{{ x|length }}`) ficava invisível para o
+detector. E como a condicional resultava falsa, o bloco inteiro deixava de
+renderizar — inclusive a iteração interna, que era justamente o que o detector
+conseguia enxergar. **O defeito escondia a si mesmo:** quanto mais o template
+dependia da variável ausente, menos o verificador a via.
+
+**Análise.** Corrigidos os dois métodos, o detector passou de dezenove para
+quarenta e seis acessos indefinidos, distribuídos por doze telas. Mais da metade
+do que ele existia para encontrar estava fora do seu alcance, e a lista de
+pendências que o acompanhava — apresentada como o inventário do problema
+conhecido — descrevia menos da metade dele.
+
+Este é o segundo achado desta natureza no trabalho. O primeiro, relatado em
+9.4.2, foi um teste de segurança que reportava conformidade sem verificá-la. A
+diferença é que aquele consultava o objeto errado, enquanto este verificava o
+objeto certo de forma incompleta. **O instrumento de verificação é um artefato
+como outro qualquer e está sujeito aos mesmos defeitos que se propõe a
+detectar** — com o agravante de que sua falha se apresenta como ausência de
+falhas.
+
+**Correção.** Os quatro métodos passaram a registrar. Os defeitos revelados
+estão nas seções seguintes.
+
+**Lição de governança.** Um controle automatizado produz duas informações: o que
+encontra e a confiança de que não há mais nada. A segunda não é verificada por
+ele próprio. Neste trabalho ela foi verificada por confronto: um achado obtido
+por outro caminho — a leitura de um par de telas que exibiam o título de módulo
+alheio — não constava do relatório do detector, e foi essa discrepância que
+levou ao exame do instrumento.
+
+#### 9.4.10 Telas trocadas entre si, em pares
+
+**Achado.** A seção 9.4.6 registra quatro telas que apresentavam o formulário de
+outra funcionalidade, copiado durante a construção e não reescrito. A
+verificação posterior encontrou uma variante mais difícil de perceber: pares de
+telas cujos arquivos estavam **trocados entre si**.
+
+O catálogo de exames continha o catálogo de medicamentos, e o de medicamentos
+continha o de exames. A listagem de encaminhamentos por paciente continha a
+listagem de exames, e a de exames continha a de encaminhamentos. Em ambos os
+casos, cada rota fornecia à tela exatamente o conjunto de dados que a **outra**
+esperava.
+
+**Análise.** A troca em par é mais difícil de detectar que a cópia simples por
+duas razões. A primeira é que nenhuma das duas telas produz erro: cada uma lê
+nomes que não recebe, e o motor de modelos os renderiza como vazio. A segunda é
+o efeito observado: as duas telas exibem uma tabela vazia sob o título do módulo
+alheio, e tabela vazia é uma condição plausível — atribui-se à ausência de
+dados, não a um defeito de montagem.
+
+Encontrou-se ainda uma terceira ocorrência, não em par: a listagem de
+prescrições de um paciente era mais uma cópia da listagem de exames. A tela
+correspondente às prescrições nunca chegou a existir.
+
+**Correção.** Troca do conteúdo dos arquivos, ajuste das rotas para fornecerem a
+separação que cada tela apresenta — regra de domínio, e não de apresentação — e
+redação da tela de prescrições a partir do que o modelo de dados armazena.
+
+**Lição de governança.** O sintoma diagnóstico é barato e foi confirmado quatro
+vezes: **o título declarado pela tela não corresponde à pasta em que o arquivo
+está.** Um verificador que compare o módulo declarado com o módulo em que o
+arquivo reside encontra essa família inteira sem executar nada.
+
+#### 9.4.11 Funcionalidade implementada e inalcançável pela interface
+
+**Achado.** Aplicou-se o raciocínio inverso ao da seção anterior: em vez de
+procurar telas sem rota, procuraram-se rotas sem tela. Confrontou-se cada rota
+registrada com toda referência a ela existente nos modelos de tela, no
+JavaScript e na navegação lateral.
+
+Vinte rotas não eram alcançáveis por nenhum caminho da interface. A mais grave
+é o **cadastro de usuário**: a rota existia, funcionava e estava corretamente
+autorizada, e a tela de administração listava, editava, ativava e desativava
+contas — apenas não oferecia como criar uma. Também inalcançáveis: a criação de
+setor com seus leitos, o cancelamento de cirurgia — que além de cancelar libera
+a sala, mantida ocupada indefinidamente sem ele —, a suspensão de prescrição, o
+registro de comparecimento em agendamento, e a tela de alertas de estoque, que
+reúne o que está crítico e o que está vencendo.
+
+**Análise.** Rota inalcançável é aprovada por todos os demais verificadores:
+responde corretamente, está autorizada, não quebra nada. O que falta não é
+correção — é caminho. Trata-se do defeito simétrico ao da tela órfã, e a
+simetria é instrutiva: um conjunto de telas sem rota e um conjunto de rotas sem
+tela indicam a mesma causa, que é a ausência de um inventário conciliando os
+dois.
+
+**Correção.** As rotas foram ligadas às telas correspondentes. Uma delas não
+foi: um comutador de estado de conta que havia sido substituído por duas rotas
+explícitas — ativar e desativar — permanecia registrado, acessível por método de
+leitura e sem nenhuma referência. Rota de mutação alcançável por requisição de
+leitura e não referenciada por nada é superfície de ataque sem proprietário; foi
+removida.
+
+**Verificação permanente.** Dois verificadores passaram a exigir a conciliação:
+todo modelo de tela precisa ser renderizado por alguma rota ou herdado por outro
+modelo, e toda rota precisa ser alcançável por vínculo, formulário, menu ou
+chamada assíncrona. As exceções legítimas — interface programável, endereços
+antigos que redirecionam — são declaradas em lista explícita, com a razão de
+cada uma.
+
+Registre-se um erro cometido na primeira versão desse verificador, por ser
+instrutivo: ele comparava nomes de rota e acusou como inalcançáveis telas que
+funcionavam, porque o sistema registra apelidos — nomes distintos para a mesma
+função. Comparar por nome, e não por função, produziria a inclusão de vínculos
+duplicados para telas que já os tinham. **Verificador recém-escrito é hipótese,
+não autoridade:** seus primeiros achados exigem confirmação como quaisquer
+outros.
+
+#### 9.4.12 Exportações de dados que nunca funcionaram
+
+**Achado.** Os arquivos em formato CSV constituíam a última camada de saída não
+verificada. Aplicou-se a ela o mesmo procedimento da seção 9.4 dedicada aos
+documentos em PDF: gerar o arquivo e examinar o conteúdo produzido.
+
+Nenhuma das exportações funcionava. Os seis vínculos de exportação montavam o
+endereço concatenando um separador de parâmetros ao endereço corrente; aberta a
+tela sem filtro — que é como se chega a ela pelo índice de relatórios —, não há
+parâmetro anterior, e o separador passa a integrar o caminho. Os seis
+resultavam em erro de recurso não encontrado.
+
+Duas exportações, alcançadas diretamente, encerravam com erro interno do
+servidor: uma lia atributo inexistente no registro de atendimento e a outra lia
+o modo de chegada ao pronto-socorro, campo que o formulário envia, a rota
+descarta e o modelo nunca possuiu.
+
+Constatou-se ainda que o caractere de marcação de codificação estava presente em
+todos os arquivos, mas o separador de campos divergia: as exportações do módulo
+de dados usavam ponto e vírgula, e as dos relatórios, vírgula. Em configuração
+regional brasileira o separador de listas é o ponto e vírgula, de modo que os
+arquivos de relatório eram abertos com todas as colunas reunidas numa só. **O
+sistema não era capaz de reimportar aquilo que ele próprio exportava**, pois a
+rotina de importação lê ponto e vírgula.
+
+**Análise.** O defeito do atendimento é o mesmo já catalogado nas telas, onde se
+manifestava como campo vazio. Na geração do arquivo, a mesma leitura interrompe
+a exportação inteira. **O custo de um defeito não é propriedade dele, e sim da
+camada em que se manifesta** — o que recomenda exercitar cada camada de saída em
+vez de inferir seu comportamento a partir das demais.
+
+Quanto à razão de nenhum verificador haver detectado: a varredura de rotas
+visita o endereço sem parâmetros, e é o parâmetro de exportação que seleciona o
+ramo de geração do arquivo. O ramo nunca havia sido executado.
+
+**Correção.** Vínculos construídos pela função de montagem de endereços, que
+trata corretamente a ausência de parâmetros anteriores e preserva os filtros já
+aplicados; remoção das leituras a campos inexistentes; e padronização do
+separador. Vinte e cinco verificações passaram a cobrir cada endereço que produz
+arquivo — presença da marcação de codificação, separador, cabeçalho, alinhamento
+entre colunas e linhas, e presença efetiva do conteúdo — além do exercício de
+cada vínculo com a tela aberta sem filtro.
+
+#### 9.4.13 Registro operatório descartado na conclusão da cirurgia
+
+**Achado.** A seção 9.4.6 relata que o agendamento de cirurgia nunca criou
+registro algum. A rota de **conclusão** do mesmo fluxo apresentava o defeito
+complementar: atribuía cinco campos — descrição do ato operatório, achados,
+intercorrências, materiais empregados e diagnóstico pós-operatório — a atributos
+que não correspondem a colunas do modelo.
+
+Na linguagem utilizada, atribuir atributo não mapeado a um objeto persistente é
+operação válida que simplesmente não persiste. A rota, portanto, respondia com
+sucesso, alterava a situação da cirurgia para realizada, encaminhava a sala para
+higienização e exibia confirmação ao usuário — enquanto o documento clínico
+integral era descartado.
+
+**Análise.** As duas extremidades do mesmo fluxo assistencial falhavam pela
+mesma causa: atributos não conferidos contra o modelo de dados. A diferença
+entre elas é relevante para o método. No agendamento, o primeiro atributo
+inválido provocava exceção, capturada por tratamento genérico e apresentada como
+advertência — havia, ao menos, um sinal. Na conclusão **não há sinal algum**,
+porque não há erro: a operação é legítima e silenciosa.
+
+Verificou-se disparando a rota e recarregando o registro: os cinco atributos não
+existiam no objeto lido do banco de dados.
+
+**Correção.** Migração acrescentando as cinco colunas; validação do diagnóstico
+pós-operatório pela rotina que o sistema já aplica no prontuário, uma vez que o
+registro operatório alimenta o faturamento e a auditoria; e recusa que **não**
+conclui a cirurgia — preservando-a em andamento em lugar de encerrá-la sem
+documento. O tratamento genérico de exceções passou a registrar em diário antes
+de degradar, precisamente por ter sido um tratamento assim que ocultou o defeito
+descrito em 9.4.6.
+
+#### 9.4.14 Vocabulário replicado como causa recorrente
+
+**Achado.** Quatro ocorrências independentes do mesmo padrão: o conjunto de
+valores válidos de um campo de estado escrito em mais de um lugar, com conteúdos
+divergentes.
+
+A prioridade de encaminhamento existia em cinco lugares com três conteúdos: a
+rota gravava um valor que o modelo não sabia rotular — exibido em texto bruto e
+na cor de menor gravidade — e o documento em PDF conhecia um valor que a rota
+nunca grava, imprimindo o caso mais grave sem acentuação e na cor mais branda. A
+situação de agendamento oferecia na tela um valor inexistente no modelo e
+ocultava dois que existiam.
+
+**Análise.** Nenhuma dessas divergências produz erro. Todas produzem exibição
+incorreta, e algumas produzem descarte silencioso: o valor selecionado é
+rejeitado pela validação sem que nada o informe.
+
+O caso do agendamento tem valor metodológico particular. A rota não lia o campo
+de situação; ao corrigi-la, acrescentou-se validação contra o vocabulário do
+modelo, e **foi o teste escrito para comprovar a correção que revelou a
+divergência** — ele falhou porque o valor oferecido pela tela não existia. Sem a
+validação, a correção teria gravado valor desconhecido e aparentado êxito.
+Correção sem verificação é hipótese.
+
+**Correção.** Vocabulário declarado uma única vez, no modelo, com a ordem de
+gravidade junto. As telas e os documentos derivam dele. Onde há duas convenções
+de nomenclatura visual — folhas de estilo distintas convivendo —, traduz-se o
+tom da cor e nunca o vocabulário.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1356,6 +1596,37 @@ cobertura integral do isolamento, correta apenas sob recorte não declarado, ter
 sustentado decisões organizacionais equivocadas. Em governança, documentação é
 artefato de controle e está sujeita a verificação como qualquer outro.
 
+**O instrumento de verificação é ele próprio um controle, e falha como tal.**
+Duas ocorrências o demonstram: um teste que consultava o objeto errado (9.4.2) e
+um detector que examinava o objeto certo de modo incompleto (9.4.9). No segundo
+caso, metade dos defeitos que ele existia para encontrar estava fora do seu
+alcance, e o relatório que produzia era apresentado — inclusive neste documento
+— como o inventário do problema conhecido.
+
+A consequência de governança é específica e transferível. Um controle de
+detecção produz duas informações: os achados e a **confiança de que não há mais
+nada**. A primeira é verificável por inspeção; a segunda, não — e é justamente
+sobre ela que se apoiam as decisões de aceitar risco residual. Um relatório
+vazio significa "não há defeito" ou "o detector parou de detectar", e nada no
+próprio relatório distingue as duas leituras. A prática que se mostrou eficaz
+foi confrontar cada verificador com um defeito conhecido por outra via, tratando
+a divergência como evidência sobre o instrumento.
+
+Esta constatação qualifica, sem contradizer, a recomendação da seção 14:
+controles devem ser acompanhados de verificação automatizada de sua efetividade
+— e essa verificação, por sua vez, precisa de evidência independente de que
+permanece capaz de detectar.
+
+**A recorrência dos padrões é achado autônomo.** Vários defeitos não são
+independentes: são a mesma causa em pontos diferentes. Telas montadas com o
+conteúdo de outro módulo aparecem sete vezes; vocabulário de estado replicado em
+mais de um lugar, quatro; leitura de campo inexistente no modelo de dados,
+sistematicamente. Isso desloca a recomendação do caso para a classe — corrigir
+uma ocorrência tem valor local, ao passo que um verificador da classe encontra
+as demais, inclusive as ainda não escritas. Foi essa a razão de cada achado
+relatado nesta seção ter sido convertido em verificação permanente, e não apenas
+em correção.
+
 ---
 
 ## 12. LIMITAÇÕES
@@ -1483,6 +1754,18 @@ estava correto e a exigência legal, atendida; o custo operacional é que não h
 sido medido. A correção adequada não foi remover o controle, mas reordená-lo.
 **Controle de conformidade tem custo, e o custo precisa ser medido com o mesmo
 rigor com que se verifica a conformidade.**
+
+Um terceiro achado incide sobre o próprio método e o delimita. O verificador
+construído para detectar dados que as telas leem sem receber apresentava, ele
+mesmo, uma variante do defeito que procurava: deixava de registrar os acessos
+feitos em teste lógico e em contagem, justamente aqueles que suprimiam o bloco
+inteiro da tela. Corrigido o instrumento, o número de achados mais que dobrou. A
+consequência para a governança não é abandonar a verificação automatizada, e sim
+reconhecer o que ela informa: **um relatório vazio significa "não há defeito" ou
+"o detector parou de detectar", e nada no relatório distingue as duas leituras.**
+Como o risco residual é aceito com base exatamente nessa segunda informação, ela
+precisa de evidência própria — obtida, neste trabalho, confrontando cada
+verificador com defeito conhecido por outra via.
 
 Essa constatação constitui a principal contribuição do trabalho para a Gestão da
 Tecnologia da Informação. Há diferença substantiva entre **implementar um controle**
