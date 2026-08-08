@@ -7,7 +7,7 @@ from models.paciente import Paciente
 from models.medico import Medico
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
-from utils.security import medico_requerido
+from utils.security import medico_requerido, validar_cid10
 from datetime import datetime, date
 from utils.rbac import requer_permissao
 
@@ -143,6 +143,13 @@ def finalizar(id):
     cir = Cirurgia.query.get_or_404(id)
 
     if request.method == 'POST':
+        cid = request.form.get('cid_pos_op', '').strip().upper() or None
+        # O CID vem digitado. Sem conferir o formato, o laudo carrega um código
+        # que nenhuma tabela reconhece — e o relatório operatório é justamente
+        # o documento que vai para o faturamento e para a auditoria.
+        if cid and not validar_cid10(cid):
+            flash('CID pós-operatório inválido.', 'warning')
+            return render_template('cirurgia/relatorio_form.html', cir=cir)
         try:
             cir.status         = 'realizada'
             cir.data_fim       = datetime.utcnow()
@@ -150,7 +157,7 @@ def finalizar(id):
             cir.achados        = request.form.get('achados', '').strip() or None
             cir.intercorrencias= request.form.get('intercorrencias', '').strip() or None
             cir.materiais      = request.form.get('materiais', '').strip() or None
-            cir.cid_pos_op     = request.form.get('cid_pos_op', '').strip().upper() or None
+            cir.cid_pos_op     = cid
             if cir.sala:
                 cir.sala.status = 'em_limpeza'
             auditar_aqui("cirurgias", "update")
@@ -158,6 +165,13 @@ def finalizar(id):
             flash('Cirurgia finalizada!', 'success')
             return redirect(url_for('cirurgia.visualizar', id=id))
         except Exception as e:
+            # REGISTRA antes de degradar. Foi um `except` como este que exibiu
+            # como aviso amarelo, por tempo indeterminado, o TypeError que fazia
+            # o agendamento de cirurgia nunca criar uma linha (TCC, 9.4.6).
+            from flask import current_app
+
+            current_app.logger.exception(
+                "falha ao finalizar a cirurgia %s", cir.id)
             db.session.rollback()
             flash(f'Erro: {e}', 'danger')
 

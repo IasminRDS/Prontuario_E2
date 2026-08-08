@@ -23,15 +23,14 @@ from tests.conftest import PERFIS, autenticar
 # Pendências conhecidas, cada uma com o motivo de ainda não ter sido corrigida.
 # Formato: "arquivo do template" -> {nomes acessados}
 #
-# Reduzir esta lista é trabalho pendente; aumentá-la exige justificar por quê.
-PENDENCIAS = {
-    # --- Cirurgia ----------------------------------------------------------
-    # `cid` é um dos seis campos que a rota antiga tentava gravar e para os
-    # quais NÃO existe coluna em `models/cirurgia.py`. Junto com `codigo_tuss`,
-    # é provavelmente necessário para faturamento — mas o caminho é migration,
-    # não campo no template.
-    "templates/cirurgia/relatorio_form.html": {"cid"},
-}
+# **A lista está VAZIA.** Chegou a ter 16 templates; foi zerada resolvendo cada
+# caso, não afrouxando o detector. Aumentá-la exige justificar por quê: entrada
+# nova aqui é dívida assumida, não exceção administrativa.
+#
+# Vazia ela ainda trabalha, porque `test_pendencias_conhecidas_nao_apodrecem`
+# reprova nos dois sentidos — o que impede alguém de silenciar um achado novo
+# acrescentando-o aqui sem corrigir e sem explicar.
+PENDENCIAS = {}
 
 
 def _origem_do_template():

@@ -150,3 +150,95 @@ def test_formulario_e_o_de_cirurgia(agendador):
     assert "Registrar Internação" not in html
     assert 'name="procedimento"' in html, "o formulário não pede o procedimento"
     assert 'name="leito_id"' not in html, "voltou a ser o formulário de internação"
+
+
+# --- Relatório operatório -------------------------------------------------
+#
+# `cirurgia.finalizar` atribuía cinco campos que não eram colunas. Em Python
+# isso é legal — atribuir atributo não mapeado num objeto do SQLAlchemy não
+# levanta erro, só não persiste. A rota respondia 200, o status ia para
+# `realizada`, a sala ia para limpeza, a mensagem dizia "Cirurgia finalizada!"
+# e o laudo inteiro sumia. É a outra ponta do defeito de 9.4.6 do TCC: lá,
+# agendar nunca criou linha; aqui, finalizar nunca guardou o relatório.
+
+def _cirurgia_em_andamento(app):
+    """Cirurgia semeada, em andamento e com o laudo LIMPO.
+
+    Zerar os campos importa: as fixtures de semeadura são de escopo `session` e
+    os testes compartilham a mesma linha. Sem isto, um teste passaria por herdar
+    o relatório que o anterior gravou — que é o oposto do que se quer medir.
+    """
+    from extensions import db
+    from models.cirurgia import Cirurgia
+
+    with app.app_context():
+        cir = Cirurgia.query.order_by(Cirurgia.id.asc()).first()
+        assert cir is not None, "sem cirurgia semeada"
+        cir.status = "em_andamento"
+        cir.relatorio = cir.achados = cir.intercorrencias = None
+        cir.materiais = cir.cid_pos_op = None
+        db.session.commit()
+        return cir.id
+
+
+def test_finalizar_guarda_o_relatorio_operatorio(app, agendador, sem_csrf):
+    from extensions import db
+    from models.cirurgia import Cirurgia
+
+    ident = _cirurgia_em_andamento(app)
+
+    resposta = agendador.post(f"/cirurgia/{ident}/finalizar", data={
+        "relatorio": "Osteossintese de femur direito",
+        "achados": "Fratura cominutiva de terco medio",
+        "intercorrencias": "Sem intercorrencias",
+        "materiais": "Placa DCP e oito parafusos",
+        "cid_pos_op": "s72.0",
+    }, follow_redirects=True)
+    assert resposta.status_code == 200
+
+    with app.app_context():
+        cir = db.session.get(Cirurgia, ident)
+        assert cir.status == "realizada"
+        assert cir.relatorio == "Osteossintese de femur direito", (
+            "o relatório operatório não persistiu")
+        assert cir.achados == "Fratura cominutiva de terco medio"
+        assert cir.intercorrencias == "Sem intercorrencias"
+        assert cir.materiais == "Placa DCP e oito parafusos"
+        assert cir.cid_pos_op == "S72.0", "o CID não foi normalizado para maiúsculas"
+
+
+def test_cid_pos_operatorio_invalido_e_recusado(app, agendador, sem_csrf):
+    """O laudo vai para faturamento e auditoria: código que nenhuma tabela
+    reconhece contamina os dois."""
+    from extensions import db
+    from models.cirurgia import Cirurgia
+
+    ident = _cirurgia_em_andamento(app)
+
+    resposta = agendador.post(f"/cirurgia/{ident}/finalizar", data={
+        "relatorio": "qualquer",
+        "cid_pos_op": "NAO-E-CID",
+    }, follow_redirects=True)
+
+    assert "inválido" in resposta.get_data(as_text=True)
+    with app.app_context():
+        cir = db.session.get(Cirurgia, ident)
+        assert cir.status == "em_andamento", (
+            "recusou o CID mas finalizou a cirurgia mesmo assim")
+        assert cir.relatorio is None
+
+
+def test_formulario_preenche_o_cid_ja_gravado(app, agendador, sem_csrf):
+    """O `value` do input lia `cir.cid`, coluna que nunca existiu: reabrir o
+    laudo mostrava o campo vazio e perdia-se o CID ao salvar de novo."""
+    from extensions import db
+    from models.cirurgia import Cirurgia
+
+    ident = _cirurgia_em_andamento(app)
+    with app.app_context():
+        cir = db.session.get(Cirurgia, ident)
+        cir.cid_pos_op = "S72.0"
+        db.session.commit()
+
+    html = agendador.get(f"/cirurgia/{ident}/finalizar").get_data(as_text=True)
+    assert 'value="S72.0"' in html, "o CID gravado não volta preenchido no formulário"

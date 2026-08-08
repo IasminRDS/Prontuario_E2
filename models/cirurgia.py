@@ -38,7 +38,22 @@ class Cirurgia(db.Model):
     data_fim = db.Column(db.DateTime, nullable=True)
     
     observacoes = db.Column(db.Text, nullable=True)
-    
+
+    # --- Relatório operatório (f3a95c07be21).
+    # `cirurgia.finalizar` já atribuía estes cinco campos, e nenhum era coluna:
+    # em Python atribuir atributo não mapeado é legal e não persiste nada, então
+    # finalizar respondia 200, mudava o status, liberava a sala e descartava o
+    # relatório inteiro. É a outra ponta do defeito da seção 9.4.6 do TCC — lá,
+    # agendar nunca criou linha; aqui, finalizar nunca guardou o laudo.
+    relatorio = db.Column(db.Text, nullable=True)
+    achados = db.Column(db.Text, nullable=True)
+    intercorrencias = db.Column(db.Text, nullable=True)
+    materiais = db.Column(db.Text, nullable=True)
+    # Diagnóstico PÓS-operatório: informação distinta da hipótese com que se
+    # agendou. O formulário e a rota já usavam este nome; era o `value` do
+    # input que lia `cir.cid`, coluna que nunca existiu.
+    cid_pos_op = db.Column(db.String(10), nullable=True)
+
     criado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True,
         index=True,
     )
