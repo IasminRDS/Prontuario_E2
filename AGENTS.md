@@ -54,6 +54,7 @@ flask auditoria-ancora --conferir             # confere o journal e a trilha
 flask auditoria-ancora --retida <hash>        # valida o prefixo até a âncora guardada fora
 flask auditoria-ancora --contra T:ID:HASH     # confere sem ler arquivo desta máquina
 flask auditoria-ancora --destino stdout       # imprime a linha, para canalizar a um coletor
+flask auditoria-ancora --conferir --idade-maxima 7   # emissão que parou também é falha
 ```
 
 `backup-validar` restaura o dump num schema temporário e compara as contagens com
@@ -99,7 +100,38 @@ aplicação não controle. É a única forma de a regra "quem escreve o log não
 guarda a âncora" ser verdade — e o que sobra de limitação é exatamente essa
 custódia, que é decisão de governança e que nenhum código deste repositório
 resolve. O modo `"a"` na escrita é convenção, não garantia: append-only de
-verdade é do sistema de arquivos (`chattr +a`, ACL sem `FILE_WRITE_DATA`).
+verdade é do sistema de arquivos, e a nona verificação do `hardening-check`
+confere isso em vez de supor.
+
+`--idade-maxima DIAS` reprova quando a âncora mais recente envelheceu: um
+verificador que parou produz o mesmo silêncio que um sistema íntegro, e sem
+checkpoint novo não há o que comparar. Falha de verificação também imprime
+**uma linha JSON em stderr**, para um coletor apanhar sem ler a saída humana —
+e ela não vai para a trilha de auditoria de propósito, porque registrar ali o
+alerta de que a trilha foi adulterada é circular.
+
+### Procedimento de implantação (a metade que não é código)
+
+Três coisas ficam fora do alcance da aplicação por definição — se ela pudesse
+aplicá-las, poderia desfazê-las, e então não seriam garantia:
+
+```bash
+# 1. Acréscimo de verdade, aplicado por quem administra a máquina.
+sudo chattr +a /var/lib/prontuario/backups/ancora_auditoria.jsonl
+
+# 2. Emissão e verificação em papéis distintos, em cron separados.
+#    O verificador não precisa de credencial de escrita.
+0 2 * * *  flask auditoria-ancora --destino stdout | logger -t ancora -n coletor.interno
+0 3 * * *  flask auditoria-ancora --conferir --idade-maxima 2
+
+# 3. Custódia externa: guarde UM hash, uma vez, fora deste servidor.
+flask auditoria-ancora --retida <o hash guardado>
+```
+
+Verificador rodando na mesma máquina, com as mesmas credenciais de quem emite,
+não separou nada — duplicou a autoridade. A separação só significa alguma coisa
+quando o destino do passo 2 é um coletor que a aplicação não controla, e é por
+isso que `--destino stdout` existe.
 
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é

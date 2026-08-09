@@ -27,8 +27,17 @@ from dataclasses import dataclass
 
 @dataclass
 class Achado:
+    """Resultado de uma verificação. `ok` tem TRÊS estados, não dois.
+
+    `True` passou, `False` falhou e `None` é **não verificável neste ambiente**
+    — que não é a mesma coisa que falhar. Confundir os dois tem consequência
+    prática: uma verificação que reprova para sempre numa máquina de
+    desenvolvimento treina quem a lê a ignorar o comando inteiro, e aí o dia em
+    que uma reprovação de verdade aparecer ela não será vista. Reportar sem
+    reprovar é o que mantém o portão significando alguma coisa.
+    """
     nome: str
-    ok: bool
+    ok: bool | None
     detalhe: str = ""
     correcao: str = ""
 
@@ -175,4 +184,72 @@ def verificar():
             f"GRANT INSERT ON audit_logs TO {papel}; "
             f"GRANT USAGE, SELECT ON SEQUENCE audit_logs_id_seq TO {papel}"))
 
+    achados.append(_journal_append_only())
+
     return achados
+
+
+def _journal_append_only():
+    """O journal de âncoras é só de acréscimo no SISTEMA DE ARQUIVOS?
+
+    A aplicação abre o arquivo em modo de anexação, e isso é convenção: o mesmo
+    processo poderia abri-lo em modo de escrita. Acréscimo efetivo é atributo do
+    sistema de arquivos, aplicado por quem administra a máquina e — este é o
+    ponto — **não removível pelo usuário da aplicação**. Se fosse removível por
+    ela, não seria garantia.
+
+    Por isso a verificação existe e a aplicação NÃO tenta aplicar o atributo:
+    aplicar exigiria o privilégio cuja ausência é justamente o que se quer
+    provar. É a mesma fronteira das outras oito, do lado do sistema de
+    arquivos em vez do banco.
+    """
+    import os
+    import pathlib
+
+    caminho = pathlib.Path(
+        os.environ.get("ANCORA_JOURNAL", "backups/ancora_auditoria.jsonl"))
+
+    if not caminho.is_file():
+        return Achado(
+            "journal de âncoras é append-only no sistema de arquivos",
+            False,
+            f"não existe journal em {caminho} — sem âncora não há o que "
+            "proteger nem o que comparar",
+            "flask auditoria-ancora")
+
+    if os.name != "posix":
+        # Windows expõe a permissão por ACL (`icacls`), e a leitura confiável
+        # exige interpretar herança e negações — mais superfície de engano do
+        # que de garantia. Declarar não-verificável é mais honesto que devolver
+        # um OK que ninguém mediu: o pior resultado possível aqui seria
+        # confirmar uma proteção inexistente.
+        return Achado(
+            "journal de âncoras é append-only no sistema de arquivos",
+            None,
+            f"não verificável neste sistema operacional ({os.name}) — o "
+            "atributo existe no Windows via ACL, mas esta verificação só sabe "
+            "lê-lo em Linux",
+            'icacls "%s" /grant "usuario:(WD,AD)" /deny "usuario:(WDAC)"'
+            % caminho)
+
+    import subprocess
+    try:
+        saida = subprocess.run(["lsattr", "-d", str(caminho)],
+                               capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return Achado(
+            "journal de âncoras é append-only no sistema de arquivos",
+            None, f"não consegui ler os atributos: {exc}",
+            f"chattr +a {caminho}")
+
+    # `lsattr` devolve "-----a--------- caminho"; o 'a' é o append-only.
+    atributos = (saida.stdout.split() or [""])[0]
+    tem_append_only = "a" in atributos
+
+    return Achado(
+        "journal de âncoras é append-only no sistema de arquivos",
+        tem_append_only,
+        "" if tem_append_only else
+        (f"{caminho} pode ser reescrito e truncado — o modo de anexação da "
+         "aplicação é convenção, não garantia"),
+        f"sudo chattr +a {caminho}")

@@ -318,11 +318,17 @@ def _registrar_cli(app):
         from services.hardening import verificar
 
         achados = verificar()
-        falhas = [a for a in achados if not a.ok]
+        # `ok is None` é "não verificável aqui", e NÃO conta como falha. Uma
+        # verificação que reprova para sempre nesta máquina ensina quem a lê a
+        # ignorar o comando inteiro — e aí o portão deixa de significar alguma
+        # coisa exatamente antes de precisar significar.
+        falhas = [a for a in achados if a.ok is False]
+        indefinidos = [a for a in achados if a.ok is None]
 
+        rotulos = {True: "OK   ", False: "FALHA", None: "?    "}
         for a in achados:
-            print(f"  {'OK  ' if a.ok else 'FALHA'} {a.nome}")
-            if not a.ok:
+            print(f"  {rotulos[a.ok]} {a.nome}")
+            if a.ok is not True:
                 print(f"        {a.detalhe}")
                 if a.correcao:
                     print(f"        corrigir: {a.correcao}")
@@ -330,7 +336,11 @@ def _registrar_cli(app):
         if falhas:
             print(f"\nRESULTADO: {len(falhas)} verificação(ões) falharam")
             sys.exit(1)
-        print(f"\nRESULTADO: {len(achados)} verificações passaram")
+        print(f"\nRESULTADO: {len(achados) - len(indefinidos)} "
+              "verificações passaram")
+        if indefinidos:
+            print(f"{len(indefinidos)} não pôde(puderam) ser verificada(s) "
+                  "neste ambiente — ausência de reprovação não é aprovação.")
 
     @app.cli.command("auditoria-ancora")
     @click.option("--conferir", is_flag=True,
@@ -343,11 +353,15 @@ def _registrar_cli(app):
     @click.option("--retida", default=None, metavar="HASH_ANCORA",
                   help="Hash de uma âncora guardada fora. Valida todo o "
                        "prefixo do journal até ela.")
+    @click.option("--idade-maxima", type=int, default=None, metavar="DIAS",
+                  help="Falha se a âncora mais recente for mais velha que "
+                       "isto. Verificador que parou não acusa nada.")
     @click.option("--destino", type=click.Choice(["arquivo", "stdout"]),
                   default="arquivo", show_default=True,
                   help="'stdout' imprime só a linha, para canalizar a um "
                        "coletor externo.")
-    def auditoria_ancora(conferir, arquivo, contra, retida, destino):
+    def auditoria_ancora(conferir, arquivo, contra, retida, idade_maxima,
+                         destino):
         """Emite ou confere a âncora da trilha de auditoria.
 
         O encadeamento por hash detecta alteração e remoção NO MEIO da cadeia.
@@ -371,8 +385,10 @@ def _registrar_cli(app):
         que a aplicação não controle — que é a única forma de a regra "quem
         escreve o log não guarda a âncora" ser verdade.
         """
+        import json
         import pathlib
         import sys
+        from datetime import datetime, timedelta
 
         from utils import ancora as ancora_mod
         from utils.audit import ancora_da_trilha, conferir_ancora
@@ -383,6 +399,17 @@ def _registrar_cli(app):
             print(titulo)
             for p in problemas:
                 print(f"  {p}")
+            # Uma linha estruturada em stderr, para que a falha apareça FORA
+            # deste processo sem que ninguém precise ler a saída humana. Não vai
+            # para a trilha de auditoria de propósito: registrar na trilha o
+            # alerta de que a trilha foi adulterada é circular — quem apagou o
+            # fim apaga o alerta junto.
+            print(json.dumps({
+                "evento": "ancora_verificacao_falhou",
+                "em": datetime.utcnow().isoformat(timespec="seconds"),
+                "journal": str(caminho),
+                "problemas": problemas,
+            }, ensure_ascii=False), file=sys.stderr)
             sys.exit(1)
 
         if contra:
@@ -424,6 +451,30 @@ def _registrar_cli(app):
                       f"{len(linhas)}, e todo o prefixo até ela fecha")
 
             ultima = linhas[-1]
+
+            # Um verificador que deixou de rodar produz o mesmo silêncio que um
+            # sistema íntegro. Sem esta pergunta, a falha do cron é invisível
+            # justamente enquanto a janela sem checkpoint se alarga.
+            if idade_maxima is not None:
+                try:
+                    emitida = datetime.fromisoformat(ultima["emitida_em"])
+                except (KeyError, ValueError):
+                    problemas.append("a última âncora não tem data legível")
+                else:
+                    limite = datetime.utcnow() - timedelta(days=idade_maxima)
+                    if emitida < limite:
+                        # Reportar a data, e não uma idade arredondada em dias:
+                        # "0 dias, acima do limite de 0" é autocontraditório
+                        # para quem lê, e diagnóstico que contradiz a si mesmo
+                        # faz o operador duvidar do verificador em vez do
+                        # sistema verificado.
+                        horas = (datetime.utcnow() - emitida).total_seconds() / 3600
+                        problemas.append(
+                            f"a âncora mais recente é de {ultima['emitida_em']} "
+                            f"({horas:.0f}h atrás) e o limite é de "
+                            f"{idade_maxima} dia(s) — a emissão parou, e sem "
+                            "checkpoint novo não há o que comparar")
+
             problemas += conferir_ancora(ultima["total"], ultima["ultimo_id"],
                                          ultima["hash_final"])
             if problemas:

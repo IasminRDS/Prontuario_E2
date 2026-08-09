@@ -90,3 +90,39 @@ def test_todo_achado_e_afirmacao_verificavel(app, postgres):
         assert len(a.nome) > 12, f"nome pouco informativo: {a.nome!r}"
         assert not a.nome.lower().startswith(("check", "verificacao ", "teste")), (
             f"nome sem conteúdo: {a.nome!r}")
+
+
+def test_nao_verificavel_nao_e_reprovacao(app):
+    """O terceiro estado existe e não pode virar `False` numa refatoração.
+
+    Colapsar "não verificável" em "falhou" faz o comando reprovar para sempre
+    em qualquer ambiente que não exponha o atributo — e quem convive com um
+    portão que sempre reprova aprende a passar por ele sem olhar. A distinção é
+    o que mantém a reprovação significando alguma coisa.
+    """
+    from services.hardening import Achado
+
+    passou = Achado("x", True)
+    reprovou = Achado("y", False)
+    indefinido = Achado("z", None)
+
+    achados = [passou, reprovou, indefinido]
+    assert [a for a in achados if a.ok is False] == [reprovou]
+    assert [a for a in achados if a.ok is None] == [indefinido]
+    # `not a.ok` é justamente a expressão que confunde os dois — o teste fixa
+    # que ela NÃO é a usada para decidir o código de saída.
+    assert not indefinido.ok, (
+        "se isto falhar, `None` deixou de ser falsy e o comentário sobre por "
+        "que não se usa `not a.ok` perdeu o sentido")
+
+
+def test_journal_ausente_reprova_de_verdade(app, tmp_path, monkeypatch):
+    """Sem journal não há o que comparar — isso é falha, não indefinição."""
+    from services.hardening import _journal_append_only
+
+    monkeypatch.setenv("ANCORA_JOURNAL", str(tmp_path / "nao_existe.jsonl"))
+    achado = _journal_append_only()
+
+    assert achado.ok is False, (
+        "journal ausente precisa REPROVAR: não é limitação do ambiente, é "
+        "ausência do próprio artefato que se pretende proteger")

@@ -10,7 +10,9 @@ Inclui os dois casos NEGATIVOS — o que o mecanismo não fecha —, porque uma
 limitação que ninguém exercita vira, com o tempo, uma garantia que ninguém
 verificou.
 """
+import hashlib
 import json
+from datetime import datetime
 
 import pytest
 
@@ -161,3 +163,99 @@ def test_truncar_o_fim_do_journal_permanece_indetectavel(journal):
         "truncar o fim passou a ser detectável pelo journal — se foi de "
         "propósito, atualize a docstring de utils/ancora.py e a seção 12 da "
         "monografia, que hoje afirmam o contrário")
+
+
+# --- Manipulações, uma a uma: o que detecta e o que não ---------------------
+#
+# "Limitação teórica" é o estado em que uma afirmação de segurança sobrevive sem
+# ser medida. Cada caso abaixo aplica UMA manipulação e fixa o resultado —
+# inclusive quando o resultado é "não detecta", que é a informação mais cara de
+# obter e a mais fácil de perder.
+
+def test_reordenar_linhas_e_detectado():
+    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
+    linhas[1], linhas[2] = linhas[2], linhas[1]
+
+    problemas = an.verificar(linhas)
+    assert any("elo rompido" in p for p in problemas), (
+        "trocar duas âncoras de lugar passou — a ordem faz parte da prova")
+
+
+def test_duplicar_linha_e_detectado():
+    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"))
+    linhas.insert(1, dict(linhas[1]))
+
+    problemas = an.verificar(linhas)
+    assert any("elo rompido" in p for p in problemas), (
+        "duplicar uma âncora passou — repetir um retrato inflaria a contagem "
+        "de checkpoints sem que nenhum novo tenha sido emitido")
+
+
+def test_inserir_linha_forjada_no_meio_e_detectado():
+    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
+    intrusa = an.montar(15, 15, "h15", anterior=linhas[0]["hash_ancora"])
+    linhas.insert(1, intrusa)
+
+    problemas = an.verificar(linhas)
+    assert problemas, (
+        "inserir âncora forjada no meio passou, ainda que ela se encadeie "
+        "corretamente na anterior: a SEGUINTE deixa de fechar")
+    assert any("elo rompido" in p for p in problemas)
+
+
+def test_truncar_o_meio_e_detectado():
+    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"),
+                     (40, 40, "h40"))
+    del linhas[1:3]
+
+    assert any("elo rompido" in p for p in an.verificar(linhas))
+
+
+def test_recomputar_a_cadeia_inteira_NAO_e_detectado():
+    """A limitação de fundo, exercitada — e a razão de a custódia ser o ponto.
+
+    Quem controla o arquivo pode reescrever TODAS as âncoras a partir do zero,
+    coerentes entre si e coerentes com uma trilha já truncada. Nenhuma
+    propriedade interna distingue esse journal de um legítimo, porque não há
+    nada dentro do arquivo que testemunhe sobre o que existia fora dele.
+
+    É o que separa este mecanismo de uma prova: ele detecta adulteração
+    PARCIAL. Contra reescrita total, só vale um valor retido fora — e é por
+    isso que `--retida` existe e que a emissão insiste em imprimir o hash.
+    """
+    honesto = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
+    retido = honesto[1]["hash_ancora"]
+
+    forjado = _cadeia((10, 10, "h10"), (12, 12, "h12"))
+
+    assert an.verificar(forjado) == [], (
+        "a reescrita completa passou a ser detectável internamente — se foi "
+        "de propósito, atualize a seção 12 da monografia")
+
+    # O que a desmascara é exclusivamente o valor guardado fora.
+    assert an.localizar(forjado, retido) is None, (
+        "a âncora retida não deveria existir no journal forjado")
+
+
+def test_formato_da_linha_e_contrato_congelado():
+    """Golden vector: mudar a serialização invalida TODO hash já retido.
+
+    É a falha mais silenciosa possível deste mecanismo. Uma refatoração que
+    reordene campos, troque separadores ou passe a escapar não-ASCII não quebra
+    teste algum, não gera erro — e faz com que toda âncora guardada fora deixe
+    de conferir, precisamente quando alguém for usá-la. Este caso trava o
+    formato com um valor calculado à mão.
+    """
+    linha = an.montar(42, 99, "abc", anterior=None,
+                      emitida_em=datetime(2026, 1, 15, 10, 30, 0))
+
+    esperado = ('{"emitida_em":"2026-01-15T10:30:00","hash_final":"abc",'
+                '"total":42,"ultimo_id":99,"versao":1}')
+    conteudo = {c: linha[c] for c in
+                ("versao", "emitida_em", "total", "ultimo_id", "hash_final")}
+    assert an._canonico(conteudo) == esperado, (
+        "a forma canônica mudou — toda âncora já guardada fora deste servidor "
+        "deixou de conferir, e ninguém será avisado até tentar usá-la")
+
+    assert linha["hash_ancora"] == hashlib.sha256(
+        (esperado + "|").encode("utf-8")).hexdigest()

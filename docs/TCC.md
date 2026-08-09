@@ -747,7 +747,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 399, em 35 arquivos |
+| Casos de teste automatizados | 407, em 35 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -901,9 +901,20 @@ Mais relevante que documentá-la é **torná-la verificável**. O comando
 cada pressuposto da coluna direita, e encerra com código de erro quando algum não
 se sustenta. A fronteira deixa de ser uma afirmação da documentação e passa a ser
 uma verificação executável, apta a integrar rotina periódica. Executado sobre o
-ambiente deste trabalho, o comando confirma **os oito pressupostos**, incluindo
-os dois que dependem de privilégio administrativo do banco e que permaneceram
-pendentes durante a maior parte do desenvolvimento.
+ambiente deste trabalho, o comando confirma **oito pressupostos** — incluindo os
+dois que dependem de privilégio administrativo do banco e que permaneceram
+pendentes durante a maior parte do desenvolvimento — e declara um nono como
+**não verificável** naquele sistema operacional.
+
+Essa terceira resposta merece justificação, porque a alternativa era mais
+simples. A nona verificação pergunta se o registro sequencial de âncoras é de
+acréscimo no sistema de arquivos, atributo que o ambiente de desenvolvimento
+utilizado não expõe de forma legível. Tratá-la como reprovação produziria um
+comando que falha permanentemente naquele ambiente — e conviver com um controle
+que sempre reprova ensina quem o executa a ignorá-lo, de modo que a reprovação
+verdadeira, quando ocorresse, não seria percebida. Distinguir "não verificável"
+de "reprovado" preserva o significado da reprovação, e a saída do comando afirma
+explicitamente que ausência de reprovação não constitui aprovação.
 
 A oitava verificação merece registro próprio, porque nasceu de um erro cometido
 ao aplicar a correção que as outras prescreviam. A instrução para retirar a
@@ -927,7 +938,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **399 casos de teste**, provenientes de 253
+A suíte automatizada compreende **407 casos de teste**, provenientes de 261
 funções distribuídas em 35 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1877,7 +1888,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 399 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 407 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
