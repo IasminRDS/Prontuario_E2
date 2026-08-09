@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from models.estoque import ItemEstoque, MovEstoque
 from database.db import db
+from utils.numeros import decimal_de
 from utils.audit import audit_log, auditar_aqui
 from utils.security import admin_requerido
 from datetime import datetime, date
@@ -59,10 +60,15 @@ def novo():
                 codigo_interno=request.form.get('codigo_interno', '').strip() or None,
                 lote_atual=request.form.get('lote_atual', '').strip() or None,
                 validade=datetime.strptime(val_str, '%Y-%m-%d').date() if val_str else None,
-                quantidade=float(request.form.get('quantidade', 0)),
-                estoque_minimo=float(request.form.get('estoque_minimo', 10)),
-                estoque_maximo=float(request.form['estoque_maximo']) if request.form.get('estoque_maximo') else None,
-                preco_unitario=float(request.form['preco_unitario']) if request.form.get('preco_unitario') else None,
+                # `decimal_de` aceita a vírgula decimal; `float()` direto não.
+                # No MESMO arquivo, `editar` já trocava a vírgula por ponto e
+                # esta rota não: cadastrar item com "10,5" caía no `except`
+                # genérico abaixo e virava "Erro: could not convert string to
+                # float" na tela, enquanto editar o mesmo item aceitava.
+                quantidade=decimal_de(request.form.get('quantidade')) or 0,
+                estoque_minimo=decimal_de(request.form.get('estoque_minimo')) or 10,
+                estoque_maximo=decimal_de(request.form.get('estoque_maximo')),
+                preco_unitario=decimal_de(request.form.get('preco_unitario')),
             )
             db.session.add(item)
             db.session.flush()

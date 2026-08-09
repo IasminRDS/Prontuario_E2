@@ -193,3 +193,126 @@ def test_vacina_aplicada_grava_o_que_foi_enviado(app, medico, paciente_id):
         assert a.dose == "2a dose", f"dose gravada como {a.dose!r}"
         assert a.nome_vacina or a.vacina_id, (
             "a dose não identifica o imunobiológico — nem por id, nem por nome")
+
+
+# --- ramos apontados pela cobertura como nunca executados ------------------
+
+def test_evolucao_de_internacao_aceita_virgula_decimal(app, medico):
+    """Terceira escrita da mesma conversão. Esta fazia `int()` DEPOIS de trocar
+    a vírgula por ponto, então "102,0" — que é inteiro — era recusado."""
+    from extensions import db
+    from models.internacao import EvolucaoInternacao, Internacao
+
+    with app.app_context():
+        intern = Internacao.query.order_by(Internacao.id.asc()).first()
+        if intern is None:
+            pytest.skip("sem internação semeada")
+        ident = intern.id
+        antes = EvolucaoInternacao.query.filter_by(internacao_id=ident).count()
+
+    resposta = medico.post(f"/internacao/{ident}/evolucao", data={
+        "subjetivo": "Refere melhora da dor",
+        "objetivo": "Abdome flacido",
+        "temperatura": "36,8",
+        "saturacao_o2": "97,5",
+        "frequencia_cardiaca": "78,0",
+        "frequencia_respiratoria": "16",
+        "diurese_ml": "1200",
+    }, follow_redirects=True)
+    assert resposta.status_code == 200, resposta.get_data(as_text=True)[:300]
+
+    with app.app_context():
+        assert EvolucaoInternacao.query.filter_by(internacao_id=ident).count() > antes, (
+            "a evolução não foi criada")
+        ev = (EvolucaoInternacao.query.filter_by(internacao_id=ident)
+              .order_by(EvolucaoInternacao.id.desc()).first())
+        assert ev.temperatura == pytest.approx(36.8)
+        assert ev.saturacao_o2 == pytest.approx(97.5)
+        assert ev.frequencia_cardiaca == 78, "'78,0' é inteiro e foi recusado"
+        assert ev.frequencia_respiratoria == 16
+        assert ev.diurese_ml == 1200
+
+
+def test_resultado_de_exame_persiste(app, medico):
+    """Ramo nunca executado. O resultado alimenta o sumário de alta e o PDF."""
+    from extensions import db
+    from models.exame import ExameSolicitado
+
+    with app.app_context():
+        e = ExameSolicitado.query.order_by(ExameSolicitado.id.asc()).first()
+        if e is None:
+            pytest.skip("sem exame semeado")
+        e.status = "coletado"
+        db.session.commit()
+        ident = e.id
+
+    resposta = medico.post(f"/exames/{ident}/resultado", data={
+        "resultado_valor": "13,4",
+        "resultado_unidade": "g/dL",
+        "valor_referencia": "12 a 16",
+        "interpretacao": "normal",
+    }, follow_redirects=True)
+    assert resposta.status_code == 200, resposta.get_data(as_text=True)[:300]
+
+    with app.app_context():
+        e = db.session.get(ExameSolicitado, ident)
+        assert e.resultado_valor == "13,4", f"gravou {e.resultado_valor!r}"
+        assert e.resultado_unidade == "g/dL"
+        assert e.interpretacao == "normal"
+        assert e.status == "concluido"
+        assert e.data_resultado is not None, "concluiu sem carimbar a data"
+
+
+def test_resultado_vazio_e_recusado(app, medico):
+    """Exame concluído sem resultado é pior que exame pendente: sai da fila e
+    ninguém volta a olhar."""
+    from extensions import db
+    from models.exame import ExameSolicitado
+
+    with app.app_context():
+        e = ExameSolicitado.query.order_by(ExameSolicitado.id.asc()).first()
+        if e is None:
+            pytest.skip("sem exame semeado")
+        e.status = "coletado"
+        db.session.commit()
+        ident = e.id
+
+    resposta = medico.post(f"/exames/{ident}/resultado", data={
+        "resultado_texto": "", "resultado_valor": "",
+    })
+    assert "Informe o resultado" in resposta.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(ExameSolicitado, ident).status == "coletado", (
+            "concluiu o exame sem resultado")
+
+
+def test_negar_encaminhamento_exige_justificativa(app, dados_clinicos, sem_csrf):
+    """A justificativa da negativa é o que a auditoria e o titular leem depois."""
+    from extensions import db
+    from models.encaminhamento import Encaminhamento
+
+    gestor = autenticar(app, PERFIS["gestor"][1])
+    with app.app_context():
+        enc = Encaminhamento.query.order_by(Encaminhamento.id.asc()).first()
+        if enc is None:
+            pytest.skip("sem encaminhamento semeado")
+        enc.status = "solicitado"
+        db.session.commit()
+        ident = enc.id
+
+    sem_motivo = gestor.post(f"/regulacao/{ident}/parecer",
+                             data={"decisao": "negado"}, follow_redirects=True)
+    assert "justificativa" in sem_motivo.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Encaminhamento, ident).status == "solicitado", (
+            "negou sem justificativa")
+
+    com_motivo = gestor.post(f"/regulacao/{ident}/parecer", data={
+        "decisao": "negado", "observacao": "Fora do perfil da referencia",
+    }, follow_redirects=True)
+    assert com_motivo.status_code == 200
+    with app.app_context():
+        enc = db.session.get(Encaminhamento, ident)
+        assert enc.status == "negado"
+        assert enc.retorno_info == "Fora do perfil da referencia", (
+            "a justificativa não foi gravada")

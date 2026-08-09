@@ -12,6 +12,7 @@ from models.medico import Medico
 from models.paciente import Paciente
 from models.prescricao_hospitalar import PrescricaoHospitalar
 from models.unidade import Unidade
+from utils.numeros import decimal_de, inteiro_de
 from utils.audit import registrar
 from utils.rbac import requer_permissao
 
@@ -228,19 +229,25 @@ def nova_evolucao(id):
             plano=(request.form.get("plano") or "").strip() or None,
         )
 
+        # `utils.numeros` e não `float`/`int` diretos: com a vírgula já trocada
+        # por ponto, `int("102.0")` levanta ValueError e a evolução era recusada
+        # por um valor que é inteiro. Terceira escrita da mesma conversão neste
+        # projeto — as outras duas estavam no prontuário e na triagem, com
+        # comportamentos diferentes entre si.
         erros = []
-        for campo, conv in (
-            ("temperatura", float), ("saturacao_o2", float),
-            ("frequencia_cardiaca", int), ("frequencia_respiratoria", int),
-            ("diurese_ml", int), ("balanco_hidrico", int),
+        for campo, converter in (
+            ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
+            ("frequencia_cardiaca", inteiro_de),
+            ("frequencia_respiratoria", inteiro_de),
+            ("diurese_ml", inteiro_de), ("balanco_hidrico", inteiro_de),
         ):
-            bruto = (request.form.get(campo) or "").strip().replace(",", ".")
-            if not bruto:
-                continue
             try:
-                setattr(ev, campo, conv(bruto))
+                valor = converter(request.form.get(campo))
             except ValueError:
                 erros.append(campo.replace("_", " "))
+                continue
+            if valor is not None:
+                setattr(ev, campo, valor)
 
         if erros:
             flash(f"Valor inválido em: {', '.join(erros)}.", "warning")
