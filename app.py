@@ -22,6 +22,7 @@ BLUEPRINTS = (
     # Assistencial
     "routes.pacientes:pacientes_bp",
     "routes.duplicatas:duplicatas_bp",
+    "routes.consentimentos:consentimentos_bp",
     "routes.prontuario:prontuario_bp",
     "routes.triagem:triagem_bp",
     "routes.atendimento:atendimento_bp",

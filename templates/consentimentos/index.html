@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Consentimentos — {{ paciente.nome_exibicao }}{% endblock %}
+{% block page_title %}Base legal do tratamento{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('pacientes.perfil', id=paciente.id) }}" class="btn btn-secondary">Voltar</a>
+{% endblock %}
+
+{% block content %}
+<p class="pagehead__subtitle mb-2">
+  Registro das operações de tratamento de dados de <strong>{{ paciente.nome_exibicao }}</strong>,
+  como exige o art. 37 da Lei 13.709/2018. Termo em vigor: versão {{ versao_termo }}.
+</p>
+
+{# A distinção abaixo é jurídica e precisa aparecer na tela, não só no código:
+   quem registra precisa saber que assistência não depende de consentimento. #}
+<div class="card mb-16" style="border-left:4px solid var(--sus-azul)">
+  <div class="card-body" style="font-size:.86rem;color:var(--cinza-700)">
+    Nem toda finalidade se apoia em consentimento. A <strong>assistência à
+    saúde</strong> tem base na tutela da saúde (art. 11, II, “f”), realizada por
+    profissional de saúde — o titular não precisa consentir para ser atendido, e
+    não pode revogá-la por aqui. O consentimento é a base do que <em>excede</em>
+    o cuidado, e só essas finalidades são revogáveis.
+  </div>
+</div>
+
+<div class="card mb-20">
+  <div class="card-header"><h3>Situação por finalidade</h3></div>
+  <div class="table-wrapper">
+    <table class="tabela">
+      <thead>
+        <tr><th>Finalidade</th><th>Base legal</th><th>Situação</th>
+            <th>Registrado em</th><th class="actions"></th></tr>
+      </thead>
+      <tbody>
+        {% for chave, (rotulo, base, por_consentimento) in finalidades.items() %}
+        {% set atual = vigentes.get(chave) %}
+        <tr>
+          <td class="fw-500">{{ rotulo }}</td>
+          <td style="font-size:.82rem">
+            {% if por_consentimento %}
+              <span class="badge badge-azul">Consentimento</span>
+            {% else %}
+              <span class="badge badge-cinza">Tutela da saúde</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not atual %}
+              {# Ausência de registro é informação: é o que falta documentar. #}
+              <span class="badge badge-amarelo">Não registrado</span>
+            {% elif atual.revogado_em %}
+              <span class="badge badge-vermelho">Revogado em
+                {{ atual.revogado_em.strftime('%d/%m/%Y') }}</span>
+            {% elif atual.concedido %}
+              <span class="badge badge-verde">Vigente</span>
+            {% else %}
+              <span class="badge badge-vermelho">Recusado</span>
+            {% endif %}
+          </td>
+          <td class="font-mono" style="font-size:.8rem">
+            {{ atual.criado_em.strftime('%d/%m/%Y %H:%M') if atual else '—' }}
+          </td>
+          <td class="actions">
+            <div class="flex gap-8">
+              <form method="POST"
+                    action="{{ url_for('consentimentos.registrar_consentimento', paciente_id=paciente.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="finalidade" value="{{ chave }}" />
+                {% if por_consentimento %}
+                  <button name="concedido" value="1" class="btn btn-sm btn-primary">Consentiu</button>
+                  <button name="concedido" value="0" class="btn btn-sm btn-secondary">Recusou</button>
+                {% else %}
+                  <button class="btn btn-sm btn-secondary">Registrar base legal</button>
+                {% endif %}
+              </form>
+              {% if atual and atual.revogavel %}
+              <form method="POST"
+                    action="{{ url_for('consentimentos.revogar', paciente_id=paciente.id, registro_id=atual.id) }}"
+                    onsubmit="return confirm('Revogar o consentimento para {{ rotulo }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button class="btn btn-sm btn-danger">Revogar</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Histórico</h3>
+    <span style="font-size:.8rem;color:var(--cinza-400);margin-left:8px">
+      {{ registros|length }} registro(s)
+    </span>
+  </div>
+  <div class="table-wrapper">
+    <table class="tabela">
+      <thead>
+        <tr><th>Data</th><th>Finalidade</th><th>Base legal</th><th>Decisão</th>
+            <th>Termo</th><th>Registrado por</th></tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr>
+          <td class="font-mono" style="font-size:.8rem">
+            {{ r.criado_em.strftime('%d/%m/%Y %H:%M') }}
+          </td>
+          <td>{{ r.rotulo }}</td>
+          <td style="font-size:.82rem">{{ r.base_legal or '—' }}</td>
+          <td>
+            {% if r.revogado_em %}
+              <span class="badge badge-vermelho">Revogado</span>
+            {% elif r.concedido %}
+              <span class="badge badge-verde">Concedido</span>
+            {% else %}
+              <span class="badge badge-cinza">Recusado</span>
+            {% endif %}
+          </td>
+          <td class="font-mono" style="font-size:.78rem">{{ r.versao_termo or '—' }}</td>
+          <td style="font-size:.82rem">{{ r.registrado_por or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--cinza-400)">
+          Nenhuma operação de tratamento registrada para este paciente.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

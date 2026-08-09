@@ -473,12 +473,19 @@ Quadro — Propriedades da segurança da informação e sua materialização no 
 
 Fonte: elaborado pela autora (2026).
 
-A propriedade de **não repúdio** merece qualificação. O encadeamento por hash
-torna a trilha *tamper-evident* — adulteração se torna detectável, porque alterar
-um registro invalida a cadeia subsequente. Não a torna *tamper-proof*: enquanto o
-papel de banco utilizado pela aplicação for proprietário da tabela, ele mantém
-capacidade técnica de alterá-la. A distinção é relevante para a análise de risco
-residual (seção 11).
+A propriedade de **não repúdio** merece qualificação em dois níveis. O
+encadeamento por resumo criptográfico torna a trilha *tamper-evident*:
+adulteração se torna detectável, porque alterar um registro invalida a cadeia
+subsequente. Isso não a tornaria *tamper-proof* enquanto o papel de banco
+utilizado pela aplicação fosse proprietário da tabela — condição corrigida neste
+trabalho, com a transferência da propriedade e a revogação das permissões de
+alteração e exclusão, verificadas por comando.
+
+Resta um limite do mecanismo, e não da configuração: o encadeamento detecta
+alteração e remoção intermediária, mas **não detecta a remoção dos registros
+finais**, que deixa a cadeia remanescente internamente consistente. A distinção
+importa porque o truncamento do fim é justamente o que serve a quem pretende
+ocultar a própria ação recente. É discutida na seção 12.
 
 ### 4.3 Multi-Tenancy
 
@@ -731,14 +738,14 @@ Quadro — Dimensão do artefato construído
 
 | Elemento | Quantidade |
 |---|---|
-| Módulos funcionais (*blueprints*) | 44 |
-| Rotas expostas | 210 — 151 aceitam GET; 103, método de mutação |
-| Tabelas no modelo de dados | 42, com 523 colunas e 106 chaves estrangeiras |
+| Módulos funcionais (*blueprints*) | 45 |
+| Rotas expostas | 213 — 152 aceitam GET; 105, método de mutação |
+| Tabelas no modelo de dados | 42, com 531 colunas e 114 chaves estrangeiras |
 | Tabelas sob política de RLS | 23 |
 | Migrações de esquema versionadas | 13 |
-| Telas (*templates*) | 117 |
+| Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 357, em 31 arquivos |
+| Casos de teste automatizados | 368, em 33 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -892,10 +899,25 @@ Mais relevante que documentá-la é **torná-la verificável**. O comando
 cada pressuposto da coluna direita, e encerra com código de erro quando algum não
 se sustenta. A fronteira deixa de ser uma afirmação da documentação e passa a ser
 uma verificação executável, apta a integrar rotina periódica. Executado sobre o
-ambiente deste trabalho, o comando confirma cinco dos sete pressupostos e acusa os
-dois que dependem de privilégio administrativo do banco — resultado que a seção 12
-registra como limitação, e que o próprio sistema passa a denunciar em vez de
-depender da memória de quem o implantou.
+ambiente deste trabalho, o comando confirma **os oito pressupostos**, incluindo
+os dois que dependem de privilégio administrativo do banco e que permaneceram
+pendentes durante a maior parte do desenvolvimento.
+
+A oitava verificação merece registro próprio, porque nasceu de um erro cometido
+ao aplicar a correção que as outras prescreviam. A instrução para retirar a
+tabela de auditoria da propriedade do papel da aplicação transferia a tabela e
+concedia inserção, mas omitia a permissão de uso sobre a **sequência**, que muda
+de proprietário junto no mesmo comando. Aplicada a instrução, a aplicação passou
+a receber erro de permissão ao tentar registrar qualquer evento — e as sete
+verificações continuaram passando, porque nenhuma delas perguntava se a
+aplicação ainda conseguia auditar.
+
+O modo de falha resultante é o pior possível para um controle de rastreabilidade:
+**a trilha para de crescer e nada acusa**, porque a ausência de eventos é
+indistinguível da ausência de acessos. Um endurecimento que impede o registro é
+mais danoso que a lacuna que ele fecha. Acrescentou-se, por isso, a verificação
+de que a aplicação **ainda consegue escrever** na trilha — e a instrução de
+correção passou a incluir a sequência.
 
 ---
 
@@ -903,8 +925,8 @@ depender da memória de quem o implantou.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **357 casos de teste**, provenientes de 224
-funções distribuídas em 31 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **368 casos de teste**, provenientes de 235
+funções distribuídas em 33 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1426,6 +1448,57 @@ de onde foi introduzido. A propriedade útil para auditoria é que **a replicaç
 é contável** — quantas vezes a mesma decisão está escrita —, o que a torna
 verificável antes de causar dano, ao contrário do dano em si.
 
+#### 9.4.15 O endurecimento que impediu o controle que protegia
+
+**Achado.** A verificação de configuração descrita em 8.2 acusava, desde o
+início, que a tabela de auditoria pertencia ao papel utilizado pela aplicação —
+e prescrevia a correção: transferir a propriedade a papel dedicado, revogar os
+privilégios e conceder de volta apenas inserção e leitura.
+
+Executada a instrução, as verificações passaram a confirmar todos os
+pressupostos. **E a aplicação parou de conseguir registrar auditoria.**
+
+A causa é uma consequência do próprio comando de transferência: em PostgreSQL, a
+sequência que gera o identificador da tabela muda de proprietário junto com ela.
+Conceder inserção sobre a tabela não basta — a inserção também exige permissão de
+uso sobre a sequência, que a instrução omitia. Toda tentativa de registrar evento
+passou a falhar com erro de permissão.
+
+**Análise.** O modo de falha é o pior possível para um controle de
+rastreabilidade, e por uma razão específica: **a trilha para de crescer e nada
+acusa**, porque a ausência de eventos é indistinguível da ausência de acessos.
+Um sistema que ninguém usou e um sistema que parou de auditar produzem
+exatamente o mesmo relatório. Um endurecimento que impede o registro é mais
+danoso que a lacuna que ele fecha, porque a lacuna era detectável e a
+interrupção não é.
+
+O ponto de governança, porém, não é o comando incompleto. É que **as sete
+verificações continuaram passando**. Elas conferiam a propriedade da tabela e a
+ausência de privilégio de exclusão — isto é, confirmavam que o controle fora
+endurecido — e nenhuma perguntava se a aplicação ainda conseguia auditar. O
+instrumento certificou como correto um estado em que a função protegida havia
+sido eliminada.
+
+É a terceira ocorrência da mesma natureza neste trabalho, e a mais aguda. Em
+9.4.2, um teste verificava o objeto errado. Em 9.4.9, um detector verificava o
+objeto certo de modo incompleto. Aqui, o verificador **prescreveu** a alteração
+que quebrou o sistema e em seguida a atestou. A progressão sugere uma
+formulação mais forte que a da seção 5.2: um controle de verificação não apenas
+pode falhar como qualquer artefato — ele pode ser a causa do dano que deveria
+detectar.
+
+**Correção.** A instrução passou a incluir a permissão sobre a sequência. E
+acrescentou-se uma oitava verificação, que confere se a aplicação **ainda
+consegue escrever** na trilha, examinando tanto o privilégio sobre a tabela
+quanto o uso da sequência. A assimetria é deliberada: as demais verificações
+confirmam que algo está impedido; esta confirma que algo continua possível.
+
+**Lição transferível.** Todo controle que restringe deve ser acompanhado da
+verificação de que a função legítima permanece disponível. Verificar apenas a
+restrição mede metade do resultado — e é a metade que não dói quando está
+errada. Formulado como pergunta de auditoria: *"o que este endurecimento pode
+ter impedido, e como saberíamos?"*
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1573,7 +1646,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 357 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 368 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1724,13 +1797,26 @@ evidência foi produzida.
 
 ## 12. LIMITAÇÕES
 
-**Imutabilidade da auditoria depende de configuração externa.** O encadeamento por
-hash torna a adulteração detectável, não impossível. A imutabilidade efetiva exige
-que a tabela pertença a papel distinto do utilizado pela aplicação, o que demanda
-privilégio de superusuário e é ação de administração de banco de dados. Enquanto
-não executada, o controle é *tamper-evident*, não *tamper-proof*. A pendência é
-detectada automaticamente pela verificação de configuração descrita em 8.2, de
-modo que permanece visível em vez de esquecida.
+**A trilha de auditoria não detecta truncamento.** A propriedade da tabela foi
+transferida a papel distinto do utilizado pela aplicação, e as permissões de
+alteração e exclusão foram revogadas — o que remove a limitação registrada
+durante a maior parte deste trabalho. Permanece, contudo, um limite do próprio
+encadeamento por resumo criptográfico, e ele é mais específico do que a
+literatura costuma enunciar.
+
+A verificação percorre a cadeia desde o início e confere cada elo. Detecta,
+portanto, a **alteração** de um registro e a **remoção intermediária**, que
+rompem a correspondência entre um elo e o seguinte. Não detecta a **remoção dos
+registros finais**: suprimidos os últimos eventos, a cadeia remanescente
+permanece internamente consistente, e nada na tabela indica que ela já foi
+maior. E é precisamente a supressão do fim que interessa a quem pretende ocultar
+o que acabou de fazer.
+
+A mitigação conhecida é ancorar externamente o resumo do último elo — publicá-lo
+em meio que a aplicação não possa reescrever, com periodicidade definida, de
+modo que a divergência entre o resumo publicado e o resumo corrente revele o
+truncamento. Não foi implementada neste trabalho, e a ancoragem depende de um
+depositário externo, que é decisão organizacional e não de software.
 
 **Medição limitada a volume sintético.** Os planos de execução foram analisados
 com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição

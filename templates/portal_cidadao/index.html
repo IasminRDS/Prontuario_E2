@@ -111,6 +111,58 @@
       </div>
     </div>
 
+    {# --- Base legal do tratamento (art. 9º) ---
+       "Quem acessou" responde metade da pergunta do titular. A outra metade é
+       COM QUE FINALIDADE e SOB QUAL FUNDAMENTO seus dados são tratados. #}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">{{ icon('shield-check') }} Por que meus dados são tratados</div>
+        <span class="text-xs text-muted">{{ consentimentos | length }} finalidade(s)</span>
+      </div>
+      <div class="card__body">
+        {% if consentimentos %}
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Finalidade</th><th>Fundamento</th><th>Situação</th><th>Desde</th></tr>
+              </thead>
+              <tbody>
+                {% for c in consentimentos %}
+                <tr>
+                  <td>{{ c.rotulo }}</td>
+                  <td class="text-xs">
+                    {% if c.base_legal == 'tutela_da_saude' %}
+                      Tutela da saúde (art. 11, II, “f”)
+                    {% else %}
+                      Consentimento do titular (art. 11, I)
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if c.revogado_em %}
+                      <span class="badge badge--red">Revogado</span>
+                    {% elif c.concedido %}
+                      <span class="badge badge--green">Vigente</span>
+                    {% else %}
+                      <span class="badge badge--slate">Recusado</span>
+                    {% endif %}
+                  </td>
+                  <td class="mono text-xs">{{ c.criado_em.strftime('%d/%m/%Y') }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <p>Nenhuma operação de tratamento registrada.</p>
+            <p class="empty-state__hint">
+              A base legal é registrada no perfil do paciente, em Consentimentos.
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
     {# --- Quem acessou meu prontuário --- #}
     <div class="card">
       <div class="card__header">

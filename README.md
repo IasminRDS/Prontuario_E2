@@ -102,12 +102,13 @@ contraste verificado nos dois temas e VLibras.
 ## Segurança e conformidade
 
 - **Isolamento multi-tenant no banco (Row-Level Security)** — o filtro por
-  unidade não vive só na aplicação: 15 tabelas carregam política do PostgreSQL
+  unidade não vive só na aplicação: 23 tabelas carregam política do PostgreSQL
   com `FORCE`, derivada do metadata do ORM. Uma consulta nova que esqueça o
   filtro não enxerga registro de outro município. Falha fechada: sem escopo
-  definido, nada é liberado. Dez tabelas ainda não têm a coluna de escopo e
-  dependem só do filtro em Python — a lista está no `AGENTS.md`, e
-  `flask hardening-check` a confronta com o banco.
+  definido, nada é liberado. As que ficam de fora — cadastro de paciente,
+  candidatos a duplicata, catálogos — precisam de **razão escrita**, que um
+  teste confere nos dois sentidos. `flask hardening-check` confronta a lista
+  com o banco.
 - **RBAC granular por permissão** (`recurso:ação`) — 26 permissões e 7 perfis,
   ortogonais ao escopo territorial: a permissão diz *o que* se pode fazer, o
   escopo diz *sobre quais registros*. O backend é a autoridade; o template
@@ -117,10 +118,16 @@ contraste verificado nos dois temas e VLibras.
 - **Login federado gov.br** (OIDC), com simulador explícito quando não há
   credenciais de produção configuradas.
 - **Auditoria encadeada por hash** — cada evento carrega o hash do anterior.
-  Alterar ou remover uma linha rompe a cadeia, e a verificação aponta onde. Não
-  depende de permissão do banco.
-- **LGPD** — registro de consentimento, trilha de "quem acessou meu prontuário"
-  exposta ao titular no Portal do Cidadão, e exportação de dados auditada.
+  Alterar ou remover uma linha do meio rompe a cadeia, e a verificação aponta
+  onde. A tabela pertence a um papel próprio, e a aplicação não tem `UPDATE`
+  nem `DELETE` nela — `flask hardening-check` confere. **Truncar o FIM da
+  cadeia continua indetectável**: os elos que sobram seguem consistentes. Fechar
+  isso exige ancorar o último hash fora do alcance da aplicação.
+- **LGPD** — base legal do tratamento registrada por finalidade, trilha de "quem
+  acessou meu prontuário" e exportação auditada. A tela distingue o que se apoia
+  em **consentimento** (pesquisa, contato, compartilhamento) do que se apoia na
+  **tutela da saúde** do art. 11, II, "f" — assistência não depende de
+  consentimento, e só o que se apoia nele é revogável.
 - **Backup verificado, não presumido** — `flask backup-validar` restaura a cópia
   num schema temporário e compara as contagens com a origem, saindo com erro se
   divergir. Backup que nunca foi restaurado é um arquivo, não um backup.
@@ -192,12 +199,12 @@ Acesse `http://localhost:5000`.
 
 | | |
 |---|---|
-| Módulos (blueprints) | 44 |
-| Rotas | 210 |
+| Módulos (blueprints) | 45 |
+| Rotas | 213 |
 | Models | 29 arquivos, 42 tabelas |
-| Templates | 117 |
+| Templates | 118 |
 | Migrations | 13, exercitadas do zero e em reversa no CI |
-| Testes | 224 funções → 357 casos, em 31 arquivos, nos dois bancos |
+| Testes | 235 funções → 368 casos, em 33 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |
 | Permissões RBAC | 26, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |

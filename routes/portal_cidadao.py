@@ -61,11 +61,15 @@ def index():
         if paciente is not None and not pode_acessar_paciente(paciente, current_user):
             abort(403)
 
-    cartao, acessos = [], []
+    cartao, acessos, consentimentos = [], [], []
 
     if paciente:
         cartao = _cartao_vacinas(paciente)
         acessos = _quem_acessou(paciente)
+        # A base legal do tratamento é o que o art. 9º manda informar ao
+        # titular: com que finalidade seus dados são tratados e sob qual
+        # fundamento. Mostrar só "quem acessou" responde metade da pergunta.
+        consentimentos = _consentimentos(paciente)
         # Abrir o portal de um paciente é, ele mesmo, um acesso a prontuário.
         registrar("pacientes", paciente.id, "read",
                   "Portal do Cidadão: cartão de vacinas e histórico de acessos",
@@ -78,7 +82,25 @@ def index():
         paciente=paciente,
         cartao=cartao,
         acessos=acessos,
+        consentimentos=consentimentos,
     )
+
+
+def _consentimentos(paciente):
+    """Situação atual por finalidade — o registro mais recente de cada uma."""
+    from models.lgpd import ConsentimentoLgpd
+
+    registros = (
+        ConsentimentoLgpd.query
+        .filter_by(paciente_id=paciente.id)
+        .order_by(ConsentimentoLgpd.criado_em.desc())
+        .all()
+    )
+    atual = {}
+    for r in registros:
+        atual.setdefault(r.finalidade, r)
+    return [atual[chave] for chave in ConsentimentoLgpd.FINALIDADES
+            if chave in atual]
 
 
 def _cartao_vacinas(paciente):

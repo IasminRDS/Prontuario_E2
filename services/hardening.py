@@ -120,7 +120,12 @@ def verificar():
             "CREATE ROLE auditoria_owner NOLOGIN; "
             "ALTER TABLE audit_logs OWNER TO auditoria_owner; "
             f"REVOKE ALL ON audit_logs FROM {papel}; "
-            f"GRANT INSERT, SELECT ON audit_logs TO {papel}"))
+            f"GRANT INSERT, SELECT ON audit_logs TO {papel}; "
+            # A SEQUÊNCIA vai junto no ALTER TABLE ... OWNER, e sem USAGE nela o
+            # INSERT falha com "permissão negada para sequência". Esta linha
+            # faltava na receita, e o resultado foi um endurecimento que passava
+            # na própria verificação e impedia a aplicação de auditar.
+            f"GRANT USAGE, SELECT ON SEQUENCE audit_logs_id_seq TO {papel}"))
 
         # 7. a aplicação não pode apagar a própria trilha
         pode_apagar = c.execute(sa.text(
@@ -131,5 +136,43 @@ def verificar():
             not pode_apagar,
             f"{papel} tem DELETE em audit_logs" if pode_apagar else "",
             f"REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM {papel}"))
+
+        # 8. ...e AINDA CONSEGUE ESCREVER.
+        #
+        # Esta verificação nasceu de um erro concreto: a receita do item 6
+        # transferia a tabela e concedia INSERT, mas não a USAGE na SEQUÊNCIA,
+        # que muda de dono junto. O INSERT passou a falhar com "permissão
+        # negada para sequência" — e as sete verificações continuaram passando,
+        # porque nenhuma delas perguntava se a aplicação ainda auditava.
+        #
+        # **Endurecimento que impede o registro é pior que a lacuna que ele
+        # fecha:** a trilha para de crescer, nada acusa, e a ausência de
+        # eventos é indistinguível de ausência de acessos. Verificar o
+        # privilégio da tabela não basta; é preciso perguntar pela sequência,
+        # que é a outra metade do que um INSERT exige.
+        pode_inserir = c.execute(sa.text(
+            "select has_table_privilege(current_user, 'audit_logs', 'INSERT')"
+        )).scalar()
+        sequencia = c.execute(sa.text(
+            "select pg_get_serial_sequence('audit_logs', 'id')")).scalar()
+        usa_sequencia = True
+        if sequencia:
+            usa_sequencia = c.execute(sa.text(
+                "select has_sequence_privilege(current_user, :s, 'USAGE')"
+            ), {"s": sequencia}).scalar()
+
+        motivos = []
+        if not pode_inserir:
+            motivos.append("sem INSERT na tabela")
+        if not usa_sequencia:
+            motivos.append(f"sem USAGE na sequência {sequencia}")
+        achados.append(Achado(
+            "aplicação ainda consegue registrar auditoria",
+            pode_inserir and usa_sequencia,
+            (f"{papel} não consegue auditar: {', '.join(motivos)} — "
+             "a trilha parou de crescer e nada acusa")
+            if motivos else "",
+            f"GRANT INSERT ON audit_logs TO {papel}; "
+            f"GRANT USAGE, SELECT ON SEQUENCE audit_logs_id_seq TO {papel}"))
 
     return achados

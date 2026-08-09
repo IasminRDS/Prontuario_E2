@@ -21,8 +21,6 @@ class ConsentimentoLgpd(db.Model):
                            nullable=True, index=True)
 
     finalidade = db.Column(db.String(120), nullable=False)
-    # assistencia | pesquisa | compartilhamento_rnds | contato
-
     concedido = db.Column(db.Boolean, nullable=False, default=True)
     base_legal = db.Column(db.String(80), nullable=True, default="tutela_da_saude")
 
@@ -35,9 +33,53 @@ class ConsentimentoLgpd(db.Model):
 
     paciente = db.relationship("Paciente", backref="consentimentos")
 
+    # Finalidade -> (rótulo, base legal, o consentimento é a base?)
+    #
+    # **A distinção do terceiro campo é jurídica, não de interface.** Em saúde,
+    # a base legal do tratamento para assistência NÃO é o consentimento: é a
+    # tutela da saúde, do art. 11, II, "f", da Lei 13.709/2018, realizada por
+    # profissional de saúde. Pedir consentimento para assistir alguém sugere
+    # que o titular poderia recusar e ainda assim ser atendido — e, se ele
+    # revogasse, a unidade teria de parar de registrar o atendimento, o que a
+    # lei não pretende e o CFM não permite.
+    #
+    # O consentimento é a base para o que EXCEDE o cuidado: pesquisa, contato
+    # não assistencial, compartilhamento além do necessário à assistência.
+    # Só essas são revogáveis pelo titular.
+    #
+    # **A qualificação jurídica de cada finalidade é decisão do encarregado
+    # (DPO) da instituição**, não do software. Este mapa é o ponto único onde
+    # ela se declara — e é o que a tela, a validação e o Portal do Cidadão leem.
+    FINALIDADES = {
+        "assistencia": (
+            "Assistência à saúde", "tutela_da_saude", False),
+        "pesquisa": (
+            "Pesquisa científica", "consentimento", True),
+        "compartilhamento_rnds": (
+            "Compartilhamento com a RNDS", "consentimento", True),
+        "contato": (
+            "Contato e lembretes", "consentimento", True),
+    }
+
     @property
     def vigente(self):
         return self.concedido and self.revogado_em is None
+
+    @property
+    def rotulo(self):
+        return self.FINALIDADES.get(
+            self.finalidade, (self.finalidade, "", False))[0]
+
+    @property
+    def revogavel(self):
+        """Só se revoga o que se apoia no consentimento.
+
+        Revogar uma finalidade cuja base é a tutela da saúde não teria efeito
+        jurídico — e oferecer o botão faria a tela prometer ao titular um
+        controle que ele não tem.
+        """
+        return (self.FINALIDADES.get(self.finalidade, (None, None, False))[2]
+                and self.vigente)
 
 
 class DocumentoAssinado(db.Model):
