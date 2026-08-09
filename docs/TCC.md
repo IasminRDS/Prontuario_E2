@@ -601,6 +601,12 @@ Concretamente, foram construídos verificadores automatizados que:
 - verificam, no catálogo do PostgreSQL, se as políticas de RLS estão
   efetivamente ativas nas tabelas esperadas.
 
+Acrescentou-se a esses verificadores a **medição de cobertura de execução**,
+empregada não como meta percentual a atingir, mas como mapa: a relação dos
+trechos que nenhum teste percorre indica onde nenhuma evidência foi produzida, e
+foi ali que se procurou. O critério mostrou-se produtivo — defeitos localizados
+por essa via estão relatados em 9.4.12 e 9.4.14.
+
 A adoção desse método é justificada pelos resultados: **defeitos com impacto
 direto sobre a proteção de dados foram identificados por essa via e não haviam
 sido percebidos por revisão de código**, conforme detalhado na seção 9.4.
@@ -1342,34 +1348,83 @@ documento. O tratamento genérico de exceções passou a registrar em diário an
 de degradar, precisamente por ter sido um tratamento assim que ocultou o defeito
 descrito em 9.4.6.
 
-#### 9.4.14 Vocabulário replicado como causa recorrente
+#### 9.4.14 Regra replicada como causa recorrente
 
-**Achado.** Quatro ocorrências independentes do mesmo padrão: o conjunto de
-valores válidos de um campo de estado escrito em mais de um lugar, com conteúdos
-divergentes.
+**Achado.** A mesma regra escrita em mais de um lugar, com conteúdos
+divergentes, é a causa isolada mais frequente entre os defeitos deste trabalho.
+Manifestou-se em duas famílias.
 
-A prioridade de encaminhamento existia em cinco lugares com três conteúdos: a
-rota gravava um valor que o modelo não sabia rotular — exibido em texto bruto e
-na cor de menor gravidade — e o documento em PDF conhecia um valor que a rota
-nunca grava, imprimindo o caso mais grave sem acentuação e na cor mais branda. A
-situação de agendamento oferecia na tela um valor inexistente no modelo e
-ocultava dois que existiam.
+**Vocabulário de estado.** A prioridade de encaminhamento existia em cinco
+lugares com três conteúdos: a rota gravava um valor que o modelo não sabia
+rotular — exibido em texto bruto e na cor de menor gravidade — e o documento em
+PDF conhecia um valor que a rota nunca grava, imprimindo o caso mais grave sem
+acentuação e na cor mais branda. A situação de agendamento oferecia na tela um
+valor inexistente no modelo e ocultava dois que existiam.
 
-**Análise.** Nenhuma dessas divergências produz erro. Todas produzem exibição
-incorreta, e algumas produzem descarte silencioso: o valor selecionado é
-rejeitado pela validação sem que nada o informe.
+**Conversão de valor numérico clínico.** A leitura de sinais vitais vindos de
+formulário — temperatura, saturação, peso, altura, glicemia, frequências —
+estava implementada **quatro vezes**, em quatro rotas, com quatro
+comportamentos. O registro de prontuário substituía a vírgula decimal por ponto
+antes de converter; a triagem chamava a conversão diretamente; a evolução de
+internação substituía a vírgula e em seguida convertia para inteiro; o cadastro
+de item de estoque convertia diretamente, enquanto a edição do **mesmo** item,
+no mesmo arquivo, substituía a vírgula.
 
-O caso do agendamento tem valor metodológico particular. A rota não lia o campo
-de situação; ao corrigi-la, acrescentou-se validação contra o vocabulário do
+O efeito é regional e não hipotético: a vírgula é o separador decimal em
+português. O mesmo valor "38,4" era aceito pelo prontuário e recusado pela
+triagem — e recusado da pior forma, porque a conversão ocorria dentro da
+construção do objeto, sob tratamento genérico de exceções: **um único campo
+ilegível descartava o registro inteiro**, exibindo a mensagem de exceção da
+linguagem e sem identificar o campo.
+
+**Análise.** Nenhuma dessas divergências produz erro no sentido corrente. Todas
+produzem exibição incorreta ou descarte silencioso: o valor é rejeitado pela
+validação, ou perdido na conversão, sem que nada informe qual.
+
+Três observações merecem registro.
+
+A primeira é que **a implementação parcialmente correta foi a que falhou de modo
+menos previsível**. A evolução de internação efetuava a substituição da vírgula
+— o cuidado que faltava à triagem — e em seguida convertia para inteiro; o
+resultado é que "102,0", que é um valor inteiro legítimo, tornava-se "102.0" e
+era recusado. Meia correção produziu um modo de falha que nenhuma das
+implementações ingênuas apresentava.
+
+A segunda é que a **coexistência das variantes no mesmo arquivo** — cadastro
+intolerante e edição tolerante em rotas vizinhas — descarta a explicação por
+desconhecimento e indica a causa real: a regra é pequena o bastante para que
+reescrevê-la pareça mais barato que localizá-la, e cada reescrita é plausível
+quando lida isoladamente.
+
+A terceira é metodológica. O caso do agendamento: a rota não lia o campo de
+situação; ao corrigi-la, acrescentou-se validação contra o vocabulário do
 modelo, e **foi o teste escrito para comprovar a correção que revelou a
 divergência** — ele falhou porque o valor oferecido pela tela não existia. Sem a
 validação, a correção teria gravado valor desconhecido e aparentado êxito.
 Correção sem verificação é hipótese.
 
+**Como as réplicas foram encontradas.** As duas últimas não vieram de inspeção,
+e sim de **medição de cobertura de execução**. Constatou-se que os trechos de
+conversão de sinais vitais jamais haviam sido executados pela suíte — em rota
+alguma. Exercitá-los revelou a divergência. O critério "trecho de código que
+nenhum teste executa" mostrou-se um bom preditor de onde procurar: é onde a
+verificação empírica ainda não chegou, e portanto onde a discrepância entre o
+comportamento pretendido e o real pode persistir indefinidamente.
+
 **Correção.** Vocabulário declarado uma única vez, no modelo, com a ordem de
-gravidade junto. As telas e os documentos derivam dele. Onde há duas convenções
-de nomenclatura visual — folhas de estilo distintas convivendo —, traduz-se o
-tom da cor e nunca o vocabulário.
+gravidade junto; conversão numérica declarada uma única vez, em módulo próprio.
+As telas, as rotas e os documentos derivam de ambos. A conversão distingue campo
+vazio — ausência legítima de medida — de texto ilegível, que é erro e precisa
+alcançar o usuário nomeando o campo. Onde há duas convenções de nomenclatura
+visual, traduz-se o tom da cor e nunca o vocabulário.
+
+**Lição de governança.** Regra replicada não é questão de estilo de código: é um
+gerador de divergência com prazo. Enquanto as cópias concordam, o sistema
+funciona e nada as denuncia; a partir da primeira alteração em uma delas, passam
+a produzir resultados diferentes para a mesma entrada, e o defeito aparece longe
+de onde foi introduzido. A propriedade útil para auditoria é que **a replicação
+é contável** — quantas vezes a mesma decisão está escrita —, o que a torna
+verificável antes de causar dano, ao contrário do dano em si.
 
 ### 9.5 Testes de backup e restauração
 
@@ -1619,13 +1674,25 @@ permanece capaz de detectar.
 
 **A recorrência dos padrões é achado autônomo.** Vários defeitos não são
 independentes: são a mesma causa em pontos diferentes. Telas montadas com o
-conteúdo de outro módulo aparecem sete vezes; vocabulário de estado replicado em
-mais de um lugar, quatro; leitura de campo inexistente no modelo de dados,
+conteúdo de outro módulo aparecem sete vezes; regra replicada em mais de um
+lugar, oito — quatro vocabulários de estado e quatro implementações da conversão
+de sinais vitais; leitura de campo inexistente no modelo de dados,
 sistematicamente. Isso desloca a recomendação do caso para a classe — corrigir
 uma ocorrência tem valor local, ao passo que um verificador da classe encontra
 as demais, inclusive as ainda não escritas. Foi essa a razão de cada achado
 relatado nesta seção ter sido convertido em verificação permanente, e não apenas
 em correção.
+
+Da replicação decorre uma observação de método com valor prático. Duas das
+quatro implementações divergentes da conversão numérica não foram localizadas
+por inspeção, e sim por **medição de cobertura de execução**: os trechos jamais
+haviam sido executados pela suíte. Trecho que nenhum teste percorre é onde a
+verificação empírica ainda não chegou — e, portanto, onde a diferença entre o
+comportamento pretendido e o real pode subsistir sem limite de prazo. A
+cobertura, aqui, não foi usada como meta a atingir, e sim como **mapa de onde
+procurar**, que é um uso mais defensável: percentual de cobertura não mede
+qualidade, mas a lista de trechos não executados diz com precisão onde nenhuma
+evidência foi produzida.
 
 ---
 
