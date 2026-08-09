@@ -15,6 +15,7 @@ triagem_bp = Blueprint("triagem", __name__, url_prefix="/triagem")
 
 @triagem_bp.route("/")
 @login_required
+@requer_permissao("triage:read")
 def index():
     """Painel de triagem do dia — fila por classificação."""
     hoje = date.today()
@@ -127,6 +128,7 @@ def nova(paciente_id=None):
 
 @triagem_bp.route("/<int:id>")
 @login_required
+@requer_permissao("triage:read")
 def visualizar(id):
     t = Triagem.query.get_or_404(id)
     import json
@@ -157,6 +159,7 @@ def atualizar_status(id):
 
 @triagem_bp.route("/paciente/<int:paciente_id>")
 @login_required
+@requer_permissao("triage:read")
 def historico_paciente(paciente_id):
     paciente = Paciente.query.get_or_404(paciente_id)
     triagens = (

@@ -109,10 +109,13 @@ contraste verificado nos dois temas e VLibras.
   candidatos a duplicata, catálogos — precisam de **razão escrita**, que um
   teste confere nos dois sentidos. `flask hardening-check` confronta a lista
   com o banco.
-- **RBAC granular por permissão** (`recurso:ação`) — 26 permissões e 7 perfis,
+- **RBAC granular por permissão** (`recurso:ação`) — 27 permissões e 7 perfis,
   ortogonais ao escopo territorial: a permissão diz *o que* se pode fazer, o
   escopo diz *sobre quais registros*. O backend é a autoridade; o template
-  apenas espelha para esconder controles.
+  apenas espelha para esconder controles. Um teste confere o vocabulário nos
+  dois sentidos: nome exigido que não existe na matriz nega todo mundo em
+  silêncio, e nome na matriz que rota nenhuma exige faz a matriz descrever um
+  sistema que não é este — as duas coisas já aconteceram aqui.
 - **Verificação em duas etapas (TOTP)** — o segredo só é gravado depois que o
   usuário prova um código válido, então ninguém se tranca fora da própria conta.
 - **Login federado gov.br** (OIDC), com simulador explícito quando não há
@@ -206,9 +209,9 @@ Acesse `http://localhost:5000`.
 | Models | 29 arquivos, 42 tabelas |
 | Templates | 118 |
 | Migrations | 14, exercitadas do zero e em reversa no CI |
-| Testes | 239 funções → 373 casos, em 33 arquivos, nos dois bancos |
+| Testes | 243 funções → 389 casos, em 34 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |
-| Permissões RBAC | 26, em 7 perfis |
+| Permissões RBAC | 27, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |
 
 Os valores acima saem de contagem sobre o repositório, não de estimativa. Estão

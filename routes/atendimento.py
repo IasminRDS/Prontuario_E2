@@ -69,7 +69,7 @@ def index():
 
 @atendimento_bp.post("/atendimento")
 @login_required
-@requer_permissao("clinical:write")
+@requer_permissao("encounter:write")
 def criar_atendimento():
     dados = request.get_json(silent=True) or request.form
     if not dados:

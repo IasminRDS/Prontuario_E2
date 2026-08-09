@@ -6,7 +6,7 @@ from models.unidade_saude import UnidadeSaude
 from database.db import db
 from utils.rbac import requer_permissao
 from utils.security import admin_requerido
-from utils.rbac import SUPER_ADMIN, _normalizar
+from utils.rbac import SUPER_ADMIN, _normalizar, perfis_atribuiveis
 from utils.audit import audit_log, auditar_aqui
 from datetime import datetime
 
@@ -44,7 +44,8 @@ def novo_usuario():
         if User.query.filter_by(email=email).first():
             flash("E-mail já cadastrado.", "danger")
             return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades
+                "admin/usuario_form.html", usuario=None, unidades=unidades,
+                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
             )
         senha = (request.form.get("senha") or "").strip()
         if len(senha) < 8:
@@ -52,7 +53,8 @@ def novo_usuario():
             # credencial conhecida por qualquer um que leia o repositório.
             flash("Defina uma senha inicial de ao menos 8 caracteres.", "warning")
             return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades
+                "admin/usuario_form.html", usuario=None, unidades=unidades,
+                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
             )
 
         perfil = request.form.get("perfil", "recepcionista")
@@ -66,7 +68,8 @@ def novo_usuario():
             flash("Selecione a unidade do usuário: sem ela, ele não terá acesso "
                   "a nenhum registro clínico.", "warning")
             return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades
+                "admin/usuario_form.html", usuario=None, unidades=unidades,
+                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
             )
 
         user = User(
@@ -83,7 +86,8 @@ def novo_usuario():
         db.session.commit()
         flash(f"Usuário {user.nome} criado com sucesso!", "success")
         return redirect(url_for("admin.index"))
-    return render_template("admin/usuario_form.html", usuario=None, unidades=unidades)
+    return render_template("admin/usuario_form.html", usuario=None, unidades=unidades,
+                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None)
 
 
 @admin_bp.route("/usuarios/<int:id>/editar", methods=["GET", "POST"])
@@ -105,7 +109,10 @@ def editar_usuario(id):
         db.session.commit()
         flash("Usuário atualizado!", "success")
         return redirect(url_for("admin.index"))
-    return render_template("admin/usuario_form.html", usuario=user, unidades=unidades)
+    return render_template("admin/usuario_form.html", usuario=user,
+                           unidades=unidades,
+                           perfis=perfis_atribuiveis(current_user.perfil),
+                           perfil_atual=_normalizar(user.perfil))
 
 
 # `toggle_usuario` vivia aqui e foi removido: `ativar_usuario` e

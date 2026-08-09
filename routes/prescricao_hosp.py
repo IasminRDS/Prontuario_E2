@@ -8,7 +8,6 @@ from models.medicamento import Medicamento
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
 from utils.rbac import requer_permissao
-from utils.security import medico_requerido
 from datetime import datetime, timedelta
 
 pres_hosp_bp = Blueprint('pres_hosp', __name__, url_prefix='/prescricao-hosp')
@@ -16,6 +15,7 @@ pres_hosp_bp = Blueprint('pres_hosp', __name__, url_prefix='/prescricao-hosp')
 
 @pres_hosp_bp.route('/internacao/<int:internacao_id>')
 @login_required
+@requer_permissao("prescription:read")
 def lista(internacao_id):
     intern    = Internacao.query.get_or_404(internacao_id)
     pres_list = (PrescricaoHospitalar.query
@@ -29,7 +29,7 @@ def lista(internacao_id):
 
 @pres_hosp_bp.route('/nova/<int:internacao_id>', methods=['GET', 'POST'])
 @login_required
-@medico_requerido
+@requer_permissao("prescription:write")
 def nova(internacao_id):
     intern   = Internacao.query.get_or_404(internacao_id)
     medico   = Medico.query.filter_by(user_id=current_user.id).first()
@@ -119,6 +119,7 @@ def nova(internacao_id):
 
 @pres_hosp_bp.route('/<int:id>')
 @login_required
+@requer_permissao("prescription:read")
 def visualizar(id):
     pres = PrescricaoHospitalar.query.get_or_404(id)
     return render_template('prescricao_hosp/visualizar.html', pres=pres)

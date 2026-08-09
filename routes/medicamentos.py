@@ -6,7 +6,6 @@ from models.paciente import Paciente
 from models.medico import Medico
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
-from utils.security import medico_requerido
 from datetime import datetime
 from utils.rbac import requer_permissao
 
@@ -50,6 +49,7 @@ def index():
 # ── Prescrições do paciente ──
 @medicamentos_bp.route('/paciente/<int:paciente_id>')
 @login_required
+@requer_permissao("prescription:read")
 def lista_paciente(paciente_id):
     paciente   = Paciente.query.get_or_404(paciente_id)
     prescricoes= (Prescricao.query
@@ -66,8 +66,7 @@ def lista_paciente(paciente_id):
 @medicamentos_bp.route('/prescrever/<int:paciente_id>/<int:prontuario_id>',
                        methods=['GET', 'POST'])
 @login_required
-@medico_requerido
-@requer_permissao("prescription:create")
+@requer_permissao("prescription:create", "prescription:write")
 def prescrever(paciente_id, prontuario_id=None):
     paciente = Paciente.query.get_or_404(paciente_id)
     medico   = Medico.query.filter_by(user_id=current_user.id).first()
@@ -132,6 +131,7 @@ def prescrever(paciente_id, prontuario_id=None):
 
 @medicamentos_bp.route('/prescricao/<int:id>')
 @login_required
+@requer_permissao("prescription:read")
 def visualizar(id):
     pres = Prescricao.query.get_or_404(id)
     return render_template('medicamentos/visualizar.html', pres=pres)
@@ -139,7 +139,7 @@ def visualizar(id):
 
 @medicamentos_bp.route('/prescricao/<int:id>/status', methods=['POST'])
 @login_required
-@medico_requerido
+@requer_permissao("prescription:write")
 def atualizar_status(id):
     pres  = Prescricao.query.get_or_404(id)
     novo  = request.form.get('status')

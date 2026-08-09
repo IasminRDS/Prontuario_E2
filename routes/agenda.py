@@ -52,7 +52,7 @@ def api_listar_eventos():
 
 @agenda_bp.route("/api/eventos", methods=["POST"])
 @login_required
-@requer_permissao("patient:read")
+@requer_permissao("schedule:write")
 def api_criar_evento():
     data = request.get_json(silent=True) or request.form
 
@@ -102,7 +102,7 @@ def api_criar_evento():
 
 @agenda_bp.route("/api/eventos/<int:evento_id>/status", methods=["POST"])
 @login_required
-@requer_permissao("patient:read")
+@requer_permissao("schedule:write")
 def api_status_evento(evento_id):
     data = request.get_json(silent=True) or request.form
     status = (data.get("status") or "").strip()

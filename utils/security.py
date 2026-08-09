@@ -33,12 +33,28 @@ def validar_cid10(cid: str) -> bool:
 # Controle por perfil (já usado)
 # ===============================
 def perfil_requerido(*perfis):
+    """Autorização por PERFIL, para o caso em que não há permissão granular.
+
+    Compara nomes NORMALIZADOS. A versão anterior comparava a string crua do
+    banco contra literais em minúsculo, enquanto `utils.rbac` normaliza por
+    apelido — de modo que um usuário gravado como "Medico" (a forma canônica de
+    `PERFIS`) passava pelo RBAC e era barrado aqui, e um gravado como "medico"
+    fazia o contrário. Duas linguagens de autorização convivendo já é ruim; que
+    discordassem sobre o mesmo usuário era o defeito.
+    """
+    from utils.rbac import ADMINISTRADOR, SUPER_ADMIN, _normalizar
+
+    alvo = {_normalizar(p) for p in perfis} | {SUPER_ADMIN}
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for("auth.login"))
-            if current_user.perfil not in perfis and current_user.perfil != "admin":
+            atual = _normalizar(getattr(current_user, "perfil", None))
+            # O administrador seguia liberado incondicionalmente pelo `!=
+            # "admin"` do final da condição antiga. Mantido, mas explícito.
+            if atual not in alvo and atual != ADMINISTRADOR:
                 flash("Você não tem permissão para acessar esta área.", "danger")
                 abort(403)
             return f(*args, **kwargs)

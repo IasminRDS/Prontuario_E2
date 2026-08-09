@@ -281,17 +281,9 @@ ESCRITA_SOB_LEITURA_ACEITA = {
     "pdf.atestado",
     "pdf.processar_pdf",
     "pdf.reorganizar",
-    # --- LACUNA DE VOCABULÁRIO, não exceção justificada.
-    # Agendamento e agenda gravam sob `patient:read` porque NÃO EXISTE
-    # permissão de agendamento entre as 26. A Recepção, de quem é a função,
-    # só tem permissões de paciente — então marcar como escrita exigiria
-    # inventar `schedule:write` e decidir quem o recebe, o que é decisão de
-    # produto e não correção de defeito. Fica registrado como dívida com nome.
-    "agenda.api_criar_evento",
-    "agenda.api_status_evento",
-    "agendamento.novo",
-    "agendamento.editar",
-    "agendamento.atualizar_status",
+    # Agenda e agendamento gravavam sob `patient:read` por não existir nome
+    # para a função. `schedule:write` foi criado e concedido a Recepção, Médico
+    # e Enfermeiro; a dívida saiu daqui em vez de envelhecer.
 }
 
 
@@ -326,3 +318,116 @@ def test_permissao_de_leitura_nao_protege_rota_de_escrita(app, raiz):
     assert not resolvidas, (
         f"já não gravam sob permissão de leitura — remova de "
         f"ESCRITA_SOB_LEITURA_ACEITA: {sorted(resolvidas)}")
+
+
+# --- Vocabulário de permissões vivo ----------------------------------------
+
+def test_toda_permissao_exigida_existe_na_matriz(raiz):
+    """String de permissão é contrato sem tipo: um erro de digitação não falha.
+
+    `pode()` compara contra o conjunto concedido; nome inexistente simplesmente
+    não pertence a ninguém, e a rota passa a negar TODO perfil que não tenha o
+    coringa administrativo. O sintoma é 403 para o usuário certo, sem erro em
+    log nenhum.
+    """
+    import ast
+
+    from utils.rbac import TODAS_PERMISSOES
+
+    desconhecidas = set()
+    for arq in sorted((raiz / "routes").glob("*.py")):
+        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+            if not isinstance(no, ast.Call):
+                continue
+            nome = getattr(no.func, "id", getattr(no.func, "attr", ""))
+            if nome not in ("requer_permissao", "pode"):
+                continue
+            for a in no.args:
+                if isinstance(a, ast.Constant) and a.value not in TODAS_PERMISSOES:
+                    desconhecidas.add(f"{arq.name}: {a.value!r}")
+
+    for tpl in sorted((raiz / "templates").rglob("*.html")):
+        for achado in re.finditer(r"pode\(\s*['\"]([^'\"]+)['\"]",
+                                  tpl.read_text(encoding="utf-8")):
+            if achado.group(1) not in TODAS_PERMISSOES:
+                desconhecidas.add(f"{tpl.name}: {achado.group(1)!r}")
+
+    assert not desconhecidas, (
+        "permissão exigida que não existe na matriz — nega todo mundo em "
+        "silêncio:\n  " + "\n  ".join(sorted(desconhecidas)))
+
+
+def test_toda_permissao_da_matriz_guarda_alguma_coisa(raiz):
+    """O sentido inverso: nome concedido a perfil que não protege rota alguma.
+
+    Quatro das 26 permissões estavam nesta situação — `triage:read`,
+    `prescription:read`, `prescription:write` e `encounter:write`. A matriz é
+    documento de governança: quem a lia concluía que a Recepção não enxergava a
+    fila de triagem, quando na verdade QUALQUER sessão autenticada enxergava,
+    porque nenhuma rota exigia o nome. Vocabulário morto faz a matriz descrever
+    um sistema que não é este.
+    """
+    import ast
+
+    from utils.rbac import ADMIN_FULL, TODAS_PERMISSOES
+
+    exigidas = set()
+    for arq in sorted((raiz / "routes").glob("*.py")):
+        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+            if isinstance(no, ast.Call) and getattr(
+                    no.func, "id", getattr(no.func, "attr", "")) in (
+                        "requer_permissao", "pode"):
+                exigidas |= {a.value for a in no.args
+                             if isinstance(a, ast.Constant)}
+    for tpl in sorted((raiz / "templates").rglob("*.html")):
+        exigidas |= set(re.findall(r"pode\(\s*['\"]([^'\"]+)['\"]",
+                                   tpl.read_text(encoding="utf-8")))
+
+    # `admin:full` é coringa: concede sem ser exigido, por desenho.
+    mortas = TODAS_PERMISSOES - exigidas - {ADMIN_FULL}
+    assert not mortas, (
+        "permissão declarada na matriz que nenhuma rota ou tela exige — ou "
+        "aplique onde deveria valer, ou remova do vocabulário:\n  "
+        + "\n  ".join(sorted(mortas)))
+
+
+# --- Mutação que escapa da leitura por construção de objeto -----------------
+
+# Rotas que mutam em massa e por isso não são vistas pelo detector de entidade
+# (que enxerga `Modelo(...)`). Cada uma precisa de razão, porque o custo de
+# estar aqui é ficar fora daquela conferência de autorização.
+MUTACAO_EM_MASSA_ACEITA = set()
+
+
+def test_mutacao_em_massa_declarada(raiz):
+    """`query.update()` e `query.delete()` não constroem objeto.
+
+    O detector de coerência de autorização por entidade lê construção de
+    objeto — está dito na docstring dele que é aproximação. Este teste fecha a
+    aproximação pelo outro lado: se aparecer mutação em massa numa rota, ela
+    precisa ser declarada, porque a autorização dela ninguém está conferindo.
+    """
+    import ast
+
+    achados = set()
+    for arq in sorted((raiz / "routes").glob("*.py")):
+        arvore = ast.parse(arq.read_text(encoding="utf-8"))
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.FunctionDef):
+                continue
+            for sub in ast.walk(no):
+                if (isinstance(sub, ast.Call)
+                        and isinstance(sub.func, ast.Attribute)
+                        and sub.func.attr in ("update", "delete")
+                        and isinstance(sub.func.value, ast.Call)):
+                    achados.add(f"{arq.stem}.{no.name}")
+
+    inesperadas = achados - MUTACAO_EM_MASSA_ACEITA
+    assert not inesperadas, (
+        "mutação em massa numa rota — fica fora da conferência de autorização "
+        "por entidade:\n  " + "\n  ".join(sorted(inesperadas)))
+
+    resolvidas = MUTACAO_EM_MASSA_ACEITA - achados
+    assert not resolvidas, (
+        f"já não fazem mutação em massa — remova de "
+        f"MUTACAO_EM_MASSA_ACEITA: {sorted(resolvidas)}")

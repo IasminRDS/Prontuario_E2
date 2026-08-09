@@ -337,7 +337,10 @@ def _registrar_cli(app):
                   help="Compara com a âncora anterior em vez de emitir uma nova.")
     @click.option("--arquivo", default="backups/ancora_auditoria.json",
                   help="Onde a âncora é lida e gravada.")
-    def auditoria_ancora(conferir, arquivo):
+    @click.option("--contra", default=None, metavar="TOTAL:ULTIMO_ID:HASH",
+                  help="Confere contra valores dados na linha de comando, sem "
+                       "ler arquivo nenhum deste servidor.")
+    def auditoria_ancora(conferir, arquivo, contra):
         """Emite ou confere a âncora da trilha de auditoria.
 
         O encadeamento por hash detecta alteração e remoção NO MEIO da cadeia.
@@ -346,9 +349,16 @@ def _registrar_cli(app):
         e é o fim que interessa a quem quer ocultar o que acabou de fazer.
 
         A defesa é comparar com um estado registrado antes. Rode sem argumento
-        para emitir a âncora, e **guarde o arquivo fora deste servidor**; rode
+        para emitir a âncora, e **guarde o valor fora deste servidor**; rode
         com `--conferir` para comparar. Guardar a âncora no mesmo lugar que se
         pretende proteger não protege de nada.
+
+        `--contra TOTAL:ULTIMO_ID:HASH` existe por causa dessa frase: com ela, a
+        conferência não lê arquivo algum desta máquina. Quem tem o valor
+        anotado — em cofre de senhas, em ata, em mensagem assinada — o cola aqui,
+        e a verificação deixa de depender de um arquivo que o próprio servidor
+        pode reescrever. É a diferença entre conferir contra uma cópia e
+        conferir contra uma testemunha.
         """
         import json
         import pathlib
@@ -358,6 +368,22 @@ def _registrar_cli(app):
         from utils.audit import ancora_da_trilha, conferir_ancora
 
         caminho = pathlib.Path(arquivo)
+
+        if contra:
+            try:
+                total_txt, ultimo_txt, hash_esperado = contra.split(":", 2)
+                esperados = (int(total_txt), int(ultimo_txt), hash_esperado.strip())
+            except ValueError:
+                sys.exit("--contra espera TOTAL:ULTIMO_ID:HASH")
+            problemas = conferir_ancora(*esperados)
+            if problemas:
+                print("ÂNCORA INFORMADA NÃO CONFERE:")
+                for p in problemas:
+                    print(f"  {p}")
+                sys.exit(1)
+            print(f"trilha íntegra contra o valor informado: "
+                  f"{esperados[0]} registros preservados")
+            return
 
         if conferir:
             if not caminho.is_file():
@@ -384,8 +410,11 @@ def _registrar_cli(app):
         }, indent=2), encoding="utf-8")
         print(f"âncora emitida: {total} registros, último id {ultimo_id}")
         print(f"gravada em {caminho}")
-        print("GUARDE ESTE ARQUIVO FORA DESTE SERVIDOR — âncora que a aplicação "
-              "pode reescrever não prova nada.")
+        print("\nANOTE ESTE VALOR FORA DESTE SERVIDOR:")
+        print(f"  {total}:{ultimo_id}:{hash_final}")
+        print("  flask auditoria-ancora --contra <o valor acima>")
+        print("Âncora que a aplicação pode reescrever não prova nada; é o valor "
+              "guardado noutro lugar que prova.")
 
     @app.cli.command("seed-volume")
     @click.option("--pacientes", default=50_000, show_default=True)

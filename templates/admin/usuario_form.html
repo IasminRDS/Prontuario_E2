@@ -39,8 +39,11 @@
           <div class="form-group">
             <label class="form-label">Perfil de acesso <span class="obrigatorio">*</span></label>
             <select name="perfil" class="form-control" required>
-              {% for p, label in [('recepcionista','Recepcionista'),('enfermeiro','Enfermeiro(a)'),('medico','Médico(a)'),('admin','Administrador')] %}
-              <option value="{{ p }}" {% if usuario and usuario.perfil == p %}selected{% endif %}>{{ label }}</option>
+              {# A lista vem de utils/rbac.perfis_atribuiveis — escrita à mão
+                 aqui, oferecia quatro dos sete perfis, e Farmacêutico e Gestor
+                 ficavam impossíveis de criar. #}
+              {% for p, label in perfis %}
+              <option value="{{ p }}" {% if perfil_atual == p %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
           </div>

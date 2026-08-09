@@ -67,6 +67,11 @@ PERFIS = {
     "medico": ("Dr. Teste", "medico2@sus.gov.br", "medico"),
     "recepcao": ("Recep Teste", "recepcao@sus.gov.br", "recepcionista"),
     "gestor": ("Gestor Teste", "gestor2@sus.gov.br", "gestor"),
+    # Enfermeiro e Farmacêutico faltavam. É omissão com consequência: são os
+    # dois perfis de quem são a triagem e o estoque, então nenhum teste
+    # conseguia perguntar se ELES alcançam o que a matriz lhes promete.
+    "enfermeiro": ("Enf. Teste", "enfermeiro2@sus.gov.br", "enfermeiro"),
+    "farmaceutico": ("Farm. Teste", "farmaceutico2@sus.gov.br", "farmaceutico"),
 }
 
 

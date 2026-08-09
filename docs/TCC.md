@@ -746,8 +746,8 @@ Quadro — Dimensão do artefato construído
 | Tabelas sob política de RLS | 23 |
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
-| Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 373, em 33 arquivos |
+| Permissões nomeadas · perfis | 27 · 7 |
+| Casos de teste automatizados | 389, em 34 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -927,8 +927,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **373 casos de teste**, provenientes de 239
-funções distribuídas em 33 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **389 casos de teste**, provenientes de 243
+funções distribuídas em 34 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1657,6 +1657,79 @@ caminhos que existem?"* — e ela só se responde cruzando decoradores com matri
 o que nenhuma revisão de código faz de forma confiável e um verificador faz a
 cada execução.
 
+#### 9.4.19 A matriz de permissões que descrevia outro sistema
+
+**Achado.** Convertida em verificação a pergunta "toda permissão exigida existe
+na matriz?", perguntou-se também a inversa — "toda permissão da matriz é exigida
+por alguma rota?" — e a resposta reprovou. **Quatro dos vinte e seis nomes não
+guardavam coisa alguma:** `triage:read`, `prescription:read`,
+`prescription:write` e `encounter:write`.
+
+O efeito não era ausência de controle em toda parte, e sim controle **diferente
+do declarado**. A matriz atribuía `triage:read` a três perfis, e quem a lesse
+concluiria que Recepção e Farmacêutico não alcançavam a fila de triagem. Na
+verdade **qualquer sessão autenticada** a alcançava, porque nenhuma rota exigia
+o nome — as telas de leitura de triagem e de prescrição estavam protegidas
+apenas por autenticação.
+
+A causa dos outros dois era distinta e mais interessante: as rotas de prescrição
+usavam `@medico_requerido`, um decorador de **perfil**, enquanto a matriz
+declarava `prescription:write`, uma **permissão**. Duas linguagens de
+autorização coexistiam, e a documentada não era a que operava.
+
+**Análise.** A investigação do decorador de perfil revelou defeito latente
+adicional. Ele comparava a string do banco contra literais em minúsculo, ao
+passo que o módulo de RBAC normaliza por apelido. Um usuário gravado com a forma
+canônica do perfil atravessava a permissão e era barrado pelo perfil; gravado com
+o apelido, o inverso. As instalações existentes usavam o apelido, e por isso o
+defeito não se manifestara — mas a tela de cadastro de usuário é que decidia,
+sozinha e por lista escrita à mão, qual das duas formas seria gravada.
+
+Essa mesma lista escrita à mão continha um terceiro achado. Oferecia **quatro
+dos sete perfis**: Farmacêutico e Gestor existiam na matriz, tinham permissões
+próprias e **não havia como criar usuário com eles**. O Farmacêutico é
+precisamente o perfil a quem a correção descrita em 9.4.18 devolveu a gestão de
+estoque — de modo que a correção teria permanecido inalcançável.
+
+Os três achados compartilham a estrutura de 9.4.14: a mesma regra escrita em
+três lugares — matriz, decorador e formulário — com três conteúdos. O que os
+tornou visíveis foi perguntar pelo vocabulário em vez de perguntar pelas rotas.
+
+**Correção.** As permissões sem uso foram aplicadas onde deveriam valer, e não
+removidas: leitura de triagem e de prescrição passaram a exigi-las, o que
+efetivamente restringiu telas antes abertas a qualquer sessão. As rotas de
+prescrição migraram do decorador de perfil para a permissão, unificando a
+linguagem. O decorador de perfil, que permanece em uso na cirurgia, passou a
+normalizar. A lista de perfis do formulário passou a derivar da matriz, com uma
+única exceção codificada: o operador de plataforma só é atribuível por outro
+operador de plataforma, porque um administrador de hospital que pudesse
+concedê-lo escaparia do próprio escopo territorial pela porta da gestão de
+contas.
+
+Acrescentou-se ainda `schedule:write`, ausente do vocabulário: agenda e
+agendamento gravavam sob `patient:read` — permissão de leitura — por não haver
+nome para a função.
+
+**Verificação.** Aqui a lição de 9.4.9 voltou a aplicar-se ao próprio trabalho.
+Após o aperto, a suíte completa executou sem falhas nos dois bancos, e isso
+**não significava nada**: a varredura que renderiza todas as rotas autentica-se
+como administrador, perfil que detém o coringa `admin:full`. Ela mede
+renderização, não discriminação. Um controle recém-restringido não tinha um
+único caso que o exercitasse pelo lado restringido.
+
+Criou-se então um arquivo de casos que pergunta, por perfil e por resposta HTTP,
+o que cada um alcança — e que verifica **os dois sentidos**, porque restrição
+que barra quem deveria passar é indisponibilidade clínica, não segurança. Foi
+preciso, antes, acrescentar Enfermeiro e Farmacêutico ao conjunto de usuários de
+teste: faltavam, e são exatamente os perfis de quem são a triagem e o estoque.
+
+**Lição transferível.** Uma matriz de permissões é documento de governança, e
+documento de governança que não corresponde ao sistema é pior que documento
+ausente, porque produz confiança. A verificação que a mantém honesta é barata e
+tem dois sentidos: nome exigido que não existe na matriz nega todo mundo em
+silêncio; nome na matriz que rota alguma exige promete um controle que não
+existe. As duas ocorreram neste trabalho.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1804,7 +1877,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 373 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 389 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1982,10 +2055,30 @@ nada, e que a âncora acusa.
 
 O que permanece limitação não é o mecanismo, e sim o depositário. Âncora
 guardada no mesmo servidor que a aplicação pode ser reescrita por quem reescreva
-a tabela, e então não prova nada — o próprio comando o adverte ao gravar. Onde
-guardá-la, com que periodicidade e sob custódia de quem são decisões
-organizacionais, e é nesse ponto que a garantia deixa de ser de software e passa
-a ser de governança.
+a tabela, e então não prova nada — o próprio comando o adverte ao emitir. Para
+que a advertência não fosse apenas retórica, a conferência passou a aceitar o
+valor **na própria linha de comando**, sem ler arquivo algum da máquina
+verificada: quem anotou o valor em cofre de senhas, em ata de reunião ou em
+mensagem assinada o informa, e a verificação deixa de depender de um arquivo
+local. É a diferença entre conferir contra uma cópia e conferir contra uma
+testemunha.
+
+O que o software não pode fornecer é a testemunha. Onde guardar o valor, com que
+periodicidade e sob custódia de quem são decisões organizacionais, e é nesse
+ponto que a garantia deixa de ser de software e passa a ser de governança.
+
+**A trilha é detectável, não irrefutável.** Distinção que convém enunciar com
+precisão, porque a literatura frequentemente as confunde. O encadeamento por
+resumo criptográfico, somado à âncora externa, torna a adulteração *detectável*
+— alguém que a examine percebe que houve. Não a torna *irrefutável* perante
+terceiro: não há assinatura digital de chave sob custódia externa, nem carimbo
+de tempo de autoridade credenciada, nem réplica da trilha em sistema
+independente. Consequentemente, a trilha sustenta apuração interna e não constitui,
+por si, prova oponível ao próprio operador do sistema. Fechar essa distância
+exigiria elementos que este trabalho não implementa por dependerem de
+infraestrutura externa — e implementá-los sem essa infraestrutura produziria
+código não exercitável afirmando propriedade de segurança que não teria, que é
+falha pior que a ausência.
 
 **A matriz de permissões não é configurável por organização.** A associação
 entre perfis e permissões é estrutura de código, idêntica em toda instalação.
@@ -1997,7 +2090,7 @@ A decisão é global porque o sistema não oferece o lugar onde ela deveria ser
 local.
 
 O que a limitação **não** significa: não se trata de ausência de granularidade.
-As 26 permissões nomeadas são suficientemente finas, e a autorização é validada
+As 27 permissões nomeadas são suficientemente finas, e a autorização é validada
 no servidor em todas as rotas de escrita. Trata-se de ausência de um ponto de
 configuração por inquilino — o mesmo isolamento territorial que o trabalho
 implementa para os dados não existe para as regras de autorização. Fechar essa

@@ -51,6 +51,7 @@ flask hardening-check                         # confere o banco, sai 1 se falhar
 flask seed-volume --pacientes 50000           # carga para medir; --limpar remove
 flask auditoria-ancora                        # emite a âncora da trilha
 flask auditoria-ancora --conferir             # confronta a âncora com o estado atual
+flask auditoria-ancora --contra T:ID:HASH     # confere sem ler arquivo desta máquina
 ```
 
 `backup-validar` restaura o dump num schema temporário e compara as contagens com
@@ -74,8 +75,12 @@ nada acuse. Trilha vazia e sistema sem uso produzem o mesmo relatório.
 **truncar o FIM da trilha é indetectável** — os elos que sobram continuam
 consistentes entre si e nada na tabela diz que ela já foi maior. A âncora grava
 total, último id e hash final; `--conferir` acusa contagem que encolheu ou hash
-divergente. Só vale se o arquivo viver **fora deste servidor**: âncora que a
+divergente. Só vale se o valor viver **fora deste servidor**: âncora que a
 aplicação pode reescrever não prova nada, e o comando avisa isso ao gravar.
+Por isso `--contra TOTAL:ULTIMO_ID:HASH` existe — quem anotou o valor noutro
+lugar o cola aqui, e a conferência deixa de depender de arquivo local. O que
+sobra de limitação é a custódia, não o mecanismo: onde guardar e sob custódia
+de quem é decisão de governança, e nenhum código deste repositório a resolve.
 
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é
