@@ -125,9 +125,10 @@ contraste verificado nos dois temas e VLibras.
   onde. A tabela pertence a um papel próprio, e a aplicação não tem `UPDATE`
   nem `DELETE` nela — `flask hardening-check` confere. **Truncar o FIM da cadeia
   não rompe elo nenhum**: os elos que sobram seguem consistentes. Por isso
-  `flask auditoria-ancora` registra total, último id e hash final, e
-  `--conferir` acusa a divergência — desde que o arquivo viva fora deste
-  servidor.
+  `flask auditoria-ancora` mantém um journal encadeado de retratos da trilha.
+  Guardada **uma linha qualquer** fora do servidor, `--retida <hash>` valida
+  todo o prefixo até ela — a custódia deixa de exigir disciplina contínua. O que
+  o mecanismo não fecha está exercitado em teste, não só escrito.
 - **LGPD** — base legal do tratamento registrada por finalidade, trilha de "quem
   acessou meu prontuário" e exportação auditada. A tela distingue o que se apoia
   em **consentimento** (pesquisa, contato, compartilhamento) do que se apoia na
@@ -209,7 +210,7 @@ Acesse `http://localhost:5000`.
 | Models | 29 arquivos, 42 tabelas |
 | Templates | 118 |
 | Migrations | 14, exercitadas do zero e em reversa no CI |
-| Testes | 243 funções → 389 casos, em 34 arquivos, nos dois bancos |
+| Testes | 253 funções → 399 casos, em 35 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |
 | Permissões RBAC | 27, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |

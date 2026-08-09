@@ -49,9 +49,11 @@ flask backup-validar backups/<arquivo>.dump   # restaura num schema e confere
 flask backup-validar --apenas-restore <arq>   # para arquivo antigo
 flask hardening-check                         # confere o banco, sai 1 se falhar
 flask seed-volume --pacientes 50000           # carga para medir; --limpar remove
-flask auditoria-ancora                        # emite a âncora da trilha
-flask auditoria-ancora --conferir             # confronta a âncora com o estado atual
+flask auditoria-ancora                        # acrescenta uma âncora ao journal
+flask auditoria-ancora --conferir             # confere o journal e a trilha
+flask auditoria-ancora --retida <hash>        # valida o prefixo até a âncora guardada fora
 flask auditoria-ancora --contra T:ID:HASH     # confere sem ler arquivo desta máquina
+flask auditoria-ancora --destino stdout       # imprime a linha, para canalizar a um coletor
 ```
 
 `backup-validar` restaura o dump num schema temporário e compara as contagens com
@@ -75,12 +77,29 @@ nada acuse. Trilha vazia e sistema sem uso produzem o mesmo relatório.
 **truncar o FIM da trilha é indetectável** — os elos que sobram continuam
 consistentes entre si e nada na tabela diz que ela já foi maior. A âncora grava
 total, último id e hash final; `--conferir` acusa contagem que encolheu ou hash
-divergente. Só vale se o valor viver **fora deste servidor**: âncora que a
-aplicação pode reescrever não prova nada, e o comando avisa isso ao gravar.
-Por isso `--contra TOTAL:ULTIMO_ID:HASH` existe — quem anotou o valor noutro
-lugar o cola aqui, e a conferência deixa de depender de arquivo local. O que
-sobra de limitação é a custódia, não o mecanismo: onde guardar e sob custódia
-de quem é decisão de governança, e nenhum código deste repositório a resolve.
+divergente. As âncoras vivem num **journal encadeado e só de acréscimo**
+(`backups/ancora_auditoria.jsonl`): cada linha referencia o hash da anterior.
+
+Seja preciso sobre o que isso compra, porque é fácil prometer demais:
+
+- **Não** fecha truncar o fim do journal — é a mesma recursão do problema
+  original. `tests/test_ancora_journal.py` exercita essa limitação de propósito,
+  para que ela continue verdadeira por medição e não por memória.
+- **Fecha** reescrever ou remover uma âncora do meio: o elo quebra.
+- **Barateia a custódia**, que é o ganho principal. Guardada UMA linha qualquer
+  fora do servidor, `--retida <hash>` valida todo o prefixo até ela. A obrigação
+  operacional passa de "guarde sempre a última" para "guarde qualquer uma, uma
+  vez" — a diferença entre um procedimento que ninguém cumpre e um que sobrevive.
+- **Testemunha contra si mesmo** sem nada externo: `--conferir` compara âncoras
+  CONSECUTIVAS e acusa trilha que encolheu entre dois checkpoints, ainda que
+  hoje ela esteja internamente consistente.
+
+`--destino stdout` imprime só a linha JSON, para canalizar a um coletor que a
+aplicação não controle. É a única forma de a regra "quem escreve o log não
+guarda a âncora" ser verdade — e o que sobra de limitação é exatamente essa
+custódia, que é decisão de governança e que nenhum código deste repositório
+resolve. O modo `"a"` na escrita é convenção, não garantia: append-only de
+verdade é do sistema de arquivos (`chattr +a`, ACL sem `FILE_WRITE_DATA`).
 
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é

@@ -747,7 +747,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 389, em 34 arquivos |
+| Casos de teste automatizados | 399, em 35 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -927,8 +927,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **389 casos de teste**, provenientes de 243
-funções distribuídas em 34 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **399 casos de teste**, provenientes de 253
+funções distribuídas em 35 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1877,7 +1877,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 389 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 399 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -2053,15 +2053,56 @@ contagem ou divergência do resumo. Um caso de teste apaga o último registro e
 verifica os dois lados da afirmação: que a verificação da cadeia **não** acusa
 nada, e que a âncora acusa.
 
-O que permanece limitação não é o mecanismo, e sim o depositário. Âncora
-guardada no mesmo servidor que a aplicação pode ser reescrita por quem reescreva
-a tabela, e então não prova nada — o próprio comando o adverte ao emitir. Para
-que a advertência não fosse apenas retórica, a conferência passou a aceitar o
-valor **na própria linha de comando**, sem ler arquivo algum da máquina
-verificada: quem anotou o valor em cofre de senhas, em ata de reunião ou em
-mensagem assinada o informa, e a verificação deixa de depender de um arquivo
-local. É a diferença entre conferir contra uma cópia e conferir contra uma
-testemunha.
+As âncoras não são um valor único reescrito a cada emissão, e sim um **registro
+sequencial encadeado**: cada linha referencia o resumo da anterior, de modo que
+a série de retratos é ela própria uma cadeia. Convém enunciar com precisão o que
+essa construção obtém, porque é fácil atribuir-lhe mais do que entrega.
+
+Ela **não** resolve a supressão das últimas linhas do próprio registro
+sequencial — é a mesma recursão do problema original, e nenhuma quantidade de
+encadeamento a encerra. A limitação é exercitada por caso de teste específico,
+para que permaneça verdadeira por medição e não por memória: se algum dia esse
+caso passar a falhar, é porque alguém acrescentou defesa, e a documentação
+precisará acompanhar.
+
+Ela **resolve** a reescrita de um retrato passado, manobra que a âncora isolada
+não detecta — com um único valor, quem suprime o fim da trilha reescreve o valor
+e o par volta a corresponder.
+
+Ela **reduz o custo da custódia externa**, que é o ganho principal e o menos
+evidente. Retida uma linha qualquer fora do servidor — por mensagem, em ata, em
+cofre de senhas —, a verificação confirma que ela pertence ao registro e que
+todo o trecho anterior a ela corresponde. A obrigação operacional deixa de ser
+"guardar sempre o último valor" e passa a ser "guardar um valor qualquer, uma
+vez". A diferença é entre um procedimento que a rotina abandona e um que
+sobrevive a ela.
+
+Ela **produz, por fim, uma verificação que não depende de nada externo**: a
+comparação entre retratos consecutivos acusa que a trilha diminuiu **entre dois
+momentos de conferência**, ainda que hoje esteja internamente consistente. O
+registro testemunha contra o sistema que o mantém.
+
+O que permanece limitação não é o mecanismo, e sim o depositário. Registro
+guardado no mesmo servidor que a aplicação pode ser reescrito por quem reescreva
+a tabela — o próprio comando o adverte ao emitir. Para que a advertência não
+fosse apenas retórica, a conferência aceita o valor **na própria linha de
+comando**, sem ler arquivo algum da máquina verificada, e a emissão admite
+destino em saída padrão, para que o retrato seja encaminhado a um coletor que a
+aplicação não controle. Quem anotou o valor em cofre de senhas, em ata de
+reunião ou em mensagem assinada o informa, e a verificação deixa de depender de
+um arquivo local. É a diferença entre conferir contra uma cópia e conferir
+contra uma testemunha.
+
+Registre-se ainda o que a escrita em modo de acréscimo **não** é. Abrir o
+arquivo em modo de anexação é convenção da aplicação, não garantia: o mesmo
+processo poderia abri-lo em modo de escrita. Acréscimo efetivo é propriedade do
+sistema de arquivos — `chattr +a` em sistemas Linux, lista de controle de acesso
+sem permissão de escrita direta em Windows — e pertence, portanto, à mesma
+fronteira entre garantia da aplicação e dependência de infraestrutura que a
+seção 8.2 torna executável. O comando faz o que lhe cabe: recusa acrescentar
+sobre um registro que não corresponda, porque anexar um retrato válido a uma
+sequência rompida produziria um arquivo que **aparenta crescer** e cujo trecho
+anterior já não vale — o pior dos dois estados.
 
 O que o software não pode fornecer é a testemunha. Onde guardar o valor, com que
 periodicidade e sob custódia de quem são decisões organizacionais, e é nesse

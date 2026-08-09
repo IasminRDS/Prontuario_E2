@@ -334,13 +334,20 @@ def _registrar_cli(app):
 
     @app.cli.command("auditoria-ancora")
     @click.option("--conferir", is_flag=True,
-                  help="Compara com a âncora anterior em vez de emitir uma nova.")
-    @click.option("--arquivo", default="backups/ancora_auditoria.json",
-                  help="Onde a âncora é lida e gravada.")
+                  help="Confere o journal e a última âncora contra a trilha.")
+    @click.option("--arquivo", default="backups/ancora_auditoria.jsonl",
+                  help="Journal de âncoras. Uma linha por emissão, só acréscimo.")
     @click.option("--contra", default=None, metavar="TOTAL:ULTIMO_ID:HASH",
-                  help="Confere contra valores dados na linha de comando, sem "
-                       "ler arquivo nenhum deste servidor.")
-    def auditoria_ancora(conferir, arquivo, contra):
+                  help="Confere contra valores informados, sem ler arquivo "
+                       "algum desta máquina.")
+    @click.option("--retida", default=None, metavar="HASH_ANCORA",
+                  help="Hash de uma âncora guardada fora. Valida todo o "
+                       "prefixo do journal até ela.")
+    @click.option("--destino", type=click.Choice(["arquivo", "stdout"]),
+                  default="arquivo", show_default=True,
+                  help="'stdout' imprime só a linha, para canalizar a um "
+                       "coletor externo.")
+    def auditoria_ancora(conferir, arquivo, contra, retida, destino):
         """Emite ou confere a âncora da trilha de auditoria.
 
         O encadeamento por hash detecta alteração e remoção NO MEIO da cadeia.
@@ -348,26 +355,35 @@ def _registrar_cli(app):
         sobram continuam consistentes e nada indica que a trilha já foi maior —
         e é o fim que interessa a quem quer ocultar o que acabou de fazer.
 
-        A defesa é comparar com um estado registrado antes. Rode sem argumento
-        para emitir a âncora, e **guarde o valor fora deste servidor**; rode
-        com `--conferir` para comparar. Guardar a âncora no mesmo lugar que se
-        pretende proteger não protege de nada.
+        As âncoras são gravadas num journal **encadeado e só de acréscimo**:
+        cada linha referencia o hash da anterior. Isso não fecha o truncamento
+        do fim do próprio journal — é a mesma recursão, e só custódia externa a
+        fecha. O que fecha é o custo dessa custódia: guardada UMA linha qualquer
+        fora do servidor, `--retida HASH` valida todo o prefixo até ela. A
+        obrigação deixa de ser "guarde sempre a última" e passa a ser "guarde
+        qualquer uma, uma vez".
 
-        `--contra TOTAL:ULTIMO_ID:HASH` existe por causa dessa frase: com ela, a
-        conferência não lê arquivo algum desta máquina. Quem tem o valor
-        anotado — em cofre de senhas, em ata, em mensagem assinada — o cola aqui,
-        e a verificação deixa de depender de um arquivo que o próprio servidor
-        pode reescrever. É a diferença entre conferir contra uma cópia e
-        conferir contra uma testemunha.
+        E o journal testemunha contra si mesmo sem depender de nada externo:
+        `--conferir` compara âncoras CONSECUTIVAS e acusa a trilha que encolheu
+        entre dois checkpoints, ainda que hoje esteja internamente consistente.
+
+        `--destino stdout` imprime só a linha JSON, para canalizar a um coletor
+        que a aplicação não controle — que é a única forma de a regra "quem
+        escreve o log não guarda a âncora" ser verdade.
         """
-        import json
         import pathlib
         import sys
-        from datetime import datetime
 
+        from utils import ancora as ancora_mod
         from utils.audit import ancora_da_trilha, conferir_ancora
 
         caminho = pathlib.Path(arquivo)
+
+        def _sair_com(problemas, titulo):
+            print(titulo)
+            for p in problemas:
+                print(f"  {p}")
+            sys.exit(1)
 
         if contra:
             try:
@@ -377,44 +393,78 @@ def _registrar_cli(app):
                 sys.exit("--contra espera TOTAL:ULTIMO_ID:HASH")
             problemas = conferir_ancora(*esperados)
             if problemas:
-                print("ÂNCORA INFORMADA NÃO CONFERE:")
-                for p in problemas:
-                    print(f"  {p}")
-                sys.exit(1)
+                _sair_com(problemas, "ÂNCORA INFORMADA NÃO CONFERE:")
             print(f"trilha íntegra contra o valor informado: "
                   f"{esperados[0]} registros preservados")
             return
 
-        if conferir:
-            if not caminho.is_file():
-                sys.exit(f"não encontrei a âncora em {caminho} — emita uma antes")
-            dados = json.loads(caminho.read_text(encoding="utf-8"))
-            problemas = conferir_ancora(dados["total"], dados["ultimo_id"],
-                                        dados["hash_final"])
+        linhas, defeitos = ancora_mod.ler(caminho)
+
+        if conferir or retida:
+            if not linhas:
+                # Defeito de formato precisa vir ANTES do "vazio": journal
+                # ilegível e journal inexistente são situações opostas, e
+                # relatar a primeira como a segunda esconde a adulteração.
+                if defeitos:
+                    _sair_com(defeitos, "JOURNAL ILEGÍVEL:")
+                sys.exit(f"journal ausente em {caminho} — emita uma âncora antes")
+            problemas = defeitos + ancora_mod.verificar(linhas)
+
+            if retida:
+                indice = ancora_mod.localizar(linhas, retida.strip())
+                if indice is None:
+                    _sair_com(
+                        [f"o hash informado não está neste journal — ou a "
+                         f"âncora foi removida, ou o journal é outro"],
+                        "ÂNCORA RETIDA NÃO ENCONTRADA:")
+                prefixo = ancora_mod.verificar(linhas[:indice + 1])
+                if prefixo:
+                    _sair_com(prefixo, "O PREFIXO ATÉ A ÂNCORA RETIDA NÃO FECHA:")
+                print(f"âncora retida confere: é a #{indice + 1} de "
+                      f"{len(linhas)}, e todo o prefixo até ela fecha")
+
+            ultima = linhas[-1]
+            problemas += conferir_ancora(ultima["total"], ultima["ultimo_id"],
+                                         ultima["hash_final"])
             if problemas:
-                print(f"ÂNCORA DE {dados['emitida_em']} NÃO CONFERE:")
-                for p in problemas:
-                    print(f"  {p}")
-                sys.exit(1)
-            print(f"trilha íntegra desde {dados['emitida_em']}: "
-                  f"{dados['total']} registros preservados")
+                _sair_com(problemas, "A TRILHA NÃO CONFERE COM O JOURNAL:")
+            print(f"journal íntegro: {len(linhas)} âncora(s) encadeadas, a "
+                  f"última de {ultima['emitida_em']}")
+            print(f"trilha preservada: {ultima['total']} registros")
             return
 
+        # Emissão. Recusar acréscimo sobre journal inconsistente é deliberado:
+        # apendar uma âncora boa sobre uma cadeia rompida produz um journal que
+        # PARECE crescer e cujo prefixo já não vale — o pior dos dois mundos.
+        if defeitos or (linhas and ancora_mod.verificar(linhas)):
+            _sair_com(defeitos + ancora_mod.verificar(linhas),
+                      "RECUSO ACRESCENTAR: o journal existente não fecha.")
+
         total, ultimo_id, hash_final = ancora_da_trilha()
+        anterior = linhas[-1]["hash_ancora"] if linhas else None
+        nova = ancora_mod.montar(total, ultimo_id, hash_final, anterior)
+        linha_json = ancora_mod._canonico(nova)
+
+        if destino == "stdout":
+            print(linha_json)
+            return
+
         caminho.parent.mkdir(parents=True, exist_ok=True)
-        caminho.write_text(json.dumps({
-            "emitida_em": datetime.utcnow().isoformat(timespec="seconds"),
-            "total": total,
-            "ultimo_id": ultimo_id,
-            "hash_final": hash_final,
-        }, indent=2), encoding="utf-8")
-        print(f"âncora emitida: {total} registros, último id {ultimo_id}")
-        print(f"gravada em {caminho}")
-        print("\nANOTE ESTE VALOR FORA DESTE SERVIDOR:")
-        print(f"  {total}:{ultimo_id}:{hash_final}")
-        print("  flask auditoria-ancora --contra <o valor acima>")
-        print("Âncora que a aplicação pode reescrever não prova nada; é o valor "
-              "guardado noutro lugar que prova.")
+        # Modo "a" e nunca "w": a aplicação não reescreve o journal. Isso é
+        # convenção, não garantia — append-only de verdade é do sistema de
+        # arquivos (`chattr +a` no Linux, ACL sem FILE_WRITE_DATA no Windows),
+        # e é a metade que a aplicação não pode entregar sozinha.
+        with caminho.open("a", encoding="utf-8") as destino_arquivo:
+            destino_arquivo.write(linha_json + "\n")
+
+        print(f"âncora #{len(linhas) + 1} emitida: {total} registros, "
+              f"último id {ultimo_id}")
+        print(f"acrescentada a {caminho}")
+        print("\nGUARDE ESTE HASH FORA DESTE SERVIDOR (uma vez basta):")
+        print(f"  {nova['hash_ancora']}")
+        print(f"  flask auditoria-ancora --retida {nova['hash_ancora']}")
+        print("Journal que a aplicação pode reescrever não prova nada; é a "
+              "linha guardada noutro lugar que prova.")
 
     @app.cli.command("seed-volume")
     @click.option("--pacientes", default=50_000, show_default=True)
