@@ -49,7 +49,17 @@ LEITURA = re.compile(
 )
 # `request.form` usado inteiro (dict(), .to_dict(), iteração): não dá para saber
 # quais chaves são lidas, então a view fica fora da comparação.
-ATACADO = re.compile(r"request\.(?:form|values)\b(?!\s*(?:\.get|\.getlist|\[))")
+#
+# A chave lida por VARIÁVEL — `request.form.get(campo)` dentro de um laço —
+# entra aqui pelo mesmo motivo: a análise é estática e não sabe o que a variável
+# vale. Sem esta cláusula o detector acusava campo lido em laço como descartado,
+# que é o inverso do que ele existe para encontrar. Apareceu ao unificar a
+# conversão de sinais vitais da triagem, que passou a ler os oito campos por
+# laço em vez de um a um.
+ATACADO = re.compile(
+    r"request\.(?:form|values)\b(?!\s*(?:\.get|\.getlist|\[))"
+    r"|request\.(?:form|values)(?:\.get|\.getlist)?\(\s*(?!['\"])[A-Za-z_]"
+)
 
 # O CSRF é lido pelo Flask-WTF, não pela view.
 IGNORAR = {"csrf_token"}

@@ -12,6 +12,7 @@ from models.medico import Medico
 from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_paciente
 from utils.audit import auditar_aqui, log_auditoria, registrar
 from utils.rbac import requer_permissao
+from utils.numeros import decimal_de, inteiro_de
 from utils.terminologias import descricao_cid
 
 prontuario_bp = Blueprint("prontuario", __name__, url_prefix="/prontuarios")
@@ -42,25 +43,20 @@ def _preencher(p, form):
         if campo in form:
             setattr(p, campo, (form.get(campo) or "").strip() or None)
 
+    # `utils.numeros` e não conversão local: a mesma conversão estava escrita
+    # aqui e em `routes/triagem.py` com comportamentos diferentes, e "38,4" era
+    # aceito por esta rota e derrubava a triagem inteira.
     for campo in CAMPOS_NUM:
         if campo in form:
-            bruto = (form.get(campo) or "").strip().replace(",", ".")
-            if not bruto:
-                setattr(p, campo, None)
-                continue
             try:
-                setattr(p, campo, float(bruto))
+                setattr(p, campo, decimal_de(form.get(campo)))
             except ValueError:
                 erros.append(f"{campo.replace('_', ' ')} deve ser numérico")
 
     for campo in CAMPOS_INT:
         if campo in form:
-            bruto = (form.get(campo) or "").strip()
-            if not bruto:
-                setattr(p, campo, None)
-                continue
             try:
-                setattr(p, campo, int(bruto))
+                setattr(p, campo, inteiro_de(form.get(campo)))
             except ValueError:
                 erros.append(f"{campo.replace('_', ' ')} deve ser inteiro")
 

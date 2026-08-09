@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import (Blueprint, current_app, flash, jsonify, redirect,
+                   render_template, request, url_for)
 from flask_login import login_required, current_user
 from models.triagem import Triagem
 from models.paciente import Paciente
 from database.db import db
 from utils.audit import audit_log, auditar_aqui
+from utils.numeros import decimal_de, inteiro_de
 from datetime import datetime, date
 from utils.rbac import requer_permissao
 
@@ -57,6 +59,30 @@ def nova(paciente_id=None):
 
             disc_raw = request.form.getlist("discriminadores")
 
+            # Converte ANTES de montar o objeto e NOMEANDO o campo. Antes, a
+            # conversão acontecia dentro da construção: um valor ilegível
+            # derrubava a triagem inteira e a tela mostrava a exceção crua do
+            # Python, sem dizer qual campo. E era `float()` direto, sem trocar
+            # a vírgula — "38,4" era aceito pelo prontuário e recusado aqui.
+            vitais = {}
+            for campo, converter in (
+                ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
+                ("glicemia", decimal_de), ("peso", decimal_de),
+                ("altura", decimal_de), ("frequencia_cardiaca", inteiro_de),
+                ("frequencia_respiratoria", inteiro_de),
+                ("dor_escala", inteiro_de),
+            ):
+                try:
+                    vitais[campo] = converter(request.form.get(campo))
+                except ValueError:
+                    flash(f"{campo.replace('_', ' ').capitalize()}: valor "
+                          f"inválido. Use número, com vírgula ou ponto.",
+                          "warning")
+                    return render_template(
+                        "triagem/form.html", pacientes=pacientes,
+                        paciente_sel=(Paciente.query.get(paciente_id)
+                                      if paciente_id else None))
+
             t = Triagem(
                 paciente_id=int(request.form["paciente_id"]),
                 unidade_id=current_user.unidade_id,
@@ -67,42 +93,14 @@ def nova(paciente_id=None):
                 or None,
                 pressao_arterial=request.form.get("pressao_arterial", "").strip()
                 or None,
-                temperatura=(
-                    float(request.form["temperatura"])
-                    if request.form.get("temperatura")
-                    else None
-                ),
-                frequencia_cardiaca=(
-                    int(request.form["frequencia_cardiaca"])
-                    if request.form.get("frequencia_cardiaca")
-                    else None
-                ),
-                frequencia_respiratoria=(
-                    int(request.form["frequencia_respiratoria"])
-                    if request.form.get("frequencia_respiratoria")
-                    else None
-                ),
-                saturacao_o2=(
-                    float(request.form["saturacao_o2"])
-                    if request.form.get("saturacao_o2")
-                    else None
-                ),
-                glicemia=(
-                    float(request.form["glicemia"])
-                    if request.form.get("glicemia")
-                    else None
-                ),
-                peso=float(request.form["peso"]) if request.form.get("peso") else None,
-                altura=(
-                    float(request.form["altura"])
-                    if request.form.get("altura")
-                    else None
-                ),
-                dor_escala=(
-                    int(request.form["dor_escala"])
-                    if request.form.get("dor_escala")
-                    else None
-                ),
+                temperatura=vitais["temperatura"],
+                frequencia_cardiaca=vitais["frequencia_cardiaca"],
+                frequencia_respiratoria=vitais["frequencia_respiratoria"],
+                saturacao_o2=vitais["saturacao_o2"],
+                glicemia=vitais["glicemia"],
+                peso=vitais["peso"],
+                altura=vitais["altura"],
+                dor_escala=vitais["dor_escala"],
                 discriminadores=json.dumps(disc_raw) if disc_raw else None,
                 observacoes=request.form.get("observacoes", "").strip() or None,
                 status="aguardando",
@@ -113,9 +111,13 @@ def nova(paciente_id=None):
             db.session.commit()
             flash(f"Triagem registrada — classificação: {t.cor_info[0]}.", "success")
             return redirect(url_for("triagem.index"))
-        except Exception as e:
+        except Exception:
+            # REGISTRA a exceção e NÃO a exibe: o texto cru do Python não ajuda
+            # quem tria e revela detalhe interno na tela.
             db.session.rollback()
-            flash(f"Erro ao registrar triagem: {e}", "danger")
+            current_app.logger.exception("falha ao registrar triagem")
+            flash("Não foi possível registrar a triagem. A equipe técnica foi "
+                  "notificada.", "danger")
 
     paciente_sel = Paciente.query.get(paciente_id) if paciente_id else None
     return render_template(
