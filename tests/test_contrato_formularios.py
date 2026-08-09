@@ -79,12 +79,12 @@ PENDENCIAS = {
     # decidido e implementado em `e2f7b48c9d13`; o que sobrou não é campo
     # descartado, é campo derivado ou renomeado — ver a docstring da migration.
 
-    # --- campos soltos, cada um com sua decisão.
-    # A entrada do PS descarta a classificação de risco escolhida na chegada e
-    # o modo de chegada. A rota tenta suprir a classificação vinculando a
-    # triagem mais recente do paciente; sem triagem, não fica nada — e
-    # relatorios_hosp/ps.html agrupa por `AtendimentoPS.classificacao`.
-    "templates/ps/entrada.html -> ps.entrada": {"classificacao", "modo_chegada"},
+    # A entrada do PS descartava `classificacao` e `modo_chegada`. Resolvido em
+    # dois lugares diferentes de propósito: a classificação passou a CRIAR uma
+    # triagem (o dado já tinha dono — duplicá-lo numa coluna nova em
+    # `atendimentos_ps` seria a mesma replicação que a seção 9.4.14 documenta),
+    # e o modo de chegada virou coluna, porque não existia em lugar nenhum.
+
     # --- FALSO POSITIVO da análise estática, não defeito.
     # O campo existe no arquivo mas é renderizado só no OUTRO modo da tela, e
     # a rota que o recebe de fato o lê. O detector é estático e não avalia o

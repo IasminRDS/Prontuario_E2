@@ -485,7 +485,9 @@ Resta um limite do mecanismo, e não da configuração: o encadeamento detecta
 alteração e remoção intermediária, mas **não detecta a remoção dos registros
 finais**, que deixa a cadeia remanescente internamente consistente. A distinção
 importa porque o truncamento do fim é justamente o que serve a quem pretende
-ocultar a própria ação recente. É discutida na seção 12.
+ocultar a própria ação recente. A mitigação — ancoragem externa do resumo do
+último elo — foi implementada e é discutida na seção 12, onde se argumenta que o
+que resta de limitação é a custódia da âncora, não o mecanismo.
 
 ### 4.3 Multi-Tenancy
 
@@ -740,12 +742,12 @@ Quadro — Dimensão do artefato construído
 |---|---|
 | Módulos funcionais (*blueprints*) | 45 |
 | Rotas expostas | 213 — 152 aceitam GET; 105, método de mutação |
-| Tabelas no modelo de dados | 42, com 531 colunas e 114 chaves estrangeiras |
+| Tabelas no modelo de dados | 42, com 532 colunas e 114 chaves estrangeiras |
 | Tabelas sob política de RLS | 23 |
-| Migrações de esquema versionadas | 13 |
+| Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 368, em 33 arquivos |
+| Casos de teste automatizados | 371, em 33 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -925,12 +927,12 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **368 casos de teste**, provenientes de 235
+A suíte automatizada compreende **371 casos de teste**, provenientes de 237
 funções distribuídas em 33 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
-SQLite, com 33 casos não aplicáveis, correspondentes às verificações de RLS e de
+SQLite, com 27 casos não aplicáveis, correspondentes às verificações de RLS e de
 dialeto, que não possuem equivalente naquele sistema.
 
 Dois testes estruturais sustentam a maior parte da proteção contra
@@ -1499,6 +1501,82 @@ restrição mede metade do resultado — e é a metade que não dói quando est�
 errada. Formulado como pergunta de auditoria: *"o que este endurecimento pode
 ter impedido, e como saberíamos?"*
 
+#### 9.4.16 A base legal implementada e nunca exercida
+
+**Achado.** O modelo de dados previa o registro de consentimento do titular
+desde o início: tabela criada, migração aplicada, campos de finalidade,
+identificação da versão do termo, data de concessão e data de revogação. A
+entidade constava do diagrama, da documentação e do inventário de tratamento de
+dados exigido pelo art. 37 da LGPD.
+
+**Nenhuma linha de código a instanciava.** Nenhuma rota a escrevia, nenhuma tela
+a exibia, nenhum caso de teste a exercitava. A varredura descrita em 9.4.11 —
+que procura rota sem porta de entrada — não a alcançava, porque não havia rota:
+o defeito estava um nível abaixo, numa entidade sem qualquer código que a
+tocasse.
+
+**Análise.** A distinção que este achado impõe é entre **conformidade
+documentada** e **conformidade operante**. O inventário de tratamento afirmava
+que o sistema registrava consentimento, e a afirmação era verificável contra o
+modelo de dados — a tabela existia. Não era verificável contra o comportamento,
+e é o comportamento que a norma exige. Uma auditoria de conformidade conduzida
+sobre a documentação e o *schema* teria aprovado o sistema.
+
+O achado é agravado por um erro conceitual que a implementação revelou: o
+registro de consentimento fora modelado como se toda finalidade dependesse de
+consentimento. Não depende. O tratamento de dados de saúde para a **tutela da
+saúde** tem base legal própria no art. 11, II, "f" da LGPD, e não é
+consentimento — condicioná-lo a consentimento seria juridicamente incorreto e
+clinicamente perigoso, porque implicaria que a recusa do titular impede o
+atendimento. Consentimento é a base legal de finalidades **acessórias**:
+pesquisa, compartilhamento com a rede nacional, contato.
+
+**Correção.** Cada finalidade passou a declarar sua base legal e, derivada
+dela, a própria revogabilidade: apenas o que se fundamenta em consentimento pode
+ser revogado. A assistência à saúde aparece na tela do titular como tratamento
+informado, não como pedido de autorização — o que atende ao art. 9º, que
+assegura o direito de **saber**, sem converter em opcional o que a lei não fez
+opcional. Foram acrescentadas as rotas de registro e revogação, a tela
+correspondente, o bloco no portal do cidadão e casos de teste que exercitam o
+ciclo completo.
+
+**Lição transferível.** Existência de estrutura de dados não é evidência de
+funcionamento. A pergunta que separa uma coisa da outra é operacional e não
+documental: *"que caminho da interface escreve nesta tabela, e que teste percorre
+esse caminho?"* Tabela sem escritor é, para efeito de conformidade, tabela
+inexistente — com o agravante de aparentar o contrário.
+
+#### 9.4.17 Dois campos descartados, duas correções diferentes
+
+**Achado.** O detector de contrato de formulário descrito em 9.4.12 acusava, na
+tela de entrada do pronto-socorro, dois campos preenchidos pelo usuário e nunca
+lidos pela rota: a **classificação de risco na chegada** e o **modo de chegada**
+— se o paciente veio por demanda espontânea, por serviço móvel de urgência, por
+transferência.
+
+**Análise.** O interesse do caso está em os dois campos exigirem correções
+opostas, e a razão ser a mesma que a seção 9.4.14 desenvolve.
+
+A classificação de risco **já tinha dono**: é atributo da triagem, entidade
+existente, com vocabulário Manchester próprio e relacionamento estabelecido com
+o atendimento. Acrescentar uma coluna de classificação ao atendimento resolveria
+o sintoma e criaria a nona ocorrência da replicação de regra — dois lugares
+guardando a mesma informação clínica, livres para divergir. A rota passou,
+portanto, a **criar uma triagem** a partir da classificação informada na chegada,
+e o atendimento a apontar para ela. O dado deixou de ser descartado sem que
+nenhuma informação passasse a existir em duplicidade.
+
+O modo de chegada não tinha dono em lugar nenhum do modelo. Não era replicação;
+era ausência. Recebeu coluna própria, com vocabulário fechado no modelo — não no
+gabarito da tela, pela razão exposta em 9.4.14 — e migração versionada.
+
+**Lição transferível.** Diante de um campo descartado, a correção não é
+automaticamente "criar a coluna". A pergunta anterior é se o dado já existe em
+algum lugar do modelo. Se existe, criar coluna é introduzir divergência futura
+sob aparência de correção; se não existe, deixar de criá-la é perder a
+informação. As duas respostas erradas são simétricas, e distingui-las exige
+consultar o modelo, não o formulário.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1646,7 +1724,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 368 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 371 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1812,11 +1890,22 @@ permanece internamente consistente, e nada na tabela indica que ela já foi
 maior. E é precisamente a supressão do fim que interessa a quem pretende ocultar
 o que acabou de fazer.
 
-A mitigação conhecida é ancorar externamente o resumo do último elo — publicá-lo
+A mitigação conhecida é ancorar externamente o resumo do último elo — registrá-lo
 em meio que a aplicação não possa reescrever, com periodicidade definida, de
-modo que a divergência entre o resumo publicado e o resumo corrente revele o
-truncamento. Não foi implementada neste trabalho, e a ancoragem depende de um
-depositário externo, que é decisão organizacional e não de software.
+modo que a divergência entre o valor registrado e o valor corrente revele o
+truncamento. O mecanismo foi implementado ao final deste trabalho: um comando
+emite a âncora — total de registros, identificador do último e resumo do elo
+final — e um segundo modo a confronta com o estado corrente, acusando redução da
+contagem ou divergência do resumo. Um caso de teste apaga o último registro e
+verifica os dois lados da afirmação: que a verificação da cadeia **não** acusa
+nada, e que a âncora acusa.
+
+O que permanece limitação não é o mecanismo, e sim o depositário. Âncora
+guardada no mesmo servidor que a aplicação pode ser reescrita por quem reescreva
+a tabela, e então não prova nada — o próprio comando o adverte ao gravar. Onde
+guardá-la, com que periodicidade e sob custódia de quem são decisões
+organizacionais, e é nesse ponto que a garantia deixa de ser de software e passa
+a ser de governança.
 
 **Medição limitada a volume sintético.** Os planos de execução foram analisados
 com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição

@@ -120,9 +120,11 @@ contraste verificado nos dois temas e VLibras.
 - **Auditoria encadeada por hash** — cada evento carrega o hash do anterior.
   Alterar ou remover uma linha do meio rompe a cadeia, e a verificação aponta
   onde. A tabela pertence a um papel próprio, e a aplicação não tem `UPDATE`
-  nem `DELETE` nela — `flask hardening-check` confere. **Truncar o FIM da
-  cadeia continua indetectável**: os elos que sobram seguem consistentes. Fechar
-  isso exige ancorar o último hash fora do alcance da aplicação.
+  nem `DELETE` nela — `flask hardening-check` confere. **Truncar o FIM da cadeia
+  não rompe elo nenhum**: os elos que sobram seguem consistentes. Por isso
+  `flask auditoria-ancora` registra total, último id e hash final, e
+  `--conferir` acusa a divergência — desde que o arquivo viva fora deste
+  servidor.
 - **LGPD** — base legal do tratamento registrada por finalidade, trilha de "quem
   acessou meu prontuário" e exportação auditada. A tela distingue o que se apoia
   em **consentimento** (pesquisa, contato, compartilhamento) do que se apoia na
@@ -203,8 +205,8 @@ Acesse `http://localhost:5000`.
 | Rotas | 213 |
 | Models | 29 arquivos, 42 tabelas |
 | Templates | 118 |
-| Migrations | 13, exercitadas do zero e em reversa no CI |
-| Testes | 235 funções → 368 casos, em 33 arquivos, nos dois bancos |
+| Migrations | 14, exercitadas do zero e em reversa no CI |
+| Testes | 237 funções → 371 casos, em 33 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |
 | Permissões RBAC | 26, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |

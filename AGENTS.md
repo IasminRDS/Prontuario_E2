@@ -49,6 +49,8 @@ flask backup-validar backups/<arquivo>.dump   # restaura num schema e confere
 flask backup-validar --apenas-restore <arq>   # para arquivo antigo
 flask hardening-check                         # confere o banco, sai 1 se falhar
 flask seed-volume --pacientes 50000           # carga para medir; --limpar remove
+flask auditoria-ancora                        # emite a âncora da trilha
+flask auditoria-ancora --conferir             # confronta a âncora com o estado atual
 ```
 
 `backup-validar` restaura o dump num schema temporário e compara as contagens com
@@ -60,6 +62,20 @@ papel da aplicação não tem e não deve ter.
 ativo, papel sem `BYPASSRLS`, ausência de escopo pré-definido no ambiente e
 propriedade da tabela de auditoria. É a fronteira entre garantia da aplicação e
 dependência de infraestrutura, em forma executável.
+
+A oitava verificação é de sinal contrário às outras sete: elas confirmam que
+algo está **impedido**, ela confirma que a aplicação **ainda consegue** inserir
+na trilha. Existe porque o endurecimento prescrito pelas outras já quebrou o
+registro de auditoria — transferir a tabela leva a sequência junto, e `GRANT
+INSERT` sem `GRANT USAGE ON SEQUENCE` deixa a trilha parar de crescer sem que
+nada acuse. Trilha vazia e sistema sem uso produzem o mesmo relatório.
+
+`auditoria-ancora` fecha o único buraco que o encadeamento por hash não fecha:
+**truncar o FIM da trilha é indetectável** — os elos que sobram continuam
+consistentes entre si e nada na tabela diz que ela já foi maior. A âncora grava
+total, último id e hash final; `--conferir` acusa contagem que encolheu ou hash
+divergente. Só vale se o arquivo viver **fora deste servidor**: âncora que a
+aplicação pode reescrever não prova nada, e o comando avisa isso ao gravar.
 
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é

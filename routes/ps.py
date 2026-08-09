@@ -153,13 +153,51 @@ def entrada(paciente_id=None):
                 )
                 return redirect(url_for("ps.visualizar", id=aberto.id))
 
-            # Vincula a triagem mais recente do paciente, se houver.
-            triagem = (
-                Triagem.query
-                .filter_by(paciente_id=paciente.id)
-                .order_by(Triagem.criado_em.desc())
-                .first()
-            )
+            # A classificação escolhida no acolhimento É um ato de triagem de
+            # Manchester, e `AtendimentoPS.classificacao` é derivada da triagem
+            # vinculada. Antes, o campo do formulário era DESCARTADO e a rota
+            # tentava suprir a classificação pescando a triagem mais recente do
+            # paciente — que podia ser de meses atrás, de outra queixa, ou não
+            # existir. Sem triagem, o atendimento entrava no painel sem cor, e
+            # `relatorios_hosp/ps.html` agrupa exatamente por esse campo.
+            #
+            # Registrar a classificação como triagem, e não como coluna nova em
+            # `atendimentos_ps`, é o que evita guardar a mesma informação em dois
+            # lugares — o defeito que a seção 9.4.14 documenta oito vezes.
+            classificacao = (request.form.get("classificacao") or "").strip()
+            if classificacao and classificacao not in CLASSIFICACOES:
+                flash("Classificação de risco inválida.", "warning")
+                return render_template("ps/entrada.html", pacientes=pacientes,
+                                       medicos=medicos, classificacoes=CLASSIFICACOES,
+                                       paciente_sel=paciente)
+
+            triagem = None
+            if classificacao:
+                triagem = Triagem(
+                    paciente_id=paciente.id,
+                    unidade_id=current_user.unidade_id,
+                    realizado_por=current_user.id,
+                    classificacao=classificacao,
+                    queixa_principal=queixa[:200],
+                    # Marca a origem: é a classificação rápida do acolhimento,
+                    # não a triagem completa com sinais vitais. Sem isto, uma
+                    # não se distingue da outra no histórico do paciente.
+                    observacoes="Classificação de risco registrada no acolhimento do PS.",
+                    status="aguardando",
+                )
+                db.session.add(triagem)
+                db.session.flush()
+            else:
+                # Sem classificação informada, o comportamento antigo continua
+                # valendo — mas agora é o caso de exceção, não a regra.
+                triagem = (
+                    Triagem.query
+                    .filter_by(paciente_id=paciente.id)
+                    .order_by(Triagem.criado_em.desc())
+                    .first()
+                )
+
+            modo = (request.form.get("modo_chegada") or "").strip()
 
             a = AtendimentoPS(
                 paciente_id=paciente.id,
@@ -168,6 +206,7 @@ def entrada(paciente_id=None):
                 unidade_id=current_user.unidade_id,
                 motivo_consulta=queixa,
                 diagnostico_preliminar=(request.form.get("hipotese_diag") or "").strip() or None,
+                modo_chegada=modo if modo in AtendimentoPS.MODOS_CHEGADA else None,
                 status="em_espera",
                 data_chegada=datetime.utcnow(),
                 criado_por=current_user.id,

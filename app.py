@@ -332,6 +332,61 @@ def _registrar_cli(app):
             sys.exit(1)
         print(f"\nRESULTADO: {len(achados)} verificações passaram")
 
+    @app.cli.command("auditoria-ancora")
+    @click.option("--conferir", is_flag=True,
+                  help="Compara com a âncora anterior em vez de emitir uma nova.")
+    @click.option("--arquivo", default="backups/ancora_auditoria.json",
+                  help="Onde a âncora é lida e gravada.")
+    def auditoria_ancora(conferir, arquivo):
+        """Emite ou confere a âncora da trilha de auditoria.
+
+        O encadeamento por hash detecta alteração e remoção NO MEIO da cadeia.
+        Não detecta truncamento do FIM: apagados os últimos eventos, os elos que
+        sobram continuam consistentes e nada indica que a trilha já foi maior —
+        e é o fim que interessa a quem quer ocultar o que acabou de fazer.
+
+        A defesa é comparar com um estado registrado antes. Rode sem argumento
+        para emitir a âncora, e **guarde o arquivo fora deste servidor**; rode
+        com `--conferir` para comparar. Guardar a âncora no mesmo lugar que se
+        pretende proteger não protege de nada.
+        """
+        import json
+        import pathlib
+        import sys
+        from datetime import datetime
+
+        from utils.audit import ancora_da_trilha, conferir_ancora
+
+        caminho = pathlib.Path(arquivo)
+
+        if conferir:
+            if not caminho.is_file():
+                sys.exit(f"não encontrei a âncora em {caminho} — emita uma antes")
+            dados = json.loads(caminho.read_text(encoding="utf-8"))
+            problemas = conferir_ancora(dados["total"], dados["ultimo_id"],
+                                        dados["hash_final"])
+            if problemas:
+                print(f"ÂNCORA DE {dados['emitida_em']} NÃO CONFERE:")
+                for p in problemas:
+                    print(f"  {p}")
+                sys.exit(1)
+            print(f"trilha íntegra desde {dados['emitida_em']}: "
+                  f"{dados['total']} registros preservados")
+            return
+
+        total, ultimo_id, hash_final = ancora_da_trilha()
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(json.dumps({
+            "emitida_em": datetime.utcnow().isoformat(timespec="seconds"),
+            "total": total,
+            "ultimo_id": ultimo_id,
+            "hash_final": hash_final,
+        }, indent=2), encoding="utf-8")
+        print(f"âncora emitida: {total} registros, último id {ultimo_id}")
+        print(f"gravada em {caminho}")
+        print("GUARDE ESTE ARQUIVO FORA DESTE SERVIDOR — âncora que a aplicação "
+              "pode reescrever não prova nada.")
+
     @app.cli.command("seed-volume")
     @click.option("--pacientes", default=50_000, show_default=True)
     @click.option("--limpar", is_flag=True, help="Remove os dados sintéticos.")

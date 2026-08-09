@@ -252,3 +252,65 @@ def test_toda_tabela_sem_escopo_tem_razao_declarada(app):
     assert not obsoletas, (
         "estas já têm `unidade_id`; remova de FORA_POR_DECISAO:\n  "
         + "\n  ".join(obsoletas))
+
+
+# --- âncora da trilha: a defesa contra o que o encadeamento não vê ---------
+
+def test_ancora_detecta_truncamento_do_fim(app, dados_clinicos):
+    """O encadeamento por hash NÃO detecta remoção dos últimos registros.
+
+    Apagados os elos finais, os que sobram continuam consistentes entre si e
+    nada na tabela indica que ela já foi maior. É o modo de adulteração que
+    interessa a quem quer ocultar o que acabou de fazer — e o único detectável
+    apenas por comparação com um estado registrado antes.
+    """
+    from datetime import datetime
+
+    from extensions import db
+    from models.audit_log import AuditLog
+    from utils.audit import ancora_da_trilha, conferir_ancora, verificar_integridade
+
+    with app.app_context():
+        # Encadeados de verdade: com hash arbitrário o teste provaria só que
+        # `verificar_integridade` detecta hash falso, que não é a questão aqui.
+        anterior = (AuditLog.query.order_by(AuditLog.id.desc())
+                    .with_entities(AuditLog.hash_atual).first())
+        elo = anterior[0] if anterior else None
+        for n in range(3):
+            log = AuditLog(tabela="teste_ancora", acao="read",
+                           descricao=f"evento {n}", criado_em=datetime.utcnow())
+            log.hash_anterior = elo
+            log.hash_atual = elo = log.calcular_hash()
+            db.session.add(log)
+        db.session.commit()
+
+        total, ultimo_id, hash_final = ancora_da_trilha()
+
+        # Trunca o FIM, que é o caso que a verificação de cadeia não enxerga.
+        alvo = (AuditLog.query.order_by(AuditLog.id.desc()).first())
+        db.session.delete(alvo)
+        db.session.commit()
+
+        _n, problemas_cadeia = verificar_integridade()
+        elos_rompidos = [p for p in problemas_cadeia
+                         if "elo rompido" in p["motivo"]]
+        assert not elos_rompidos, (
+            "premissa do teste falhou: truncar o fim NÃO deveria romper elo")
+
+        problemas = conferir_ancora(total, ultimo_id, hash_final)
+        assert problemas, (
+            "a âncora não detectou o truncamento — sem ela, apagar o fim da "
+            "trilha é indetectável")
+        assert any("ENCOLHEU" in p for p in problemas)
+
+        AuditLog.query.filter_by(tabela="teste_ancora").delete()
+        db.session.commit()
+
+
+def test_ancora_em_trilha_intacta_nao_acusa(app, dados_clinicos):
+    """Falso positivo aqui faria a verificação periódica virar ruído."""
+    from utils.audit import ancora_da_trilha, conferir_ancora
+
+    with app.app_context():
+        total, ultimo_id, hash_final = ancora_da_trilha()
+        assert conferir_ancora(total, ultimo_id, hash_final) == []

@@ -163,3 +163,59 @@ def log_auditoria(tabela, acao):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+
+def ancora_da_trilha():
+    """Estado atual da cadeia, para ser ancorado FORA do alcance da aplicação.
+
+    O encadeamento por hash detecta alteração de registro e remoção
+    intermediária — os dois rompem a correspondência entre um elo e o seguinte.
+    **Não detecta truncamento do fim.** Suprimidos os últimos eventos, a cadeia
+    remanescente continua internamente consistente, e nada na tabela indica que
+    ela já foi maior. E é o fim que interessa a quem pretende ocultar o que
+    acabou de fazer.
+
+    A única defesa contra isso é comparar o estado atual com um estado
+    registrado antes, em lugar que a aplicação não possa reescrever. Esta função
+    devolve o que precisa ser guardado; guardar é decisão de operação, e o
+    depositário tem de ser externo — arquivo em outro servidor, sistema de
+    bilhetagem, o que a organização usar como registro imutável.
+
+    Devolve `(total, ultimo_id, hash_final)`. Os três juntos: o hash sozinho não
+    denuncia truncamento se o último elo remanescente coincidir por acaso, e a
+    contagem sozinha não denuncia substituição.
+    """
+    total = AuditLog.query.count()
+    ultimo = (AuditLog.query
+              .order_by(AuditLog.id.desc())
+              .with_entities(AuditLog.id, AuditLog.hash_atual)
+              .first())
+    if ultimo is None:
+        return 0, None, None
+    return total, ultimo[0], ultimo[1]
+
+
+def conferir_ancora(total_esperado, ultimo_id_esperado, hash_esperado):
+    """Compara a trilha com uma âncora registrada antes.
+
+    Devolve a lista de divergências, vazia quando tudo confere. Detecta o que a
+    verificação da cadeia não vê: registros que sumiram do FIM.
+    """
+    total, ultimo_id, hash_final = ancora_da_trilha()
+    problemas = []
+
+    if total < total_esperado:
+        problemas.append(
+            f"a trilha ENCOLHEU: {total_esperado} registros na âncora, "
+            f"{total} agora — {total_esperado - total} sumiram")
+    if ultimo_id_esperado is not None and (ultimo_id or 0) < ultimo_id_esperado:
+        problemas.append(
+            f"o último id retrocedeu: âncora em {ultimo_id_esperado}, "
+            f"agora em {ultimo_id}")
+    if (hash_esperado and total == total_esperado
+            and hash_final != hash_esperado):
+        problemas.append(
+            "mesma contagem e hash final diferente: registro do fim foi "
+            "substituído")
+
+    return problemas

@@ -18,6 +18,23 @@ class AtendimentoPS(db.Model):
     motivo_consulta = db.Column(db.Text, nullable=False)
     diagnostico_preliminar = db.Column(db.Text, nullable=True)
     conduta = db.Column(db.Text, nullable=True)
+
+    # Como o paciente chegou (d81f4e0a76c5). Separa demanda espontânea de
+    # demanda regulada — linhas de cuidado diferentes, financiadas de formas
+    # diferentes. O formulário oferecia o campo desde sempre e nada o guardava.
+    modo_chegada = db.Column(db.String(20), nullable=True)
+
+    MODOS_CHEGADA = {
+        "espontaneo": "Espontâneo",
+        "samu": "SAMU",
+        "viatura": "Viatura policial",
+        "transferencia": "Transferência",
+        "outros": "Outros",
+    }
+
+    @property
+    def modo_chegada_label(self):
+        return self.MODOS_CHEGADA.get(self.modo_chegada, self.modo_chegada or "—")
     
     # Status e Tempo
     status = db.Column(db.String(50), default='em_espera') # em_espera, em_atendimento, internado, alta, obito

@@ -88,8 +88,11 @@ _ALIASES = {
 PERFIL_PERMISSOES = {
     # Operador da plataforma: atravessa o isolamento por hospital.
     SUPER_ADMIN: {ADMIN_FULL, HOSPITAL_MANAGE},
-    # Admin dentro do próprio hospital.
-    ADMINISTRADOR: {ADMIN_FULL},
+    # Admin dentro do próprio hospital. `ADMIN_FULL` é coringa e já
+    # concederia tudo — `USER_MANAGE` aparece explícito porque a matriz
+    # é documento de governança: quem a lê precisa ver QUEM administra
+    # contas sem ter de saber que existe um coringa.
+    ADMINISTRADOR: {ADMIN_FULL, USER_MANAGE},
     MEDICO: {
         PATIENT_READ, PATIENT_UPDATE,
         CLINICAL_READ, CLINICAL_WRITE, ENCOUNTER_WRITE,

@@ -4,6 +4,7 @@ from models.user import User
 from models.audit_log import AuditLog
 from models.unidade_saude import UnidadeSaude
 from database.db import db
+from utils.rbac import requer_permissao
 from utils.security import admin_requerido
 from utils.rbac import SUPER_ADMIN, _normalizar
 from utils.audit import audit_log, auditar_aqui
@@ -15,6 +16,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_bp.route("/")
 @login_required
 @admin_requerido
+@requer_permissao("user:manage")
 def index():
     usuarios = User.query.order_by(User.nome).all()
     total_ativos = sum(1 for u in usuarios if u.ativo)
@@ -32,6 +34,7 @@ def index():
 @admin_bp.route("/usuarios/novo", methods=["GET", "POST"])
 @login_required
 @admin_requerido
+@requer_permissao("user:manage")
 def novo_usuario():
     unidades = (
         UnidadeSaude.query.filter_by(ativo=True).order_by(UnidadeSaude.nome).all()
@@ -86,6 +89,7 @@ def novo_usuario():
 @admin_bp.route("/usuarios/<int:id>/editar", methods=["GET", "POST"])
 @login_required
 @admin_requerido
+@requer_permissao("user:manage")
 def editar_usuario(id):
     user = User.query.get_or_404(id)
     unidades = UnidadeSaude.query.filter_by(ativo=True).order_by(UnidadeSaude.nome).all()
@@ -114,6 +118,7 @@ def editar_usuario(id):
 @admin_bp.post("/usuarios/<int:id>/ativar")
 @login_required
 @admin_requerido
+@requer_permissao("user:manage")
 def ativar_usuario(id):
     """Reativa a conta. Explícito em vez de toggle: o clique diz o que faz."""
     user = User.query.get_or_404(id)
@@ -131,6 +136,7 @@ def ativar_usuario(id):
 @admin_bp.post("/usuarios/<int:id>/desativar")
 @login_required
 @admin_requerido
+@requer_permissao("user:manage")
 def desativar_usuario(id):
     """Desativa a conta. Nunca a própria — evita o admin se trancar fora."""
     user = User.query.get_or_404(id)
@@ -148,9 +154,12 @@ def desativar_usuario(id):
     return redirect(url_for("admin.index"))
 
 
+# Leitura da trilha é `audit:read`, e não gestão de usuário: são competências
+# distintas, e o Gestor tem a primeira sem ter a segunda.
 @admin_bp.route("/auditoria")
 @login_required
 @admin_requerido
+@requer_permissao("audit:read")
 def auditoria():
     page = request.args.get("page", 1, type=int)
     tabela = request.args.get("tabela", "")
