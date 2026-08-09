@@ -46,7 +46,7 @@ def index():
 
 @estoque_bp.route('/novo', methods=['GET', 'POST'])
 @login_required
-@requer_permissao("clinical:read")
+@requer_permissao("med-admin:write")
 def novo():
     if request.method == 'POST':
         try:
@@ -95,7 +95,7 @@ def novo():
 # de estoque sem nenhuma.
 @estoque_bp.route('/<int:item_id>/editar', methods=['GET', 'POST'])
 @login_required
-@requer_permissao("clinical:read")
+@requer_permissao("med-admin:write")
 def editar(item_id):
     """Edita o cadastro do item.
 
@@ -175,7 +175,7 @@ def editar(item_id):
 
 @estoque_bp.route('/<int:id>/movimentar', methods=['GET', 'POST'])
 @login_required
-@requer_permissao("clinical:read")
+@requer_permissao("med-admin:write")
 def movimentar(id):
     item = ItemEstoque.query.get_or_404(id)
     if request.method == 'POST':

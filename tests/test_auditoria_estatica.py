@@ -157,3 +157,172 @@ def test_uso_de_safe_em_template_e_consciente(raiz):
     inesperados = [u for u in usos if not u.startswith("templates/_icons.html")]
     assert not inesperados, "novo uso de |safe para revisar:\n" + "\n".join(
         f"  {x}" for x in inesperados)
+
+
+# --- Autorização coerente por entidade -------------------------------------
+#
+# O defeito: duas rotas escrevem a MESMA entidade exigindo permissões
+# diferentes, e o resultado é um perfil que não pode fazer algo por uma porta e
+# pode pela outra. Aconteceu duas vezes neste projeto — a classificação de risco
+# (gravada por `triagem.nova` sob `triage:write` e por `ps.entrada` sob
+# `emergency:write`) e a movimentação de estoque (gravada sob `clinical:read`
+# num módulo e `med-admin:write` no outro).
+#
+# A comparação NÃO é entre os nomes das permissões. Nomes diferentes são
+# legítimos: `ps.entrada` é primariamente admissão de urgência e exigir
+# `emergency:write` está certo. O que não pode divergir é o CONJUNTO DE PERFIS
+# que consegue passar — porque é isso que o usuário sente.
+#
+# É por medir perfis, e não strings, que este teste depende da concessão de
+# `triage:write` ao MEDICO: sem ela, o médico classifica pelo pronto-socorro e
+# não pela triagem, e o teste reprova.
+
+# Divergência aceita precisa de razão escrita. Vazio é o estado correto — cada
+# entrada aqui é uma dívida, não uma configuração.
+AUTORIZACAO_DIVERGENTE_ACEITA = {}
+
+
+def _entidades_escritas_por_rota(raiz):
+    """{Modelo: {frozenset(permissões): {endpoints}}}, por análise estática.
+
+    Construção do objeto no corpo da view é o sinal de escrita. É aproximação
+    — não pega escrita por `update()` em massa — mas cobre o caminho normal e
+    não depende de executar a rota.
+    """
+    import ast
+    import collections
+
+    from extensions import db
+
+    modelos = {m.class_.__name__ for m in db.Model.registry.mappers}
+    mapa = collections.defaultdict(lambda: collections.defaultdict(set))
+
+    for arq in sorted((raiz / "routes").glob("*.py")):
+        arvore = ast.parse(arq.read_text(encoding="utf-8"))
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.FunctionDef):
+                continue
+            permissoes, e_rota = set(), False
+            for dec in no.decorator_list:
+                alvo = dec.func if isinstance(dec, ast.Call) else dec
+                nome = getattr(alvo, "attr", getattr(alvo, "id", ""))
+                if nome in ("route", "get", "post", "put", "patch", "delete"):
+                    e_rota = True
+                if nome == "requer_permissao" and isinstance(dec, ast.Call):
+                    for a in dec.args:
+                        if isinstance(a, ast.Constant):
+                            permissoes.add(a.value)
+            if not e_rota:
+                continue
+            for sub in ast.walk(no):
+                if (isinstance(sub, ast.Call)
+                        and isinstance(sub.func, ast.Name)
+                        and sub.func.id in modelos):
+                    mapa[sub.func.id][frozenset(permissoes)].add(
+                        f"{arq.stem}.{no.name}")
+    return mapa
+
+
+def _perfis_que_passam(permissoes):
+    """Perfis capazes de atravessar `requer_permissao(*permissoes)`.
+
+    Reproduz a semântica de `pode`: QUALQUER uma das permissões basta, e
+    `admin:full` é coringa.
+    """
+    from utils.rbac import ADMIN_FULL, PERFIL_PERMISSOES
+
+    alvo = set(permissoes)
+    return frozenset(
+        perfil for perfil, concedidas in PERFIL_PERMISSOES.items()
+        if ADMIN_FULL in concedidas or not alvo or (alvo & concedidas)
+    )
+
+
+def test_entidade_escrita_por_varias_rotas_tem_a_mesma_autorizacao(raiz, app):
+    """Mesma entidade, portas diferentes, mesmo conjunto de perfis."""
+    with app.app_context():
+        mapa = _entidades_escritas_por_rota(raiz)
+
+    divergentes = {}
+    for modelo, por_permissao in mapa.items():
+        if len(por_permissao) < 2:
+            continue
+        perfis = {}
+        for permissoes, endpoints in por_permissao.items():
+            perfis.setdefault(_perfis_que_passam(permissoes), set()).update(
+                f"{e} ({', '.join(sorted(permissoes)) or 'sem permissão'})"
+                for e in endpoints)
+        if len(perfis) > 1:
+            divergentes[modelo] = perfis
+
+    inesperadas = {m: v for m, v in divergentes.items()
+                   if m not in AUTORIZACAO_DIVERGENTE_ACEITA}
+    assert not inesperadas, (
+        "entidade gravada por rotas que admitem perfis diferentes — um perfil "
+        "consegue pela porta A e não pela porta B:\n" + "\n".join(
+            f"  {m}:\n" + "\n".join(
+                f"    {sorted(p)} <- {sorted(rotas)}"
+                for p, rotas in v.items())
+            for m, v in inesperadas.items()))
+
+    resolvidas = set(AUTORIZACAO_DIVERGENTE_ACEITA) - set(divergentes)
+    assert not resolvidas, (
+        f"já não divergem — remova de AUTORIZACAO_DIVERGENTE_ACEITA: "
+        f"{sorted(resolvidas)}")
+
+
+# Rota de escrita legitimamente guardada por permissão de leitura. Cada entrada
+# precisa de razão, e a razão precisa ser de NATUREZA — não "ainda não arrumei".
+ESCRITA_SOB_LEITURA_ACEITA = {
+    # Estes três respondem POST porque recebem payload de formulário, não
+    # porque mutam estado: leem dado clínico e devolvem um arquivo. A auditoria
+    # que gravam é do tipo `read`. Exigir permissão de escrita aqui impediria o
+    # Gestor de emitir relatório sobre dado que ele já pode ver.
+    "pdf.atestado",
+    "pdf.processar_pdf",
+    "pdf.reorganizar",
+    # --- LACUNA DE VOCABULÁRIO, não exceção justificada.
+    # Agendamento e agenda gravam sob `patient:read` porque NÃO EXISTE
+    # permissão de agendamento entre as 26. A Recepção, de quem é a função,
+    # só tem permissões de paciente — então marcar como escrita exigiria
+    # inventar `schedule:write` e decidir quem o recebe, o que é decisão de
+    # produto e não correção de defeito. Fica registrado como dívida com nome.
+    "agenda.api_criar_evento",
+    "agenda.api_status_evento",
+    "agendamento.novo",
+    "agendamento.editar",
+    "agendamento.atualizar_status",
+}
+
+
+def test_permissao_de_leitura_nao_protege_rota_de_escrita(app, raiz):
+    """`clinical:read` guardando um POST concede escrita a quem só deveria ler.
+
+    Os casos reais: três rotas de estoque gravavam sob `clinical:read` — o
+    Gestor, perfil de leitura e relatório, movimentava estoque, e o
+    Farmacêutico, de quem é a função, não conseguia; o catálogo de vacinas
+    destoava do de exames, que já usava `exam:write`; e o envio à RNDS estava
+    sob `reports:read`, o que permitia ao Gestor publicar documento clínico na
+    rede nacional.
+
+    A lista de exceções reprova nos dois sentidos, como as demais deste projeto.
+    """
+    falhas = set()
+    for regra in app.url_map.iter_rules():
+        if regra.endpoint == "static" or not (regra.methods & METODOS_ESCRITA):
+            continue
+        decoradores = _decoradores(app, regra.endpoint, raiz)
+        for argumentos in re.findall(r"requer_permissao\(([^)]*)\)", decoradores):
+            nomes = re.findall(r'"([^"]+)"', argumentos)
+            if nomes and all(n.endswith(":read") for n in nomes):
+                falhas.add(regra.endpoint)
+
+    inesperadas = falhas - ESCRITA_SOB_LEITURA_ACEITA
+    assert not inesperadas, (
+        "rota de escrita guardada só por permissão de leitura — quem só pode "
+        "ler consegue gravar:\n  " + "\n  ".join(sorted(inesperadas)))
+
+    resolvidas = ESCRITA_SOB_LEITURA_ACEITA - falhas
+    assert not resolvidas, (
+        f"já não gravam sob permissão de leitura — remova de "
+        f"ESCRITA_SOB_LEITURA_ACEITA: {sorted(resolvidas)}")

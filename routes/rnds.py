@@ -219,7 +219,7 @@ def preview(tipo, entity_id):
 
 @rnds_bp.post("/enviar")
 @login_required
-@requer_permissao("reports:read")
+@requer_permissao("clinical:write")
 def enviar():
     tipo = (request.form.get("tipo") or "").strip()
     entity_id = request.form.get("entity_id", type=int)
@@ -254,7 +254,7 @@ def enviar():
 
 @rnds_bp.post("/processar")
 @login_required
-@requer_permissao("reports:read")
+@requer_permissao("clinical:write")
 def processar():
     """Drena a fila sob demanda.
 
@@ -283,7 +283,7 @@ def processar():
 
 @rnds_bp.post("/envios/<int:id>/reenviar")
 @login_required
-@requer_permissao("reports:read")
+@requer_permissao("clinical:write")
 def reenviar(id):
     envio = EnvioRnds.query.get_or_404(id)
 

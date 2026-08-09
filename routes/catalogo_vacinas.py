@@ -23,7 +23,7 @@ def index():
 
 @catalogo_vacinas_bp.post("/novo")
 @login_required
-@requer_permissao("clinical:read")
+@requer_permissao("exam:write")
 def novo():
     nome = (request.form.get("nome") or "").strip()
     codigo = (request.form.get("codigo") or "").strip().upper()

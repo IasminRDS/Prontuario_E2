@@ -97,7 +97,17 @@ PERFIL_PERMISSOES = {
         PATIENT_READ, PATIENT_UPDATE,
         CLINICAL_READ, CLINICAL_WRITE, ENCOUNTER_WRITE,
         PRESCRIPTION_READ, PRESCRIPTION_CREATE, PRESCRIPTION_WRITE,
-        TRIAGE_READ,
+        # `TRIAGE_WRITE` é concessão decidida contra a norma profissional, e o
+        # motivo precisa ficar aqui: em unidade pequena sem enfermeiro de
+        # plantão, negar produz paciente na fila SEM classificação de risco — e
+        # é a classificação que ordena o painel do PS. O ganho de segregação
+        # seria pequeno, porque a trilha já registra a autoria; e negar empurra
+        # para o registro por terceiro, que faz a trilha mentir sobre quem
+        # classificou. Onde a organização quiser respeitar a privatividade do
+        # enfermeiro, o lugar da decisão seria uma matriz configurável por
+        # organização — que este sistema não tem, e está registrado como
+        # limitação. Enquanto não tiver, a decisão é global e é esta.
+        TRIAGE_READ, TRIAGE_WRITE,
         INTERNMENT_WRITE, EMERGENCY_WRITE, EXAM_WRITE, SURGERY_WRITE,
         REPORTS_READ,
         SURVEILLANCE_READ, SURVEILLANCE_WRITE,

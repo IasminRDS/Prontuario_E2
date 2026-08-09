@@ -747,7 +747,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 371, em 33 arquivos |
+| Casos de teste automatizados | 373, em 33 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -927,7 +927,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **371 casos de teste**, provenientes de 237
+A suíte automatizada compreende **373 casos de teste**, provenientes de 239
 funções distribuídas em 33 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1577,6 +1577,86 @@ sob aparência de correção; se não existe, deixar de criá-la é perder a
 informação. As duas respostas erradas são simétricas, e distingui-las exige
 consultar o modelo, não o formulário.
 
+#### 9.4.18 Autorização incoerente entre portas da mesma entidade
+
+**Achado.** A correção descrita em 9.4.17 — fazer a entrada do pronto-socorro
+criar uma triagem — produziu, ela própria, uma reincidência do defeito 9.4.3.
+Passaram a existir duas rotas que gravam a mesma entidade sob exigências
+diferentes: a triagem propriamente dita, sob `triage:write`, e a entrada de
+urgência, sob `emergency:write`. Como o perfil Médico detinha a segunda e não a
+primeira, o resultado era um sistema em que **o médico não podia classificar
+risco pela tela de triagem e podia pela tela do pronto-socorro**. A restrição
+não estava sendo aplicada; estava apenas mal sinalizada.
+
+Convertido o achado em verificação — e é essa a parte que interessa —, o mesmo
+instrumento revelou outras três ocorrências que nenhuma leitura dirigida havia
+encontrado:
+
+- **Movimentação de estoque** gravada sob `clinical:read` em um módulo e
+  `med-admin:write` em outro. O efeito era invertido em relação à competência:
+  o Gestor, perfil de leitura e relatório, movimentava estoque; o Farmacêutico,
+  de quem é a função, não conseguia.
+- **Catálogo de vacinas** criado sob `clinical:read`, enquanto o catálogo de
+  exames — rota irmã, escrita no mesmo padrão — já exigia `exam:write`.
+- **Envio à Rede Nacional de Dados em Saúde** sob `reports:read`, o que
+  permitia ao perfil de gestão **publicar documento clínico de paciente na rede
+  nacional** por deter uma permissão de relatório.
+
+**Análise.** Os quatro casos compartilham a causa de 9.4.14 — a mesma regra
+escrita em mais de um lugar —, mas numa variante que os detectores anteriores
+não alcançavam, porque aqui a regra não está replicada em dados e sim
+distribuída entre um decorador de rota e uma matriz de perfis. A conferência
+exige cruzar as duas, e nenhuma leitura de arquivo isolado a faz.
+
+A formulação do verificador foi a decisão de projeto relevante. Comparar os
+**nomes** das permissões produziria falso positivo legítimo: a entrada de
+urgência é primariamente admissão, e exigir `emergency:write` ali está correto.
+O que não pode divergir é o **conjunto de perfis que atravessa cada porta** —
+porque é isso que o usuário experimenta. O teste, portanto, resolve cada
+permissão contra a matriz, inclusive o coringa administrativo, e compara
+conjuntos de perfis. Nomes diferentes são tolerados enquanto forem
+coextensivos, e a reprovação ocorre no instante em que a matriz deixa de
+torná-los coextensivos — que é exatamente o momento em que o defeito nasce.
+
+Acrescentou-se um segundo verificador, mais simples e de alcance distinto:
+permissão terminada em `:read` guardando rota de mutação. Foi ele que localizou
+os casos do estoque, do catálogo e da RNDS.
+
+**Correção.** As três incoerências de competência foram corrigidas pela
+permissão, não pela matriz: estoque e catálogo de vacinas passaram às permissões
+de escrita já usadas por suas rotas irmãs, e o envio à RNDS passou a exigir
+`clinical:write` — quem publica o registro precisa poder tê-lo escrito. A
+consulta à fila e a pré-visualização permaneceram em `reports:read`, porque
+acompanhar o andamento é função legítima da gestão.
+
+A quarta foi decidida no sentido oposto, pela matriz: **concedeu-se
+`triage:write` ao perfil Médico**. É a única das quatro que constitui escolha de
+produto, e não correção de defeito, e por isso o argumento fica registrado.
+
+Há norma profissional que trata a classificação de risco como atividade
+privativa do enfermeiro, e ela é razão real para negar. Três considerações
+prevaleceram em sentido contrário. Primeira, a de disponibilidade clínica: o
+sistema destina-se a rede municipal, e na unidade pequena sem enfermeiro de
+plantão negar a permissão produz paciente na fila **sem classificação de risco**
+— e é a classificação que ordena o painel de atendimento. Segunda, a de que a
+segregação de funções protege pouco neste caso específico, porque a trilha já
+registra a autoria da classificação e o controle contra classificação inadequada
+é revisão clínica, não controle de acesso. Terceira, e a mais decisiva: negar não
+impede o ato, apenas empurra para o registro por terceiro — e então a trilha
+passa a **atribuir a classificação a quem não a decidiu**, que é perda de
+rastreabilidade em nome de uma restrição que não restringiu.
+
+O lugar próprio dessa decisão seria uma matriz de permissões configurável por
+organização, em que cada rede ajustasse a concessão à norma que observa. O
+sistema não a possui — a matriz é estrutura de código — e a limitação está
+registrada na seção 12.
+
+**Lição transferível.** Autorização não se audita rota a rota. A pergunta
+correta é por entidade e por perfil: *"quem consegue gravar isto, por todos os
+caminhos que existem?"* — e ela só se responde cruzando decoradores com matriz,
+o que nenhuma revisão de código faz de forma confiável e um verificador faz a
+cada execução.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -1724,7 +1804,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 371 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 373 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -1907,6 +1987,24 @@ guardá-la, com que periodicidade e sob custódia de quem são decisões
 organizacionais, e é nesse ponto que a garantia deixa de ser de software e passa
 a ser de governança.
 
+**A matriz de permissões não é configurável por organização.** A associação
+entre perfis e permissões é estrutura de código, idêntica em toda instalação.
+A consequência aparece com nitidez na decisão registrada em 9.4.18: a concessão
+de `triage:write` ao perfil Médico foi tomada por análise de disponibilidade
+clínica, contra uma norma profissional que aponta em sentido oposto — e uma rede
+que observe estritamente essa norma não tem como revogá-la sem alterar o código.
+A decisão é global porque o sistema não oferece o lugar onde ela deveria ser
+local.
+
+O que a limitação **não** significa: não se trata de ausência de granularidade.
+As 26 permissões nomeadas são suficientemente finas, e a autorização é validada
+no servidor em todas as rotas de escrita. Trata-se de ausência de um ponto de
+configuração por inquilino — o mesmo isolamento territorial que o trabalho
+implementa para os dados não existe para as regras de autorização. Fechar essa
+lacuna exigiria persistir a matriz por unidade ou por rede, com precedência
+definida e com auditoria das próprias alterações de permissão, o que constitui
+trabalho autônomo e está indicado entre as continuações possíveis.
+
 **Medição limitada a volume sintético.** Os planos de execução foram analisados
 com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição
 real de uma rede de saúde — sazonalidade, concentração por especialidade,
@@ -1988,6 +2086,9 @@ privilégio `CREATEDB` ao papel da aplicação.
 **Arquitetura**
 - Introdução de camada de serviço explícita, com centralização da decisão de
   autorização em ponto único.
+- Matriz de permissões persistida e configurável por organização, com auditoria
+  das próprias alterações de permissão — de modo que decisões como a registrada
+  em 9.4.18 sejam locais à rede que as toma, e não globais ao software.
 - Documentação formal do modelo multi-tenant como especificação versionada.
 
 **Funcionalidade e integração**
