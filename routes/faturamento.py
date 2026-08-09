@@ -196,6 +196,9 @@ def aih_form(id=None):
                 db.session.add(aih)
 
             aih.paciente_id = paciente.id
+            # Escopo territorial: da internação quando existe, senão de quem
+            # emite. A AIH carrega CID e procedimento — é dado clínico.
+            aih.unidade_id = current_user.unidade_id
             aih.internacao_id = request.form.get("internacao_id", type=int)
             aih.medico_solicitante_id = request.form.get("medico_solicitante_id", type=int)
             aih.numero_aih = numero
@@ -371,6 +374,7 @@ def apac_form(id=None):
                 db.session.add(apac)
 
             apac.paciente_id = paciente.id
+            apac.unidade_id = current_user.unidade_id
             apac.medico_solicitante_id = request.form.get("medico_solicitante_id", type=int)
             apac.numero_apac = numero
             apac.procedimento_principal = procedimento

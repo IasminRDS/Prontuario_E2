@@ -16,6 +16,8 @@ from datetime import datetime, timedelta
 import sqlalchemy as sa
 
 from extensions import db
+from flask_login import current_user
+
 from models.lgpd import EnvioRnds
 from services.rnds_cliente import (
     RndsIndisponivel,
@@ -57,6 +59,9 @@ def enfileirar(tipo, recurso, tabela, entidade_id, paciente_id=None,
         entidade_tabela=tabela,
         entidade_id=entidade_id,
         paciente_id=paciente_id,
+        # O payload é o conteúdo clínico serializado: sem escopo, a fila da
+        # RNDS seria legível de qualquer município.
+        unidade_id=getattr(current_user, 'unidade_id', None),
         payload=payload,
         chave_idempotencia=chave,
         status="pendente",

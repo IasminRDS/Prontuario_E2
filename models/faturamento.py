@@ -7,6 +7,10 @@ class AIH(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     internacao_id = db.Column(db.Integer, db.ForeignKey('internacoes.id'), nullable=True, index=True)
     medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
 
@@ -82,6 +86,10 @@ class APAC(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     medico_solicitante_id = db.Column(db.Integer, db.ForeignKey('medicos.id'), nullable=True, index=True)
 
     numero_apac = db.Column(db.String(20), unique=True, nullable=True)

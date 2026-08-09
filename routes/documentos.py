@@ -41,6 +41,9 @@ def registrar_documento(tipo, conteudo, paciente_id=None, referencia_tabela=None
     if assinante is not None:
         doc.assinado_por = assinante.id
         doc.assinante_nome = assinante.nome
+        # Escopo territorial: o documento pertence à unidade de quem o assinou.
+        # É a única origem disponível — o paciente é nacional de propósito.
+        doc.unidade_id = getattr(assinante, "unidade_id", None)
         medico = getattr(assinante, "medico_perfil", None)
         if medico:
             doc.assinante_registro = getattr(medico, "crm", None)

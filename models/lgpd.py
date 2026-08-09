@@ -15,6 +15,10 @@ class ConsentimentoLgpd(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=False, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
 
     finalidade = db.Column(db.String(120), nullable=False)
     # assistencia | pesquisa | compartilhamento_rnds | contato
@@ -54,6 +58,10 @@ class DocumentoAssinado(db.Model):
     # prontuario | receituario | atestado | encaminhamento | alta
 
     paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=True, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     referencia_tabela = db.Column(db.String(60), nullable=True)
     referencia_id = db.Column(db.Integer, nullable=True)
 
@@ -90,6 +98,10 @@ class EnvioRnds(db.Model):
     entidade_tabela = db.Column(db.String(60), nullable=True)
     entidade_id = db.Column(db.Integer, nullable=True, index=True)
     paciente_id = db.Column(db.Integer, db.ForeignKey("pacientes.id"), nullable=True, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
 
     status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
     # pendente | enviado | erro

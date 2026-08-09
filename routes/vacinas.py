@@ -128,6 +128,9 @@ def registrar_dose(paciente_id):
         dose=(request.form.get("dose") or "").strip() or f"{aplicadas + 1}ª dose",
         data_aplicacao=data_aplicacao,
         unidade=(current_user.unidade.nome if current_user.unidade else None),
+        # A coluna de texto acima é o registro histórico; esta é a ligação
+        # real, e é dela que a política de RLS depende.
+        unidade_id=current_user.unidade_id,
         profissional=current_user.nome,
         observacao=(request.form.get("observacao") or "").strip() or None,
     )

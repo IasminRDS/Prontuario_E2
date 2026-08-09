@@ -155,7 +155,7 @@ As 27 capitais são semeadas por padrão; a relação completa (5.570) vem do IB
 A aplicação já filtra por unidade em Python. O RLS coloca a mesma regra **dentro
 do banco**, para que uma consulta nova que esqueça o filtro não enxergue registro
 de outro município. A lista sai do metadata (`utils/rls.tabelas_protegidas`), e a
-política alcança **toda tabela que tenha a coluna `unidade_id`** — hoje são 15.
+política alcança **toda tabela que tenha a coluna `unidade_id`** — hoje são 23.
 
 **A frase acima já esteve errada, e o erro custou caro.** Ela dizia que "tabela
 clínica nova nasce protegida", o que é falso: nasce protegida a tabela que
@@ -165,19 +165,34 @@ evolucoes_internacao e itens_prescricao — não tinham `unidade_id` e estavam
 inteiramente fora de qualquer política, enquanto a documentação afirmava
 cobertura total. O mecanismo estava certo; o alcance é que não era o anunciado.
 
-**Dez tabelas continuam sem a coluna** e, portanto, sem política:
+Dez tabelas continuaram sem a coluna por mais tempo. **Oito foram cobertas em
+`c6b83f2a41d7`**: seis guardam dado identificável de paciente
+(`consentimentos_lgpd`, `vacinas_aplicadas`, `envios_rnds`,
+`documentos_assinados`, `faturamento_aih`, `faturamento_apac`) e duas eram
+filhas de tabelas já protegidas (`itens_prescricao_hosp`, `administracoes_med`)
+— depender do pai é exatamente o argumento que a auditoria acima derrubou.
 
-    administracoes_med      itens_prescricao_hosp   documentos_assinados
-    vacinas_aplicadas       consentimentos_lgpd     faturamento_aih
-    agenda_eventos          envios_rnds             faturamento_apac
-    candidatos_duplicata
+**As que ficam de fora agora precisam de razão escrita.**
+`tests/test_rls_negacao.py` mantém `FORA_POR_DECISAO`, que reprova nos dois
+sentidos: tabela sem `unidade_id` e sem justificativa falha, e justificativa
+para tabela que já ganhou a coluna também. As duas que sobraram desta leva:
 
-Para elas o isolamento depende só do filtro em Python — que é exatamente do que
-o RLS existia para não depender. Algumas são sensíveis (`consentimentos_lgpd`
-prova a base legal do tratamento; `vacinas_aplicadas` alimenta o cartão do
-Portal do Cidadão; `administracoes_med` é registro clínico). **Antes de afirmar
-cobertura, rode `flask hardening-check`** — ele confronta o banco com o
-metadata em vez de repetir o que está escrito aqui.
+- `candidatos_duplicata` — existe para reconciliar a mesma pessoa cadastrada em
+  municípios diferentes; escopo territorial destruiria a função. Mesmo motivo
+  de `pacientes`.
+- `agenda_eventos` — não tem `paciente_id` nem uma única chave estrangeira. Não
+  há de onde derivar unidade nem dado de paciente a proteger. A ausência total
+  de relações é questão de modelagem, anterior e independente do isolamento.
+
+**Antes de afirmar cobertura, rode `flask hardening-check`** — ele confronta o
+banco com o metadata em vez de repetir o que está escrito aqui. Foi ele que
+acusou, logo após esta migration, que o banco de desenvolvimento ainda não a
+tinha aplicado.
+
+**A coluna nasce NULLABLE e isso tem consequência:** com a política ativa, linha
+com `unidade_id` nulo fica invisível para todo escopo, menos SISTEMA. É falha
+fechada, que é correto — e significa que registro que o backfill não resolveu
+some da tela até alguém resolver. A migration conta e informa quantos são.
 
 Quatro detalhes que decidem se isto é proteção ou teatro:
 

@@ -93,6 +93,10 @@ class ItemPrescricaoHosp(db.Model):
     # `prescricao_id`, igual ao item ambulatorial. Renomeado para o nome que o
     # resto do código já assumia.
     prescricao_id = db.Column(db.Integer, db.ForeignKey('prescricoes_hospitalares.id'), nullable=False, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     medicamento_id = db.Column(db.Integer, db.ForeignKey('medicamentos.id'), nullable=True, index=True)
 
     nome_livre = db.Column(db.String(150), nullable=True)
@@ -132,6 +136,10 @@ class AdministracaoMed(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     item_prescricao_id = db.Column(db.Integer, db.ForeignKey('itens_prescricao_hosp.id'), nullable=False, index=True)
+    # Escopo territorial do RLS (c6b83f2a41d7). Desnormalizado do pai para
+    # a política ser comparação direta, sem subconsulta a cada linha lida.
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades_saude.id'),
+                           nullable=True, index=True)
     administrado_por = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
 
     data_agendada = db.Column(db.DateTime, nullable=True)

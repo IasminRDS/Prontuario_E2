@@ -79,6 +79,8 @@ def nova(internacao_id):
                 mid = med_ids[i] if i < len(med_ids) and med_ids[i] else None
                 item = ItemPrescricaoHosp(
                     prescricao_id  = pres.id,
+                    # Escopo herdado da prescrição, o pai clínico.
+                    unidade_id     = pres.unidade_id,
                     medicamento_id = int(mid) if mid else None,
                     nome_livre     = nome.strip() if not mid else None,
                     dose           = doses[i].strip()    if i < len(doses)    else None,
@@ -128,18 +130,36 @@ def visualizar(id):
 @login_required
 @requer_permissao("med-admin:write")
 def administrar(item_id):
-    item   = ItemPrescricaoHosp.query.get_or_404(item_id)
-    status = request.form.get('status', 'administrado')
-    obs    = request.form.get('observacoes', '').strip() or None
+    item = ItemPrescricaoHosp.query.get_or_404(item_id)
+
+    # `item_prescricao_id` e `administrado_por` são os nomes das colunas. A rota
+    # passava `item_id` e `profissional_id`, que não existem: o construtor do
+    # mapeador recusa kwarg desconhecido, então registrar administração de
+    # medicamento levantava TypeError e devolvia erro interno. Sem `try` para
+    # disfarçar, ao contrário do agendamento de cirurgia (TCC, 9.4.6) — mas o
+    # mesmo defeito: atributos não conferidos contra o modelo.
+    status = (request.form.get('status') or 'realizado').strip()
+    if status not in AdministracaoMed.STATUS_LABELS:
+        # `administrado` era o padrão anterior e não está no vocabulário do
+        # model: o painel o exibiria cru e cinza.
+        flash('Situação de administração inválida.', 'warning')
+        return redirect(url_for('pres_hosp.visualizar', id=item.prescricao_id))
 
     adm = AdministracaoMed(
-        item_id         = item_id,
-        profissional_id = current_user.id,
-        status          = status,
-        observacoes     = obs,
+        item_prescricao_id = item.id,
+        administrado_por   = current_user.id,
+        # Escopo territorial herdado da prescrição, que é o pai clínico. O
+        # backref chama-se `prescricao_hospitalar`, e não `prescricao`.
+        unidade_id         = (item.prescricao_hospitalar.unidade_id
+                              if item.prescricao_hospitalar else None),
+        status             = status,
+        observacoes        = request.form.get('observacoes', '').strip() or None,
+        data_administracao = datetime.utcnow() if status == 'realizado' else None,
     )
     db.session.add(adm)
     auditar_aqui("administracoes_med", "create")
     db.session.commit()
-    flash(f'{item.nome_exibicao} — {status}.', 'success')
+
+    rotulo, _tom = adm.status_label
+    flash(f'{item.nome_exibicao} — {rotulo}.', 'success')
     return redirect(url_for('pres_hosp.visualizar', id=item.prescricao_id))

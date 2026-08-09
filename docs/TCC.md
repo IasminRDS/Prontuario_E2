@@ -734,11 +734,11 @@ Quadro — Dimensão do artefato construído
 | Módulos funcionais (*blueprints*) | 44 |
 | Rotas expostas | 210 — 151 aceitam GET; 103, método de mutação |
 | Tabelas no modelo de dados | 42, com 523 colunas e 106 chaves estrangeiras |
-| Tabelas sob política de RLS | 15 |
-| Migrações de esquema versionadas | 12 |
+| Tabelas sob política de RLS | 23 |
+| Migrações de esquema versionadas | 13 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 26 · 7 |
-| Casos de teste automatizados | 347, em 31 arquivos |
+| Casos de teste automatizados | 357, em 31 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -903,7 +903,7 @@ depender da memória de quem o implantou.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **347 casos de teste**, provenientes de 223
+A suíte automatizada compreende **357 casos de teste**, provenientes de 224
 funções distribuídas em 31 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1529,14 +1529,40 @@ efetivamente transmitidos.
 
 O isolamento territorial passou a ser aplicado em duas camadas independentes: o
 filtro da aplicação e a política do banco de dados. Após as correções descritas
-em 9.4.1, quinze tabelas estão sob política, com verificação automatizada de sua
-efetividade. **A cobertura não é total, e essa constatação é resultado.** Dez
-tabelas permanecem sem a coluna de escopo e, portanto, fora de qualquer política
-— entre elas o registro de consentimento LGPD, a aplicação de imunobiológicos e a
-administração de medicamentos. Para essas, o isolamento continua dependendo
-apenas do filtro da aplicação. Diferentemente do estado inicial, porém, a lacuna
-está identificada, quantificada e detectável por comando, em vez de afirmada como
-inexistente pela documentação.
+em 9.4.1, e após a ampliação descrita adiante, **vinte e três tabelas** estão sob
+política, com verificação automatizada de sua efetividade.
+
+A trajetória dessa cobertura é, ela própria, o resultado mais instrutivo desta
+seção. O mecanismo sempre esteve correto; o alcance percorreu três estados. No
+primeiro, dez tabelas estavam sob política e a documentação afirmava cobertura
+total — cinco tabelas clínicas centrais estavam fora, e é o achado de 9.4.1. No
+segundo, quinze tabelas estavam sob política e a documentação passou a declarar
+que dez permaneciam fora, nomeando-as: a lacuna deixou de ser negada, mas
+continuou existindo. No terceiro, oito dessas dez foram cobertas, e as duas
+restantes passaram a exigir **justificativa escrita e verificada**.
+
+A diferença entre o segundo e o terceiro estado merece registro porque é fácil
+confundi-los. Declarar honestamente uma lacuna é melhor que ocultá-la, e não é o
+mesmo que corrigi-la: durante o segundo estado, o registro de consentimento
+previsto na LGPD, a aplicação de imunobiológicos que alimenta o cartão do
+cidadão e a fila de envio à rede nacional — que transporta o conteúdo clínico
+serializado — permaneceram legíveis a partir de qualquer município. A
+documentação estava certa, e o dado, exposto.
+
+Das duas tabelas que permanecem fora, nenhuma o está por omissão. O cadastro de
+candidatos a duplicata existe para reconciliar a mesma pessoa registrada em
+municípios distintos, e o escopo territorial destruiria sua função — é o mesmo
+motivo pelo qual o cadastro de pacientes está fora. A tabela de eventos de
+agenda não possui vínculo com paciente nem qualquer chave estrangeira, de modo
+que não há de onde derivar unidade nem dado pessoal a proteger; sua ausência de
+relações é questão de modelagem, anterior e independente do isolamento.
+
+**A ausência passou a custar justificativa.** Um verificador exige que toda
+tabela sem escopo territorial conste de uma lista com a razão declarada, e
+reprova nos dois sentidos: tabela sem coluna e sem justificativa falha, e
+justificativa remanescente para tabela que já ganhou a coluna também. É a
+resposta direta à causa de 9.4.1 — lá, a ausência não custava nada a ninguém, e
+por isso passou despercebida.
 
 O controle de acesso combina permissão nomeada e escopo territorial como
 dimensões independentes, com decisão no servidor.
@@ -1547,8 +1573,8 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 347 casos de teste executa sem falhas em ambos os sistemas de banco de
-dados. A sequência de doze migrações foi exercitada a partir de banco vazio e
+A suíte de 357 casos de teste executa sem falhas em ambos os sistemas de banco de
+dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
 

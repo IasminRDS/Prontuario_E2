@@ -29,6 +29,13 @@ class VacinaAplicada(db.Model):
     vacina_id = db.Column(
         db.Integer, db.ForeignKey("vacinas.id"), nullable=True, index=True
     )
+    # Escopo territorial do RLS (c6b83f2a41d7). Esta tabela é o caso limite: não
+    # tem `criado_por` nem FK para unidade, só a coluna `unidade` de texto livre
+    # abaixo — que é exatamente o problema que o código IBGE resolve para
+    # município. A coluna nova é a ligação real; a de texto permanece como o
+    # dado histórico que o backfill tenta casar.
+    unidade_id = db.Column(db.Integer, db.ForeignKey("unidades_saude.id"),
+                           nullable=True, index=True)
 
     nome_vacina = db.Column(
         db.String(120), nullable=True
