@@ -1397,8 +1397,9 @@ descartado ao final da requisição. Verificou-se a inexistência de qualquer
 mecanismo global de confirmação.
 
 **Análise.** O sistema aparentava auditar leituras de prontuário e não as
-auditava. O impacto é duplo: descumprimento do art. 37 da LGPD e ausência de
-detecção do vetor de abuso mais frequente em sistemas de saúde. Adicionalmente, o
+auditava. O impacto é duplo: descumprimento do art. 37 da LGPD e incapacidade
+estrutural de detectar a consulta indevida por profissional autorizado — que
+não altera estado e, sem registro, não deixa vestígio algum. Adicionalmente, o
 módulo de transparência informaria ao titular, com base na mesma tabela, que não
 houve acessos.
 
