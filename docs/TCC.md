@@ -460,6 +460,13 @@ reintroduza achando que agrega:
   nenhuma vez no artigo; (3) a evidencia e de 2004, sobre cenario que Celuppi
   et al. (2024) documentam como transformado.
 
+ATENCAO AO ANO DA REFERENCIA DA RNDS:
+  A pagina institucional da RNDS no gov.br nao traz data de publicacao — e
+  material continuamente atualizado. Pela NBR 6023, na ausencia de data de
+  publicacao admite-se o ano de ACESSO. Esta como 2026 na lista E na chamada
+  em 7.1. Se voce acessar noutro ano, MUDE OS DOIS. Nenhuma data foi inferida
+  da pagina; e o ano de acesso, por convencao.
+
 ACESSO:
   ISO/IEC 27000 é gratuita (iso.org/standard/73906.html); 27001 e 27002 são
   pagas e NÃO são citadas. NIST SP 800-92 é gratuita. Não cite tradução ABNT
@@ -534,6 +541,8 @@ Quadro — Propriedades da segurança da informação e sua materialização no 
 | **Responsabilização** | propriedade adicional prevista na nota ao item 3.28 | Registro de autoria, ação, endereço de origem e instante em cada mutação clínica |
 | **Não repúdio** (3.48) | capacidade de **provar** a ocorrência de um evento ou ação e suas entidades de origem | Trilha de auditoria encadeada por hash, com ancoragem externa dos retratos |
 
+
+Fonte: definições conforme ISO/IEC 27000:2018; correspondência com o sistema elaborada pela autora (2026).
 A definição normativa de não repúdio impõe um critério mais exigente do que a
 formulação corrente de "impossibilidade de negar autoria": a norma requer a
 capacidade de **provar**. É contra esse critério, e não contra uma noção
@@ -621,6 +630,8 @@ Quadro — Estratégias de isolamento em arquitetura multi-tenant
 | *Schema* por inquilino | Alto | Médio-alto — *n* schemas por migração | Custosa | Inadequada: mesma limitação, com complexidade adicional |
 | **Coluna discriminadora** | Médio, dependente de aplicação | Baixo — um banco, uma migração | Natural | **Adotada** |
 
+
+Fonte: elaborado pela autora (2026) a partir da taxonomia de Chong, Carraro e Wolter (2006).
 #### Decisão adotada, e o argumento contrário
 
 A escolha pela coluna discriminadora (`unidade_id`) decorre de um requisito
@@ -668,9 +679,10 @@ caso obtenham êxito — descritos em 9.3 e cujos achados são analisados em 9.4
 
 ### 4.4 Row-Level Security (RLS)
 
-O RLS do PostgreSQL permite definir políticas que restringem, por linha, quais
-registros uma sessão pode enxergar. A política é avaliada pelo servidor de banco
-de dados em toda consulta, independentemente de sua origem.
+O *Row-Level Security* do PostgreSQL permite definir políticas que restringem,
+por linha, quais registros uma sessão pode enxergar; a política é avaliada pelo
+servidor de banco de dados em toda consulta, independentemente de sua origem
+(THE POSTGRESQL GLOBAL DEVELOPMENT GROUP, 2026).
 
 Do ponto de vista de governança, o RLS transfere o controle de isolamento da
 camada onde o erro é provável (aplicação, com dezenas de consultas escritas por
@@ -736,6 +748,9 @@ fora do alcance da aplicação está declarado na seção 12.
 ---
 
 ## 5. METODOLOGIA
+
+A apresentação deste documento segue a ABNT NBR 14724 quanto à estrutura e à
+formatação, a NBR 6023 quanto às referências e a NBR 6028 quanto ao resumo.
 
 **Natureza:** pesquisa aplicada.
 **Objetivos:** exploratória e descritiva.
@@ -848,6 +863,8 @@ Figura — Camadas da arquitetura e ponto de aplicação de cada controle
 └──────────────────────────────────────────────────────────────┘
 ```
 
+
+Fonte: elaborada pela autora (2026).
 ### 6.2 Fluxo de uma requisição
 
 1. O navegador envia a requisição com o cookie de sessão.
@@ -898,15 +915,18 @@ entre o modelo de dados e os controles aplicados sobre ele.
 A aplicação organiza-se em módulos por domínio funcional (pacientes, prontuário,
 triagem, internação, pronto-socorro, cirurgia, prescrição, exames, encaminhamento
 e regulação, imunização, faturamento, vigilância epidemiológica, estoque e
-farmácia, auditoria, administração), acompanhados de camadas transversais de
-autorização, auditoria, escopo territorial e identidade de pacientes.
+farmácia, auditoria, administração), acrescidos de três de natureza distinta: a
+interoperabilidade com a Rede Nacional de Dados em Saúde (BRASIL, 2026), o
+registro de consentimento e de base legal exigido pela proteção de dados, e o
+portal de transparência ao cidadão. Todos são acompanhados de camadas
+transversais de autorização, auditoria, escopo territorial e identidade de
+pacientes.
 
 A dimensão do artefato é registrada abaixo porque condiciona a leitura dos
-resultados: a cobertura de um controle sobre 42 tabelas e 210 rotas é uma
+resultados: a cobertura de um controle sobre 42 tabelas e 213 rotas é uma
 afirmação de natureza diferente da mesma cobertura sobre meia dúzia de telas de
-demonstração. Os valores foram obtidos por contagem automatizada sobre o
-código-fonte e sobre o *metadata* do mapeador objeto-relacional, e não por
-estimativa.
+demonstração. Os valores foram obtidos por contagem automatizada sobre o código-fonte e sobre
+o *metadata* do mapeador objeto-relacional, e não por estimativa.
 
 Quadro — Dimensão do artefato construído
 
@@ -921,6 +941,8 @@ Quadro — Dimensão do artefato construído
 | Permissões nomeadas · perfis | 27 · 7 |
 | Casos de teste automatizados | 417, em 35 arquivos |
 
+
+Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 Os valores acima resultam de contagem automatizada sobre o repositório.
 
 ### 7.2 Banco de dados
@@ -1051,6 +1073,8 @@ Quadro — Matriz de riscos, controles aplicados e benefício gerencial
 | Configuração de produção aplicada incorretamente | Ambiente exigido explicitamente, sem valor padrão | Configuração inválida impede a inicialização em vez de degradar silenciosamente |
 | Divergência entre modelo de dados e controles | Lista de tabelas protegidas derivada do *metadata* | Reduz risco de tabela nova nascer desprotegida |
 
+
+Fonte: elaborado pela autora (2026).
 ### 8.2 Fronteira entre garantias da aplicação e dependências de infraestrutura
 
 Distinção metodologicamente relevante para a avaliação:
@@ -1242,6 +1266,8 @@ Quadro — Mecanismos recorrentes e achados correspondentes
 | IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13 | medição do efeito, não da chamada |
 | V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15 | verificação de segunda ordem sobre o próprio controle |
 
+
+Fonte: elaborado pela autora (2026), por classificação a posteriori dos achados relatados em 9.4.
 O achado 9.4.6 reúne observações pontuais
 de interesse gerencial e não corresponde a mecanismo único. As sobreposições —
 9.4.15 nas classes IV e V, 9.4.17 nas classes II e IV, 9.4.19 nas classes I e
@@ -1268,6 +1294,8 @@ Quadro — Instrumentos permanentes derivados de cada mecanismo
 | IV | renderização de toda rota de leitura com dados semeados; conferência de que rota de escrita registra auditoria na mesma transação; medição do que ficou persistido |
 | V | listas de exceção que reprovam **nos dois sentidos** — achado novo falha, e achado já corrigido que continue listado também; conferência de que o endurecimento não impediu a função protegida |
 
+
+Fonte: elaborado pela autora (2026).
 O instrumento da classe V merece nota, por ser o único de segunda ordem. As
 listas de exceção existem porque toda verificação automatizada acumula casos
 tolerados, e casos tolerados envelhecem: o que era exceção justificada torna-se
@@ -2429,9 +2457,8 @@ Quadro — Manipulações do registro de âncoras e o que é detectado
 | **Truncar o fim do registro** | **Não** | as linhas restantes seguem encadeadas e nada no arquivo indica que já foi maior |
 | **Recomputar o registro inteiro** | **Não** | quem controla o arquivo produz sequência internamente coerente; só o valor retido fora a desmascara |
 
-Cada linha da tabela corresponde a um caso executado em
-`tests/test_ancora_journal.py`.
 
+Fonte: elaborado pela autora (2026), por medição — cada linha corresponde a um caso executado em `tests/test_ancora_journal.py`.
 A penúltima linha da tabela merece nota, porque foi acrescentada tarde e por
 medição, não por previsão. O resumo criptográfico cobria apenas os campos
 declarados, de modo que uma chave adicional inserida em uma linha legítima —
@@ -2748,7 +2775,7 @@ https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2016/decreto/d8727.htm.
 Acesso em: ....
 
 BRASIL. Ministério da Saúde. **Rede Nacional de Dados em Saúde (RNDS)**.
-Brasília, DF: Ministério da Saúde, ..... Disponível em:
+Brasília, DF: Ministério da Saúde, 2026. Disponível em:
 https://www.gov.br/saude/pt-br/composicao/seidigi/rnds. Acesso em: ....
 
 CONSELHO FEDERAL DE ENFERMAGEM. **Resolução Cofen nº 661, de 9 de março de
@@ -2805,17 +2832,16 @@ perspective. **Journal of Systems and Software**, v. 100, p. 139-148, 2015. DOI:
 
 ### Usabilidade
 
-NIELSEN, Jakob. **Usability engineering**. San Francisco: Morgan Kaufmann, 1993.
-
 NIELSEN, Jakob. **10 usability heuristics for user interface design**. Nielsen
 Norman Group, 1994. Disponível em:
 https://www.nngroup.com/articles/ten-usability-heuristics/. Acesso em: ....
 
 ### Documentação técnica
 
-THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL documentation**: row
-security policies. [S. l.]: PostgreSQL, ..... Disponível em:
-https://www.postgresql.org/docs/current/ddl-rowsecurity.html. Acesso em: ....
+THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL 16.14 documentation**:
+row security policies. [S. l.]: The PostgreSQL Global Development Group, 2026.
+Seção 5.8. Disponível em:
+https://www.postgresql.org/docs/16/ddl-rowsecurity.html. Acesso em: ....
 
 <!--
 SUGESTÕES DE LEITURA COMPLEMENTAR — não incluídas na lista acima porque só devem
@@ -2855,6 +2881,8 @@ Quadro — Correspondência entre as disciplinas do curso e o trabalho
 | **Regulamentação e Ética Aplicada** | LGPD (arts. 5º, 9º, 11 e 37), sigilo profissional, direito do titular à transparência de acessos |
 | **Pesquisa Orientada ao TCC** | Classificação metodológica, estudo de caso aplicado, análise crítica de resultados |
 
+
+Fonte: elaborado pela autora (2026).
 ## APÊNDICE B — Glossário
 
 Quadro — Glossário dos termos técnicos empregados
@@ -2872,3 +2900,5 @@ Quadro — Glossário dos termos técnicos empregados
 | **CNES** | Cadastro Nacional de Estabelecimentos de Saúde |
 | **AIH** | Autorização de Internação Hospitalar |
 | **Preenchimento retroativo** | Atribuição de valor a coluna nova em registros preexistentes |
+
+Fonte: elaborado pela autora (2026).
