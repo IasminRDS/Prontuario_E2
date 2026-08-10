@@ -2320,8 +2320,15 @@ escrita. Trata-se de substituição de controle dependente de conduta por contro
 técnico — princípio central de controles internos.
 
 **Confiabilidade da informação gerencial.** A adoção do código IBGE como chave
-territorial elimina a fragmentação de agrupamentos por variação de grafia,
+territorial fornece um critério de agrupamento imune à variação de grafia,
 condição necessária para que relatórios agregados sejam utilizáveis em decisão.
+A formulação é deliberadamente restrita: o ganho vale para as agregações que
+utilizam o código, e não para o modelo inteiro. Os campos de município e unidade
+federativa em texto livre permanecem no esquema — são consumidos por telas e
+documentos —, e o código territorial admite valor nulo em cadastros anteriores à
+sua adoção. Agregação que continue a agrupar pelo texto permanece sujeita ao
+problema; o que a decisão estabelece é a existência de uma chave que não o tem, e
+a obrigação de usá-la.
 
 **Continuidade verificada.** A validação automatizada da restauração converte a
 suposição de continuidade em verificação periódica com alarme automático.
@@ -2335,9 +2342,15 @@ controles que permanecem sob sua responsabilidade.
 Os defeitos relatados em 9.4 constituem resultado do trabalho, e não relato de
 insucesso. Três considerações sustentam essa interpretação.
 
-**Todos foram identificados por verificação empírica, e nenhum por inspeção de
-código.** Isso valida a premissa metodológica adotada em 5.2 e recomenda-a para
-contextos análogos.
+**A quase totalidade foi identificada por verificação empírica, e não por
+inspeção de código.** Isso sustenta a premissa metodológica adotada em 5.2 e
+recomenda-a para contextos análogos. Registre-se, porém, a exceção, por delimitar
+o alcance do método: o achado 9.4.16 — a entidade de consentimento que nenhuma
+linha de código instanciava — não foi alcançado por verificação alguma, e não
+poderia sê-lo. As varreduras percorrem rotas, telas e execuções; uma entidade
+sem qualquer código que a toque não aparece em nenhuma delas. Há, portanto, um
+piso abaixo do qual a verificação empírica não alcança, e nele a leitura do
+modelo de dados continua sendo o único instrumento.
 
 **A natureza dos defeitos é instrutiva.** Predominam falhas de *cobertura* e de
 *consistência*, não de implementação: mecanismo correto aplicado a conjunto
@@ -2373,7 +2386,9 @@ permanece capaz de detectar.
 
 **A recorrência dos padrões é achado autônomo.** Vários defeitos não são
 independentes: são a mesma causa em pontos diferentes. Telas montadas com o
-conteúdo de outro módulo aparecem sete vezes; regra replicada em mais de um
+conteúdo de outro módulo aparecem em sete ocorrências — quatro relatadas em
+9.4.6 e três em 9.4.10, sendo duas delas pares trocados entre si; regra
+replicada em mais de um
 lugar, oito — quatro vocabulários de estado e quatro implementações da conversão
 de sinais vitais; leitura de campo inexistente no modelo de dados,
 sistematicamente. Isso desloca a recomendação do caso para a classe — corrigir
@@ -2563,6 +2578,16 @@ implementa para os dados não existe para as regras de autorização. Fechar ess
 lacuna exigiria persistir a matriz por unidade ou por rede, com precedência
 definida e com auditoria das próprias alterações de permissão, o que constitui
 trabalho autônomo e está indicado entre as continuações possíveis.
+
+**Medição de desempenho sem tratamento estatístico.** Os tempos apresentados em
+11.2 correspondem a observações em ambiente de desenvolvimento e **não são
+acompanhados de número de repetições nem de medida de dispersão**. Servem, com
+essa ressalva, ao propósito para o qual foram produzidos: evidenciar diferenças
+de ordem de grandeza — de 185,9 ms para 0,96 ms, ou de 106 consultas para 17 —,
+magnitude em que a variação entre execuções não altera a conclusão. Não servem
+para comparação fina entre alternativas de implementação, nem como referência de
+capacidade, e a precisão decimal com que são apresentados não deve ser lida como
+indicação de repetibilidade.
 
 **Medição limitada a volume sintético.** Os planos de execução foram analisados
 com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição
