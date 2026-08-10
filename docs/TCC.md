@@ -268,6 +268,15 @@ ocorre em escala federativa: uma mesma pessoa é atendida em municípios distint
 por unidades administrativamente independentes, sob gestão estadual e federal
 compartilhada.
 
+O deslocamento não é projeção: está medido. Celuppi *et al.* (2024), ao analisarem
+a base da Secretaria de Atenção Primária à Saúde ao longo da primeira década da
+estratégia e-SUS APS, registram que o número de unidades de saúde utilizando o
+Prontuário Eletrônico do Cidadão passou de 8.930, em 2017, para 26.091, em 2022,
+e concluem que esse prontuário é hoje a principal ferramenta do gênero no país.
+A escala importa para o argumento que segue: não se trata de antecipar um cenário
+futuro, mas de examinar controles que já operam sobre registros clínicos de
+dezenas de milhares de unidades.
+
 Esse arranjo produz uma tensão que é, antes de tudo, um problema de gestão. De um
 lado, o prontuário longitudinal — a capacidade de recuperar o histórico completo
 de um cidadão independentemente de onde foi atendido — é a principal promessa
@@ -277,6 +286,15 @@ tratamento restrito, finalidade determinada e rastreabilidade. Ampliar o acesso
 melhora o cuidado; restringi-lo protege o titular. A arquitetura do sistema é o
 instrumento pelo qual a organização decide onde essa fronteira é traçada — e essa
 decisão é de governança, não de programação.
+
+A quem cabe assegurar que essa fronteira seja respeitada é questão já colocada
+pela literatura nacional. Ao discutirem a integração do prontuário com sistemas
+de terceiros, Celuppi *et al.* (2024) atribuem à gestão municipal e às empresas
+contratadas a responsabilidade pela manutenção e adequação dos sistemas no que
+concerne à interoperabilidade, à proteção e à segurança dos dados. A atribuição
+enuncia a responsabilidade, mas não fornece o instrumento pelo qual quem a
+detém possa verificar se ela está sendo cumprida — e é essa lacuna que o presente
+trabalho se propõe a estreitar.
 
 Sob a ótica da Gestão da Tecnologia da Informação, um sistema de prontuário não
 se avalia apenas por funcionar. Avalia-se por oferecer **garantias verificáveis**:
@@ -430,9 +448,17 @@ CUIDADOS QUE NÃO PODEM SE PERDER NUMA REVISÃO FUTURA:
     FOI REMOVIDA. Os dados do setor oscilam demais entre anos para sustentá-la,
     e o argumento é lógico e não estatístico. Não reintroduza o superlativo.
 
-AINDA SEM FONTE:
-  1  O contexto do prontuário eletrônico no SUS não cita literatura nacional.
-     É onde a banca espera SciELO ou repositório da CAPES.
+AINDA SEM FONTE: nenhuma pendência conhecida no corpo do texto.
+
+FONTE NACIONAL DESCARTADA APÓS VERIFICAÇÃO — registre-se para que ninguém a
+reintroduza achando que agrega:
+  FACCHINI et al. (2005), Cienc. Saude Coletiva, sobre fragmentação dos
+  sistemas de informação em saúde. Descartada por três razões conferidas no
+  PDF: (1) o trecho sobre fragmentação termina com "(Ministério da Saúde, 2004;
+  Brasil, 2005)" — os proprios autores o atribuem a terceiros, entao cita-lo
+  seria citacao de segunda mao; (2) a palavra "interoperabilidade" nao aparece
+  nenhuma vez no artigo; (3) a evidencia e de 2004, sobre cenario que Celuppi
+  et al. (2024) documentam como transformado.
 
 ACESSO:
   ISO/IEC 27000 é gratuita (iso.org/standard/73906.html); 27001 e 27002 são
@@ -2697,6 +2723,15 @@ documentação: resumo, resenha e recensão: apresentação. Rio de Janeiro: ABN
 
 ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 14724**: informação e
 documentação: trabalhos acadêmicos: apresentação. Rio de Janeiro: ABNT, 2011.
+
+### Prontuário eletrônico no SUS
+
+CELUPPI, Ianka Cristina; MOHR, Eduarda Talita Bramorski; FELISBERTO, Mariano;
+RODRIGUES, Thiago Serafim; HAMMES, Jades Fernando; CUNHA, Célio Luiz;
+WAZLAWICK, Raul Sidnei; DALMARCO, Eduardo Monguilhott. Dez anos do Prontuário
+Eletrônico do Cidadão e-SUS APS: em busca de um Sistema Único de Saúde
+eletrônico. **Revista de Saúde Pública**, São Paulo, v. 58, p. 23, 2024. DOI:
+10.11606/s1518-8787.2024058005770.
 
 ### Legislação e normas oficiais
 
