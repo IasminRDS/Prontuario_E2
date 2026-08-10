@@ -319,7 +319,10 @@ isolamento entre inquilinos costuma ser implementado na camada de aplicação, p
 meio de filtros adicionados às consultas. O controle depende, então, da
 disciplina do desenvolvedor: uma consulta nova que esqueça o filtro expõe dados
 de outra unidade sem gerar erro, sem alerta e sem qualquer sinal perceptível ao
-usuário. O incidente não se manifesta como falha — manifesta-se como
+usuário. O risco é reconhecido na literatura da área: Kabbedijk *et al.* (2015)
+registram que o compartilhamento de uma mesma instância por organizações
+distintas eleva a possibilidade de dados serem **acidentalmente consultados pelo
+inquilino errado**. O incidente não se manifesta como falha — manifesta-se como
 funcionamento normal com dados a mais. É a classe de risco mais difícil de
 detectar por observação operacional.
 
@@ -392,69 +395,78 @@ constitui contribuição relevante, conforme discutido na seção 11.4.
 ## 4. FUNDAMENTAÇÃO TEÓRICA
 
 <!--
-ANCORAGEM BIBLIOGRÁFICA — O QUE FALTA NESTA SEÇÃO
+ANCORAGEM BIBLIOGRÁFICA — ESTADO ATUAL
 
-Até esta revisão o texto inteiro não tinha NENHUMA citação no corpo, embora a
-lista de referências trouxesse onze obras. Isso é defeito formal grave: a NBR
-10520 exige a citação no texto, e a NBR 6023 pressupõe que a lista corresponda
-ao que foi citado. Lista sem chamada no texto sugere bibliografia montada e não
-usada — é das primeiras coisas que uma banca confere.
+A NBR 10520 exige a citação no texto, e a NBR 6023 pressupõe que a lista
+corresponda ao que foi citado. Lista sem chamada no texto sugere bibliografia
+montada e não usada; é das primeiras coisas que uma banca confere.
 
-JÁ ANCORADO nesta revisão (obras que já estavam na sua lista):
-  4.1  domínios do COBIT ............................ (ISACA, 2018)
-  4.4  falha fechada / fail-safe defaults ........... Saltzer e Schroeder (1975)
-  10.1 dez heurísticas ............................... Nielsen (1994)
+ANCORADO E VERIFICADO NA FONTE:
   1, 2.2, 4.5  artigos da LGPD ...................... (BRASIL, 2018)
+  2.2   consulta acidental de outro inquilino ....... Kabbedijk et al. (2015, p. 20)
+  2.2   auditoria anterior à LGPD .................. (CFM, 2007)
+  4.1   distinção governança x gestão .............. (ISACA, 2018)
+  4.1   estruturas/processos/mecanismos relacionais  Van Grembergen et al. (2004)
+  4.2   propriedades da segurança .................. ISO/IEC 27000:2018, itens 3.6-3.48
+  4.3   definição de multi-tenancy ................. Kabbedijk et al. (2015, p. 17)
+  4.3   as três estratégias de isolamento .......... Chong, Carraro e Wolter (2006)
+  4.3   expectativa do setor de saúde .............. Chong et al. (2006, p. 4)
+  4.3   testes de isolamento como agenda ........... Kabbedijk et al. (2015, p. 20)
+  4.4   falha fechada / fail-safe defaults ......... Saltzer e Schroeder (1975)
+  4.5   finalidades e integridade dos registros .... Kent e Souppaya (2006)
+  7.2   nome social ................................ (BRASIL, 2016)
+  10.1  dez heurísticas ............................ Nielsen (1994)
 
-AINDA SEM FONTE — cada item abaixo é uma afirmação conceitual que hoje se
-sustenta apenas na redação própria. Leia antes de citar:
+CUIDADOS QUE NÃO PODEM SE PERDER NUMA REVISÃO FUTURA:
+  - 4.1: "estruturas, processos e mecanismos relacionais" é o modelo de
+    IMPLANTAÇÃO da governança, NÃO a definição dela. Foi assim que a atribuição
+    saiu errada da primeira vez. Não funda as duas frases numa só.
+  - 4.3: a frase sobre gestão de registros médicos é sobre o que CLIENTES
+    exigem, não sobre exigência técnica. Não a cite como recomendação.
+  - 4.3: a chamada por testes de isolamento (p. 20) vem da perspectiva
+    INDUSTRIAL do estudo, não do corpus acadêmico. Não escreva "a literatura
+    acadêmica aponta".
+  - 4.5: a afirmação de que a consulta indevida seria "o vetor mais frequente"
+    FOI REMOVIDA. Os dados do setor oscilam demais entre anos para sustentá-la,
+    e o argumento é lógico e não estatístico. Não reintroduza o superlativo.
 
-  4.1  A definição de governança de TI como "estruturas, processos e mecanismos
-       relacionais" NÃO é do COBIT — é de Van Grembergen e De Haes. Ou você cita
-       a fonte correta, ou reescreve a definição com base no COBIT, que já está
-       na lista. Não atribua a frase ao COBIT como está.
+AINDA SEM FONTE:
+  1  O contexto do prontuário eletrônico no SUS não cita literatura nacional.
+     É onde a banca espera SciELO ou repositório da CAPES.
 
-  4.2  As cinco propriedades (confidencialidade, integridade, disponibilidade,
-       autenticidade, não repúdio) estão com definição própria. A ancoragem
-       natural é a ABNT NBR ISO/IEC 27000/27001/27002. É a seção que mais ganha
-       com uma norma no lugar de definição autoral.
+ACESSO:
+  ISO/IEC 27000 é gratuita (iso.org/standard/73906.html); 27001 e 27002 são
+  pagas e NÃO são citadas. NIST SP 800-92 é gratuita. Não cite tradução ABNT
+  das normas ISO sem tê-la aberto.
 
-  4.3  O quadro comparativo das estratégias de multi-tenancy é o item mais
-       exposto: apresenta um julgamento (isolamento x custo x consulta entre
-       inquilinos) sem nenhuma fonte. Procure artigo revisado por pares sobre
-       "multi-tenant data architecture".
-
-  4.4  A descrição do RLS deve citar a documentação do PostgreSQL, que já está
-       na lista — falta preencher o ano da versão consultada.
-
-  4.5  As três funções da trilha de auditoria e as duas propriedades
-       (completude, integridade) estão sem fonte.
-
-  1    O contexto do prontuário eletrônico no SUS não cita nada. É onde a banca
-       espera literatura nacional (SciELO, repositório da CAPES).
-
-REFERÊNCIAS ÓRFÃS — estão na lista e NUNCA aparecem no corpo. Ou você as usa,
-ou as remove; lista com obra não citada tem o mesmo problema, ao contrário:
-
-  - Decreto nº 8.727/2016 (nome social). O sistema IMPLEMENTA nome social
-    (`nome_social` / `nome_exibicao`), então há onde citar de verdade: na
-    seção 7.2, ao descrever a entidade Paciente.
-  - Resolução CFM nº 1.821/2007. Caberia na seção 1 ou 2, no contexto
-    normativo do prontuário eletrônico.
-  - ABNT NBR 6023 e NBR 6028. São normas de formatação DESTE documento, não
-    fontes do argumento. O usual é não listá-las como referência.
+REFERÊNCIAS ÓRFÃS — resolvidas: Decreto 8.727/2016 foi ancorado em 7.2 e a
+Resolução CFM 1.821/2007 em 2.2. Permanecem as NBR 6023/6028/14724, que são
+normas de formatação DESTE documento e não fontes do argumento; o usual é não
+listá-las como referência.
 -->
 
 ### 4.1 Governança de Tecnologia da Informação
 
-Governança de TI designa o conjunto de estruturas, processos e mecanismos
-relacionais que asseguram que a tecnologia sustente os objetivos organizacionais,
-com gestão adequada de riscos e uso responsável de recursos. Distingue-se da
-gestão de TI por tratar de **decisão e responsabilização** — quem decide, sob
-quais critérios, e como se comprova que a decisão foi cumprida.
+Governança de tecnologia da informação trata de assegurar que a tecnologia
+sustente os objetivos organizacionais, com gestão adequada de riscos e uso
+responsável de recursos. Distingue-se da **gestão** de TI por ocupar-se de
+decisão e responsabilização — quem decide, sob quais critérios, e como se
+comprova que a decisão foi cumprida —, enquanto a gestão se ocupa de planejar,
+construir, executar e monitorar as atividades que realizam a decisão tomada. O
+modelo COBIT organiza esses elementos em domínios de avaliação, direcionamento,
+monitoramento e execução (ISACA, 2018).
 
-O modelo COBIT organiza esses elementos em domínios de avaliação, direcionamento,
-monitoramento e execução (ISACA, 2018). Dois princípios orientaram este trabalho:
+Definida a distinção, cabe perguntar por quais meios a governança se materializa.
+Van Grembergen, De Haes e Guldentops (2004) propõem que ela seja **implantada**
+por meio da combinação de três tipos de mecanismo: **estruturas** (órgãos e
+papéis de decisão), **processos** (formalização das decisões e do monitoramento)
+e **mecanismos relacionais** (participação e colaboração entre as áreas de
+negócio e de tecnologia). A distinção entre definir governança e enumerar seus
+mecanismos de implantação não é retórica: o presente trabalho atua sobre o
+segundo tipo, os processos, ao converter decisões de controle em verificações
+executáveis.
+
+Dois princípios orientaram este trabalho:
 
 **Controle interno preferencialmente automatizado.** Controle dependente de
 conduta humana degrada com rotatividade e pressão operacional. Um controle
@@ -470,15 +482,38 @@ contínua.
 
 ### 4.2 Segurança da Informação
 
+A norma ISO/IEC 27000:2018 define segurança da informação como a **preservação da
+confidencialidade, da integridade e da disponibilidade** da informação, e
+acrescenta, em nota, que outras propriedades — entre elas autenticidade,
+responsabilização (*accountability*) e não repúdio — podem também estar
+envolvidas (item 3.28). A hierarquia é deliberada na norma e é preservada aqui,
+com uma escolha que convém explicitar: neste trabalho, autenticidade e não
+repúdio foram tratadas no mesmo nível das três primeiras, porque em prontuário
+eletrônico a **autoria do registro clínico** não é atributo acessório. Quem
+prescreveu, quem classificou o risco, quem consultou o prontuário de um cidadão
+— essas perguntas constituem o objeto da regulação profissional e da proteção de
+dados, e não uma qualidade desejável do sistema.
+
+As definições abaixo são as da norma; a terceira coluna registra por qual
+mecanismo cada propriedade se realiza neste sistema.
+
 Quadro — Propriedades da segurança da informação e sua materialização no sistema
 
-| Propriedade | Definição operacional | Materialização no sistema |
+| Propriedade | Definição (ISO/IEC 27000:2018) | Materialização no sistema |
 |---|---|---|
-| **Confidencialidade** | Acesso restrito a quem é autorizado | RLS no banco, RBAC por perfil, escopo territorial |
-| **Integridade** | Dado não alterado indevidamente | Restrições de integridade referencial, encadeamento por hash da auditoria, validação anterior à persistência |
-| **Disponibilidade** | Informação acessível quando necessária | Backup em formato *custom* com validação automatizada de restauração |
-| **Autenticidade** | Certeza sobre a origem da ação | Autenticação com hash de senha (*scrypt*), sessão com atributos de segurança, registro de autoria em cada mutação |
-| **Não repúdio** | Impossibilidade de negar autoria | Trilha de auditoria com usuário, ação, IP e encadeamento por hash |
+| **Confidencialidade** (3.10) | informação não disponibilizada nem revelada a indivíduos, entidades ou processos não autorizados | RLS no banco, RBAC por permissão nomeada, escopo territorial |
+| **Integridade** (3.36) | propriedade de exatidão e completude | Restrições de integridade referencial, encadeamento por hash da auditoria, validação anterior à persistência |
+| **Disponibilidade** (3.7) | propriedade de ser acessível e utilizável sob demanda por entidade autorizada | Backup em formato *custom* com validação automatizada de restauração |
+| **Autenticidade** (3.6) | propriedade de que uma entidade é o que afirma ser | Autenticação com hash de senha (*scrypt*), sessão com atributos de segurança, verificação em duas etapas |
+| **Responsabilização** | propriedade adicional prevista na nota ao item 3.28 | Registro de autoria, ação, endereço de origem e instante em cada mutação clínica |
+| **Não repúdio** (3.48) | capacidade de **provar** a ocorrência de um evento ou ação e suas entidades de origem | Trilha de auditoria encadeada por hash, com ancoragem externa dos retratos |
+
+A definição normativa de não repúdio impõe um critério mais exigente do que a
+formulação corrente de "impossibilidade de negar autoria": a norma requer a
+capacidade de **provar**. É contra esse critério, e não contra uma noção
+intuitiva, que a trilha implementada neste trabalho é avaliada — e a avaliação
+resulta em atendimento parcial, analisado ao final desta seção e retomado na
+seção 12.
 
 A propriedade de **não repúdio** merece qualificação em dois níveis. O
 encadeamento por resumo criptográfico torna a trilha *tamper-evident*:
@@ -496,11 +531,61 @@ ocultar a própria ação recente. A mitigação — ancoragem externa do resumo
 último elo — foi implementada e é discutida na seção 12, onde se argumenta que o
 que resta de limitação é a custódia da âncora, não o mecanismo.
 
+Confrontado o resultado com o item 3.48 da norma, o atendimento é **parcial** e
+convém dizê-lo com precisão: o sistema torna a adulteração *detectável* por quem
+examine a trilha, mas não produz *prova* oponível ao próprio operador, para o que
+seriam necessários assinatura sob custódia externa, carimbo de tempo de
+autoridade credenciada ou réplica em sistema independente. A distância entre
+detectar e provar é a distância entre este trabalho e o critério normativo, e é
+declarada como limitação em vez de dissolvida na redação.
+
 ### 4.3 Multi-Tenancy
 
-Multi-tenancy designa a arquitetura em que uma única instância de aplicação serve
-múltiplos inquilinos com isolamento entre seus dados. As estratégias usuais
-apresentam o seguinte quadro comparativo:
+O termo *multi-tenancy* carece de definição uniforme, e a divergência não é
+apenas terminológica: Kabbedijk *et al.* (2015), em estudo de mapeamento
+sistemático que analisou 761 artigos acadêmicos e 371 publicações do meio
+profissional, identificaram 43 definições distintas, a maioria delas aplicável a
+apenas uma camada da arquitetura. Da consolidação dessas definições os autores
+propõem a seguinte, adotada neste trabalho:
+
+> *Multi-tenancy* é uma propriedade de um sistema em que múltiplos clientes,
+> denominados inquilinos, compartilham de forma transparente os recursos do
+> sistema — serviços, aplicações, bancos de dados ou equipamentos —, com o
+> objetivo de reduzir custos, mantendo-se a possibilidade de configurar o
+> sistema exclusivamente conforme as necessidades de cada inquilino
+> (KABBEDIJK *et al.*, 2015, p. 17, tradução nossa).
+
+Dois elementos dessa definição orientam o restante da seção. O primeiro é
+*transparente*: o compartilhamento não deve ser perceptível ao inquilino, o que
+converte o isolamento de dado em requisito e não em característica. O segundo é
+que a propriedade se aplica a **camadas distintas** — pode-se ser multi-inquilino
+no equipamento, no banco de dados ou na aplicação —, de modo que afirmar que um
+sistema é multi-inquilino, sem dizer em que camada, não informa nada sobre o
+isolamento que ele oferece.
+
+#### Alternativas arquiteturais
+
+A referência usual para as estratégias de isolamento de dados é o trabalho de
+Chong, Carraro e Wolter (2006), que as dispõe num contínuo entre isolamento e
+compartilhamento, e não como escolha binária. São três:
+
+- **Bancos separados** (*separate databases*) — cada inquilino possui o próprio
+  banco; a aplicação e os recursos computacionais são compartilhados. É descrita
+  pelos autores como a abordagem mais simples do ponto de vista do isolamento.
+- **Banco compartilhado, esquemas separados** (*shared database, separate
+  schemas*) — inquilinos convivem no mesmo banco, cada um com seu conjunto de
+  tabelas agrupadas num esquema próprio.
+- **Banco compartilhado, esquema compartilhado** (*shared database, shared
+  schema*) — as mesmas tabelas hospedam os dados de todos os inquilinos, e uma
+  **coluna identificadora do inquilino** associa cada registro ao seu titular.
+
+#### Critérios de comparação
+
+A escolha entre as três foi avaliada segundo quatro critérios, sendo o último
+específico do domínio deste trabalho: grau de isolamento obtido; custo
+operacional de manutenção, migração e cópia de segurança; viabilidade de consulta
+que atravesse inquilinos; e adequação ao cuidado longitudinal em rede pública de
+saúde.
 
 Quadro — Estratégias de isolamento em arquitetura multi-tenant
 
@@ -510,14 +595,50 @@ Quadro — Estratégias de isolamento em arquitetura multi-tenant
 | *Schema* por inquilino | Alto | Médio-alto — *n* schemas por migração | Custosa | Inadequada: mesma limitação, com complexidade adicional |
 | **Coluna discriminadora** | Médio, dependente de aplicação | Baixo — um banco, uma migração | Natural | **Adotada** |
 
+#### Decisão adotada, e o argumento contrário
+
 A escolha pela coluna discriminadora (`unidade_id`) decorre de um requisito
 organizacional, não de conveniência de implementação: o cuidado longitudinal
 exige consulta que atravesse unidades de forma controlada. Bancos separados
-tornariam essa consulta uma operação de integração entre sistemas.
+tornariam essa consulta uma operação de integração entre sistemas — precisamente
+o obstáculo que o prontuário em rede existe para remover.
 
-A fragilidade reconhecida dessa estratégia é a dependência da aplicação para
-aplicar o filtro. É precisamente essa fragilidade que o mecanismo descrito em 4.4
-se propõe a mitigar.
+A decisão foi tomada **contra uma expectativa documentada do próprio setor**, e
+registrá-la é mais honesto que omiti-la. Chong, Carraro e Wolter (2006, p. 4)
+observam que clientes de áreas como serviços bancários e **gestão de registros
+médicos** costumam ter exigências de isolamento particularmente fortes, e podem
+sequer considerar uma aplicação que não forneça a cada inquilino o seu próprio
+banco de dados. A observação diz respeito ao que tais clientes **exigem**, não ao
+que é tecnicamente necessário; ainda assim, contraria a estratégia aqui adotada e
+transfere a este trabalho o ônus de demonstrar que o isolamento obtido é
+suficiente — ônus que a seção 4.4 e o capítulo 9 assumem.
+
+#### Fragilidade e mitigação
+
+A fragilidade reconhecida da estratégia é a **dependência da aplicação** para
+aplicar o filtro: o isolamento passa a repousar sobre a disciplina de quem
+escreve cada consulta. Não é risco hipotético — Kabbedijk *et al.* (2015, p. 20)
+registram, entre as preocupações levantadas em sua revisão, que o
+compartilhamento de instância eleva o risco de dados serem **acidentalmente
+consultados pelo inquilino errado**. É precisamente essa fragilidade que o
+mecanismo descrito em 4.4 se propõe a mitigar, deslocando a regra de isolamento
+da camada onde o erro é provável para a camada onde ela é declarada uma vez.
+
+#### Verificar o isolamento como contribuição
+
+Resta uma pergunta que a adoção do mecanismo não responde: **como se sabe que o
+isolamento funciona?** Os mesmos autores, ao enunciarem a agenda de pesquisa
+derivada de seu mapeamento, apontam o isolamento de dados como preocupação
+central e acrescentam que *"desenvolver testes que assegurem que o isolamento de
+dados está funcionando corretamente é também um caminho interessante para
+trabalhos futuros"* (KABBEDIJK *et al.*, 2015, p. 20, tradução nossa). Registre-se
+que essa chamada foi identificada pelos autores a partir da perspectiva
+**profissional** examinada no estudo, e não do consenso da literatura acadêmica.
+
+É nesse ponto que se situa a contribuição deste trabalho. O sistema não apenas
+implementa isolamento multi-inquilino: submete-o a verificação empírica
+permanente, por meio de casos de teste que tentam violar o isolamento e reprovam
+caso obtenham êxito — descritos em 9.3 e cujos achados são analisados em 9.4.
 
 ### 4.4 Row-Level Security (RLS)
 
@@ -553,16 +674,38 @@ Quatro condições determinam se o mecanismo constitui proteção efetiva:
 
 ### 4.5 Auditoria e rastreabilidade
 
-Trilha de auditoria em sistema de saúde cumpre três funções distintas:
-responsabilização individual, atendimento a direito do titular (BRASIL, 2018,
-art. 9º) e
-apuração de incidentes.
+O registro de auditoria é o mecanismo pelo qual as propriedades de
+responsabilização e não repúdio, enunciadas em 4.2, deixam de ser declarações e
+passam a ter suporte material. Kent e Souppaya (2006) situam entre as
+finalidades da gestão de registros a identificação de incidentes de segurança,
+de violações de política e de atividade fraudulenta, além do apoio a análises
+forenses e a investigações internas. Em sistema de saúde, a essas finalidades
+soma-se uma de natureza jurídica: o atendimento ao direito do titular de saber
+quem acessou seus dados (BRASIL, 2018, art. 9º).
 
-Duas propriedades condicionam sua utilidade. **Completude:** trilha que registra
-escritas mas omite leituras não detecta o vetor de abuso mais frequente em saúde
-— consulta indevida por profissional autorizado, que não altera nada.
-**Integridade:** trilha alterável pelo próprio sistema auditado tem valor
-probatório reduzido.
+Duas propriedades condicionam a utilidade da trilha, e ambas são condições
+necessárias — uma trilha íntegra porém incompleta e uma trilha completa porém
+alterável falham por razões diferentes e com igual gravidade.
+
+**Completude.** Trilha que registra escritas e omite leituras é estruturalmente
+incapaz de detectar a consulta indevida por profissional autorizado. O argumento
+é de construção, e não de frequência: a consulta não altera estado, não viola
+restrição de integridade, não difere de uma consulta legítima em nenhum atributo
+observável pelo sistema — de modo que, se não for registrada, **não deixa
+vestígio algum**. Ausência de registro e ausência de acesso tornam-se
+indistinguíveis. É por essa razão, e não por estimativa de incidência, que este
+trabalho registra leituras além de escritas.
+
+**Integridade.** Trilha que o sistema auditado pode alterar tem valor probatório
+reduzido, pela razão evidente de que o interessado em suprimir o registro de um
+acesso é frequentemente quem detém o controle do sistema que o produziu. Kent e
+Souppaya (2006) tratam a proteção da confidencialidade e da integridade dos
+registros como requisito próprio da gestão de logs, distinto da sua geração. As
+condições concretas que essa exigência impõe — propriedade da tabela por papel
+distinto do utilizado pela aplicação, revogação dos privilégios de alteração e
+exclusão, encadeamento por resumo criptográfico e ancoragem externa — são
+analisadas em 8.2 e verificadas por comando executável, e o que delas permanece
+fora do alcance da aplicação está declarado na seção 12.
 
 ---
 
@@ -2586,17 +2729,44 @@ CFM, 2007.
 
 ### Governança e segurança da informação
 
+INTERNATIONAL ORGANIZATION FOR STANDARDIZATION; INTERNATIONAL ELECTROTECHNICAL
+COMMISSION. **ISO/IEC 27000:2018**: information technology — security techniques
+— information security management systems — overview and vocabulary. 5. ed.
+Genebra: ISO, 2018.
+
 ISACA. **COBIT 2019 framework**: governance and management objectives. Schaumburg:
 ISACA, 2018.
 
+KENT, Karen; SOUPPAYA, Murugiah. **Guide to computer security log management**.
+Gaithersburg: National Institute of Standards and Technology, set. 2006. (NIST
+Special Publication, 800-92). Disponível em:
+https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-92.pdf.
+Acesso em: ....
+
 SALTZER, Jerome H.; SCHROEDER, Michael D. The protection of information in
 computer systems. **Proceedings of the IEEE**, v. 63, n. 9, p. 1278-1308, 1975.
+
+VAN GREMBERGEN, Wim; DE HAES, Steven; GULDENTOPS, Erik. Structures, processes and
+relational mechanisms for IT governance. In: VAN GREMBERGEN, Wim (org.).
+**Strategies for information technology governance**. Hershey: Idea Group
+Publishing, 2004. p. 1-36.
 
 <!--
 Saltzer e Schroeder é a origem do princípio de "fail-safe defaults" (padrões que
 falham fechado), citado nas seções 4.4 e 8.1. É referência clássica e ainda
 usada; vale a leitura da seção "Design Principles", que é curta.
 -->
+
+### Arquitetura de software
+
+CHONG, Frederick; CARRARO, Gianpaolo; WOLTER, Roger. **Multi-tenant data
+architecture**. [S. l.]: Microsoft Corporation, jun. 2006. Disponível em:
+https://docs.citusdata.com/en/v13.0/_static/mt-data-arch.pdf. Acesso em: ....
+
+KABBEDIJK, Jaap; BEZEMER, Cor-Paul; JANSEN, Slinger; ZAIDMAN, Andy. Defining
+multi-tenancy: a systematic mapping study on the academic and the industrial
+perspective. **Journal of Systems and Software**, v. 100, p. 139-148, 2015. DOI:
+10.1016/j.jss.2014.10.034.
 
 ### Usabilidade
 
