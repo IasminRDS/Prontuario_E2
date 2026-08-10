@@ -707,8 +707,9 @@ Quatro condições determinam se o mecanismo constitui proteção efetiva:
    estabelecimento da conexão, pois conexões são reutilizadas por *pool* e
    requisições efetuam múltiplas transações.
 4. **Cobertura efetiva** — a política protege as tabelas às quais foi aplicada.
-   Esta condição, aparentemente trivial, foi a que falhou neste trabalho e é
-   analisada na seção 10.3.
+   Esta condição, aparentemente trivial, foi a que falhou neste trabalho: é o
+   achado relatado em 9.4.1, cuja evolução ao longo de três estados é analisada
+   em 11.1.
 
 ### 4.5 Auditoria e rastreabilidade
 
@@ -912,15 +913,29 @@ entre o modelo de dados e os controles aplicados sobre ele.
 
 ### 7.1 Estrutura do sistema
 
-A aplicação organiza-se em módulos por domínio funcional (pacientes, prontuário,
-triagem, internação, pronto-socorro, cirurgia, prescrição, exames, encaminhamento
-e regulação, imunização, faturamento, vigilância epidemiológica, estoque e
-farmácia, auditoria, administração), acrescidos de três de natureza distinta: a
-interoperabilidade com a Rede Nacional de Dados em Saúde (BRASIL, 2026), o
-registro de consentimento e de base legal exigido pela proteção de dados, e o
-portal de transparência ao cidadão. Todos são acompanhados de camadas
-transversais de autorização, auditoria, escopo territorial e identidade de
-pacientes.
+A aplicação organiza-se em módulos por domínio funcional, agrupados como segue —
+o agrupamento não é descritivo apenas: corresponde à ordem de registro dos
+módulos no código, de modo que a descrição abaixo é verificável contra ele.
+
+- **Assistencial** — cadastro de pacientes e reconciliação de cadastros
+  duplicados, registro de consentimento e base legal, prontuário, triagem com
+  classificação de risco, atendimento ambulatorial, pronto-socorro, internação e
+  leitos, cirurgia, agenda e agendamento, encaminhamentos.
+- **Apoio diagnóstico e medicação** — exames e seus catálogos, imunização e
+  catálogo de imunobiológicos, prescrição ambulatorial e hospitalar, estoque,
+  farmácia e faturamento.
+- **Vigilância, regulação e interoperabilidade** — vigilância epidemiológica,
+  regulação de vagas, notificação compulsória, envio à Rede Nacional de Dados em
+  Saúde (BRASIL, 2026) e terminologias oficiais (CID-10, RENAME, CBO, SIGTAP).
+- **Cidadão e conformidade** — portal de transparência ao titular e emissão de
+  documentos com verificação de autenticidade.
+- **Gestão e plataforma** — relatórios ambulatoriais e hospitalares, unidades e
+  território, administração de contas, consulta à trilha de auditoria, alertas,
+  configurações, importação e exportação de dados, cópia de segurança e geração
+  de documentos em PDF.
+
+Todos são acompanhados de camadas transversais de autorização, auditoria, escopo
+territorial e identidade de pacientes.
 
 A dimensão do artefato é registrada abaixo porque condiciona a leitura dos
 resultados: a cobertura de um controle sobre 42 tabelas e 213 rotas é uma
@@ -2088,7 +2103,7 @@ existe. As duas ocorreram neste trabalho.
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
 dados reais, aplicada sem qualquer erro; e ciclo completo de cópia e restauração,
-com conferência de contagens em doze tabelas, apresentando correspondência exata.
+com conferência de contagens em treze tabelas, apresentando correspondência exata.
 O *schema* temporário foi removido ao final, e os arquivos intermediários — que
 contêm o banco em texto legível — foram eliminados.
 
