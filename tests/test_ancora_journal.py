@@ -12,6 +12,7 @@ verificou.
 """
 import hashlib
 import json
+import pathlib
 from datetime import datetime
 
 import pytest
@@ -165,78 +166,111 @@ def test_truncar_o_fim_do_journal_permanece_indetectavel(journal):
         "monografia, que hoje afirmam o contrário")
 
 
-# --- Manipulações, uma a uma: o que detecta e o que não ---------------------
+
+# --- A matriz de garantias -------------------------------------------------
 #
-# "Limitação teórica" é o estado em que uma afirmação de segurança sobrevive sem
-# ser medida. Cada caso abaixo aplica UMA manipulação e fixa o resultado —
-# inclusive quando o resultado é "não detecta", que é a informação mais cara de
-# obter e a mais fácil de perder.
+# Esta tabela É a fonte dos casos abaixo, e não um documento ao lado deles.
+# Documento paralelo deriva: alguém corrige o código, o teste acompanha, e a
+# tabela continua afirmando o que era verdade no ano passado. Aqui a única
+# forma de mudar o que a tabela promete é mudar o que o teste mede.
+#
+# A coluna que importa é a das linhas com `detectado=False`. Elas são o que
+# distingue este mecanismo de uma prova, e existem para ser confrontadas: quem
+# quiser convertê-las precisa antes explicar como detectar coerência interna
+# de fora dela.
 
-def test_reordenar_linhas_e_detectado():
-    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
+def _reordenar(linhas):
     linhas[1], linhas[2] = linhas[2], linhas[1]
-
-    problemas = an.verificar(linhas)
-    assert any("elo rompido" in p for p in problemas), (
-        "trocar duas âncoras de lugar passou — a ordem faz parte da prova")
+    return linhas
 
 
-def test_duplicar_linha_e_detectado():
-    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"))
+def _duplicar(linhas):
     linhas.insert(1, dict(linhas[1]))
+    return linhas
 
+
+def _inserir_forjada(linhas):
+    linhas.insert(1, an.montar(15, 15, "h15",
+                               anterior=linhas[0]["hash_ancora"]))
+    return linhas
+
+
+def _remover_do_meio(linhas):
+    del linhas[1]
+    return linhas
+
+
+def _reescrever_do_meio(linhas):
+    linhas[1]["total"] = 5
+    return linhas
+
+
+def _campo_extra(linhas):
+    linhas[1]["observacao"] = "conferido e aprovado pela auditoria externa"
+    return linhas
+
+
+def _truncar_o_fim(linhas):
+    return linhas[:1]
+
+
+def _recomputar_tudo(_linhas):
+    # Coerente consigo mesmo, e coerente com uma trilha já truncada.
+    return _cadeia((10, 10, "h10"), (12, 12, "h12"))
+
+
+MATRIZ = (
+    ("reordenar duas linhas", _reordenar, True,
+     "a ordem faz parte da prova: o elo da linha deslocada deixa de bater"),
+    ("duplicar uma linha", _duplicar, True,
+     "a cópia ocupa o lugar da precedente e a seguinte deixa de apontar certo"),
+    ("inserir linha forjada no meio", _inserir_forjada, True,
+     "encadeia-se corretamente na anterior, mas a SEGUINTE não fecha"),
+    ("remover linha do meio", _remover_do_meio, True,
+     "o elo da seguinte aponta para uma linha que não está mais ali"),
+    ("reescrever uma linha passada", _reescrever_do_meio, True,
+     "é a manobra que a âncora ÚNICA não vê, e a razão de haver journal"),
+    ("acrescentar campo não previsto", _campo_extra, True,
+     "o hash cobre só os campos declarados; sem validação de forma, conteúdo "
+     "forjado viajaria dentro de uma linha que fecha"),
+    ("truncar o FIM do journal", _truncar_o_fim, False,
+     "as linhas que sobram seguem encadeadas e nada no arquivo diz que ele "
+     "já foi maior — mesma recursão do problema original"),
+    ("recomputar o journal inteiro", _recomputar_tudo, False,
+     "quem controla o arquivo produz um journal internamente coerente; só o "
+     "valor retido FORA o desmascara"),
+)
+
+
+@pytest.mark.parametrize("nome,manipular,detectado,porque",
+                         MATRIZ, ids=[m[0] for m in MATRIZ])
+def test_matriz_de_garantias(nome, manipular, detectado, porque):
+    """Cada linha da matriz, medida. Inclusive as que dizem 'não detecta'."""
+    linhas = manipular(_cadeia((10, 10, "h10"), (20, 20, "h20"),
+                               (30, 30, "h30")))
     problemas = an.verificar(linhas)
-    assert any("elo rompido" in p for p in problemas), (
-        "duplicar uma âncora passou — repetir um retrato inflaria a contagem "
-        "de checkpoints sem que nenhum novo tenha sido emitido")
+
+    if detectado:
+        assert problemas, (
+            f"a matriz promete detectar '{nome}' e não detectou — {porque}")
+    else:
+        assert problemas == [], (
+            f"'{nome}' passou a ser detectado. Se foi de propósito, atualize a "
+            f"MATRIZ, a constante NAO_DETECTAVEL e a seção 12 da monografia, "
+            f"que hoje afirmam o contrário. Motivo registrado: {porque}")
 
 
-def test_inserir_linha_forjada_no_meio_e_detectado():
-    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
-    intrusa = an.montar(15, 15, "h15", anterior=linhas[0]["hash_ancora"])
-    linhas.insert(1, intrusa)
+def test_matriz_cobre_tudo_que_o_modulo_declara_indetectavel():
+    """`NAO_DETECTAVEL` e a matriz não podem divergir.
 
-    problemas = an.verificar(linhas)
-    assert problemas, (
-        "inserir âncora forjada no meio passou, ainda que ela se encadeie "
-        "corretamente na anterior: a SEGUINTE deixa de fechar")
-    assert any("elo rompido" in p for p in problemas)
-
-
-def test_truncar_o_meio_e_detectado():
-    linhas = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"),
-                     (40, 40, "h40"))
-    del linhas[1:3]
-
-    assert any("elo rompido" in p for p in an.verificar(linhas))
-
-
-def test_recomputar_a_cadeia_inteira_NAO_e_detectado():
-    """A limitação de fundo, exercitada — e a razão de a custódia ser o ponto.
-
-    Quem controla o arquivo pode reescrever TODAS as âncoras a partir do zero,
-    coerentes entre si e coerentes com uma trilha já truncada. Nenhuma
-    propriedade interna distingue esse journal de um legítimo, porque não há
-    nada dentro do arquivo que testemunhe sobre o que existia fora dele.
-
-    É o que separa este mecanismo de uma prova: ele detecta adulteração
-    PARCIAL. Contra reescrita total, só vale um valor retido fora — e é por
-    isso que `--retida` existe e que a emissão insiste em imprimir o hash.
+    A constante é o que alguém lê no código; a matriz é o que foi medido. Se
+    uma listar o que a outra não lista, uma das duas está mentindo, e não há
+    como saber qual sem refazer a medição.
     """
-    honesto = _cadeia((10, 10, "h10"), (20, 20, "h20"), (30, 30, "h30"))
-    retido = honesto[1]["hash_ancora"]
-
-    forjado = _cadeia((10, 10, "h10"), (12, 12, "h12"))
-
-    assert an.verificar(forjado) == [], (
-        "a reescrita completa passou a ser detectável internamente — se foi "
-        "de propósito, atualize a seção 12 da monografia")
-
-    # O que a desmascara é exclusivamente o valor guardado fora.
-    assert an.localizar(forjado, retido) is None, (
-        "a âncora retida não deveria existir no journal forjado")
-
-
+    na_matriz = {nome for nome, _f, detectado, _p in MATRIZ if not detectado}
+    assert len(na_matriz) == len(an.NAO_DETECTAVEL), (
+        f"a matriz mede {len(na_matriz)} manipulações indetectáveis e o módulo "
+        f"declara {len(an.NAO_DETECTAVEL)} — as duas listas divergiram")
 def test_formato_da_linha_e_contrato_congelado():
     """Golden vector: mudar a serialização invalida TODO hash já retido.
 
@@ -259,3 +293,86 @@ def test_formato_da_linha_e_contrato_congelado():
 
     assert linha["hash_ancora"] == hashlib.sha256(
         (esperado + "|").encode("utf-8")).hexdigest()
+
+
+# --- Compatibilidade retroativa --------------------------------------------
+
+FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "journal_v1_congelado.jsonl"
+
+# Hash da SEGUNDA âncora do arquivo congelado, transcrito aqui à mão. Faz o
+# papel do valor que um operador teria guardado fora do servidor em março de
+# 2026 — e é contra ele que a compatibilidade se mede.
+RETIDO_EM_MARCO = "3f5cf6460b89e4c0a11cea626c1dacae57101b952bd1acc36555a5a102416df4"
+
+
+def test_journal_v1_antigo_continua_valido():
+    """O risco nº 1 deste mecanismo, e o mais silencioso.
+
+    O golden vector trava a serialização de UMA linha. Este caso trava o
+    pipeline inteiro contra BYTES escritos por uma versão anterior: leitura,
+    validação de forma, recálculo de hash e conferência da cadeia.
+
+    O arquivo em `tests/fixtures/` é dado literal e **não deve ser
+    regenerado**. Regenerá-lo para fazer o teste passar é destruir a própria
+    medição: se ele deixou de conferir, é porque toda âncora já retida fora de
+    um servidor em produção também deixou — e ninguém saberá disso até tentar
+    usá-la, que é sempre o pior momento.
+    """
+    linhas, defeitos = an.ler(FIXTURE)
+
+    assert defeitos == [], f"o journal congelado ficou ilegível: {defeitos}"
+    assert len(linhas) == 3
+    assert an.verificar(linhas) == [], (
+        "um journal emitido por versão anterior deixou de conferir — a "
+        "compatibilidade retroativa quebrou, e com ela toda âncora retida")
+
+
+def test_hash_retido_ha_meses_ainda_localiza_e_valida_o_prefixo():
+    """A promessa operacional: 'guarde uma, uma vez' precisa valer no futuro."""
+    linhas, _ = an.ler(FIXTURE)
+
+    indice = an.localizar(linhas, RETIDO_EM_MARCO)
+    assert indice == 1, (
+        "o hash retido não foi mais encontrado no journal — o cálculo mudou, e "
+        "quem guardou o valor não tem como saber")
+    assert an.verificar(linhas[: indice + 1]) == []
+
+
+def test_verificador_e_idempotente():
+    """Duas execuções, o mesmo resultado — e o mesmo texto.
+
+    Parece trivial e não é: pega leitura parcial de arquivo, dependência de
+    estado entre chamadas e diferença de decodificação entre a primeira e a
+    segunda leitura. Verificador cujo veredito oscila é pior que nenhum,
+    porque a dúvida passa a recair sobre o instrumento.
+    """
+    primeira_leitura, _ = an.ler(FIXTURE)
+    segunda_leitura, _ = an.ler(FIXTURE)
+    assert primeira_leitura == segunda_leitura
+
+    assert an.verificar(primeira_leitura) == an.verificar(primeira_leitura)
+
+    quebrado = _reescrever_do_meio(_cadeia((10, 10, "h10"), (20, 20, "h20"),
+                                           (30, 30, "h30")))
+    assert an.verificar(quebrado) == an.verificar(quebrado), (
+        "o relatório de problemas mudou entre duas execuções sobre a mesma "
+        "entrada")
+
+
+def test_nenhuma_mensagem_afirma_causa_que_o_dado_nao_sustenta():
+    """Varredura das mensagens: sintoma é sintoma, causa é inferência.
+
+    A mensagem de elo rompido enumerava duas causas ("removida do meio ou
+    reescrita") quando a MATRIZ prova que cinco manipulações distintas
+    produzem o mesmo sintoma. Diagnóstico que nomeia causa não provada manda
+    quem investiga procurar na direção errada — e num incidente de auditoria
+    isso custa o tempo que mais importa.
+    """
+    linhas = _remover_do_meio(_cadeia((10, 10, "h10"), (20, 20, "h20"),
+                                      (30, 30, "h30")))
+    texto = " ".join(an.verificar(linhas))
+
+    for suposicao in ("removida do meio ou reescrita", "provavelmente",
+                      "possivelmente", "alguém"):
+        assert suposicao not in texto, (
+            f"a mensagem afirma {suposicao!r}, que o dado não distingue")

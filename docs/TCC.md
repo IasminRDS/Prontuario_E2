@@ -747,7 +747,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 407, em 35 arquivos |
+| Casos de teste automatizados | 417, em 35 arquivos |
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
 
@@ -938,7 +938,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **407 casos de teste**, provenientes de 261
+A suíte automatizada compreende **417 casos de teste**, provenientes de 264
 funções distribuídas em 35 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1888,7 +1888,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 407 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 417 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -2092,6 +2092,56 @@ Ela **produz, por fim, uma verificação que não depende de nada externo**: a
 comparação entre retratos consecutivos acusa que a trilha diminuiu **entre dois
 momentos de conferência**, ainda que hoje esteja internamente consistente. O
 registro testemunha contra o sistema que o mantém.
+
+O conjunto dessas propriedades foi organizado como matriz explícita, e a
+organização não é editorial. Cada linha corresponde a um caso de teste que
+aplica a manipulação e afere o resultado, e a matriz é a **fonte** desses casos,
+não um resumo posterior — de modo que a única forma de alterar o que ela promete
+é alterar o que se mede. Documento paralelo ao teste envelhece em silêncio, e o
+efeito é o que a seção 9.4.19 descreve a propósito da matriz de permissões: um
+artefato de governança que descreve um sistema que já não existe.
+
+Quadro — Manipulações do registro de âncoras e o que é detectado
+
+| Manipulação | Detectada | Por quê |
+|---|---|---|
+| Reordenar duas linhas | Sim | a ordem faz parte da prova; o elo da linha deslocada deixa de corresponder |
+| Duplicar uma linha | Sim | a cópia ocupa o lugar da precedente e a seguinte deixa de apontar corretamente |
+| Inserir linha forjada no meio | Sim | encadeia-se na anterior, mas a seguinte não fecha |
+| Remover linha do meio | Sim | o elo da seguinte aponta para linha ausente |
+| Reescrever uma linha passada | Sim | é a manobra que o retrato único não detecta, e a razão de haver registro sequencial |
+| Acrescentar campo não previsto | Sim | com validação estrita de forma; sem ela, conteúdo forjado viaja dentro de linha que fecha |
+| **Truncar o fim do registro** | **Não** | as linhas restantes seguem encadeadas e nada no arquivo indica que já foi maior |
+| **Recomputar o registro inteiro** | **Não** | quem controla o arquivo produz sequência internamente coerente; só o valor retido fora a desmascara |
+
+Fonte: elaborada pela autora (2026), por medição — cada linha corresponde a um
+caso executado em `tests/test_ancora_journal.py`.
+
+A penúltima linha da tabela merece nota, porque foi acrescentada tarde e por
+medição, não por previsão. O resumo criptográfico cobria apenas os campos
+declarados, de modo que uma chave adicional inserida em uma linha legítima —
+por exemplo, uma anotação afirmando conferência por auditoria externa —
+permanecia dentro do arquivo verificado **sem estar coberta por nada**, e a
+verificação continuava aprovando. O conteúdo forjado adquiria, aos olhos de quem
+lesse o arquivo, a mesma autoridade da parte protegida. A correção foi tornar a
+validação de forma estrita: o que não é exatamente válido é inválido. Registra-se
+o achado porque ele ilustra uma regra geral — em artefato de auditoria, tolerância
+sintática não é conveniência, é superfície.
+
+Duas verificações complementares protegem a própria capacidade de verificar. A
+primeira confronta o código atual com um registro **congelado no repositório**,
+escrito em versão anterior e declarado não regenerável: se ele deixar de
+conferir, é porque toda âncora já retida fora de um servidor também deixou, e o
+fato só seria descoberto no momento de usá-la. A segunda confere que duas
+execuções sobre a mesma entrada produzem o mesmo veredito — verificador cujo
+resultado oscila desloca a dúvida do sistema verificado para o instrumento.
+
+Registra-se, por fim, uma decisão sobre a redação dos diagnósticos. A mensagem
+de elo rompido enumerava duas causas possíveis; a matriz demonstrou que cinco
+manipulações distintas produzem o mesmo sintoma. A mensagem passou a descrever
+o que foi observado, sem nomear causa — diagnóstico que afirma mais do que o
+dado sustenta orienta a investigação na direção errada, e num incidente de
+auditoria o custo é o tempo que mais importa.
 
 O que permanece limitação não é o mecanismo, e sim o depositário. Registro
 guardado no mesmo servidor que a aplicação pode ser reescrito por quem reescreva

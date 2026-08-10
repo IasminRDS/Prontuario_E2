@@ -35,6 +35,27 @@ from datetime import datetime
 
 VERSAO = 1
 
+# Campos que ENTRAM no hash, na ordem em que a forma canônica os põe. Mexer
+# nesta tupla invalida toda âncora já retida fora do servidor — ver o caso
+# `test_formato_da_linha_e_contrato_congelado`.
+CAMPOS_CONTEUDO = ("versao", "emitida_em", "total", "ultimo_id", "hash_final")
+
+# Campos de encadeamento, que ficam FORA do hash do próprio conteúdo pela razão
+# óbvia: `hash_ancora` não pode conter a si mesmo.
+CAMPOS_ELO = ("ancora_anterior", "hash_ancora")
+
+CAMPOS_VALIDOS = frozenset(CAMPOS_CONTEUDO + CAMPOS_ELO)
+
+# Manipulações que este mecanismo NÃO detecta, por construção e não por
+# omissão. A lista existe para ser confrontada: quem tentar "corrigir" uma
+# delas precisa antes explicar como, já que ambas consistem em produzir um
+# arquivo internamente coerente — e coerência interna é tudo o que um
+# verificador que só lê o arquivo pode medir.
+NAO_DETECTAVEL = (
+    "truncar o FIM do journal (as linhas que sobram seguem encadeadas)",
+    "recomputar o journal inteiro, coerente com uma trilha já truncada",
+)
+
 
 def _canonico(registro):
     """Serialização estável do conteúdo que entra no hash.
@@ -92,6 +113,58 @@ def ler(caminho):
     return linhas, defeitos
 
 
+def validar_forma(linha):
+    """Confere que a linha tem exatamente os campos previstos, e nada mais.
+
+    Rejeitar campo DESCONHECIDO não é preciosismo de formato: o hash cobre
+    apenas os campos declarados, de modo que qualquer chave a mais viaja dentro
+    de uma linha que fecha, sem estar coberta por nada. Sem esta validação é
+    possível anexar a uma âncora legítima um texto como "conferido e aprovado
+    pela auditoria externa" e a verificação continua aprovando — o conteúdo
+    forjado passa a ter, aos olhos de quem lê o arquivo, a mesma autoridade da
+    parte assinada.
+
+    Regra: o que não é exatamente válido é inválido. Parser permissivo em
+    artefato de auditoria é superfície, não conveniência.
+    """
+    problemas = []
+
+    if not isinstance(linha, dict):
+        return ["não é um objeto JSON"]
+
+    presentes = set(linha)
+    extras = presentes - CAMPOS_VALIDOS
+    if extras:
+        problemas.append(
+            f"campos não previstos, fora do alcance do hash: "
+            f"{', '.join(sorted(extras))}")
+
+    faltantes = CAMPOS_VALIDOS - presentes
+    if faltantes:
+        problemas.append(f"campos ausentes: {', '.join(sorted(faltantes))}")
+
+    tipos = {
+        "versao": (int,), "emitida_em": (str,), "total": (int,),
+        "ultimo_id": (int, type(None)), "hash_final": (str, type(None)),
+        "ancora_anterior": (str, type(None)), "hash_ancora": (str,),
+    }
+    for campo, aceitos in tipos.items():
+        if campo in linha and not isinstance(linha[campo], aceitos):
+            # `bool` é subclasse de `int` em Python: `True` passaria por
+            # `total` sem esta exclusão, e `total: true` não é uma contagem.
+            problemas.append(
+                f"{campo} tem tipo inesperado ({type(linha[campo]).__name__})")
+        elif campo in linha and isinstance(linha[campo], bool):
+            problemas.append(f"{campo} é booleano, e nenhum campo daqui é")
+
+    if linha.get("versao") not in (None, VERSAO):
+        problemas.append(
+            f"versão {linha['versao']} desconhecida — este verificador só "
+            f"sabe ler a {VERSAO}")
+
+    return problemas
+
+
 def verificar(linhas):
     """Confere a cadeia de âncoras. Devolve a lista de problemas.
 
@@ -112,16 +185,32 @@ def verificar(linhas):
     for indice, linha in enumerate(linhas):
         rotulo = f"âncora #{indice + 1} ({linha.get('emitida_em', 'sem data')})"
 
-        conteudo = {c: linha.get(c) for c in
-                    ("versao", "emitida_em", "total", "ultimo_id", "hash_final")}
-        esperado = _hash_da_linha(conteudo, linha.get("ancora_anterior"))
-        if linha.get("hash_ancora") != esperado:
+        forma = validar_forma(linha)
+        if forma:
+            problemas += [f"{rotulo}: {p}" for p in forma]
+            # Sem forma válida não há o que verificar adiante: um hash sobre
+            # campos incompletos produziria divergência acessória, e o relatório
+            # apontaria para o sintoma em vez da causa.
+            anterior_hash = linha.get("hash_ancora") if isinstance(linha, dict) else None
+            anterior = linha if isinstance(linha, dict) else None
+            continue
+
+        conteudo = {c: linha[c] for c in CAMPOS_CONTEUDO}
+        esperado = _hash_da_linha(conteudo, linha["ancora_anterior"])
+        if linha["hash_ancora"] != esperado:
             problemas.append(f"{rotulo}: conteúdo alterado após a emissão")
 
-        if linha.get("ancora_anterior") != anterior_hash:
+        if linha["ancora_anterior"] != anterior_hash:
+            # A mensagem NÃO nomeia a causa. Ela dizia "alguma foi removida do
+            # meio ou reescrita", e os casos de `test_ancora_journal` provam que
+            # remoção, reescrita, reordenação, duplicação e inserção produzem
+            # todos este mesmo sintoma. Enumerar duas das cinco fazia o
+            # diagnóstico afirmar mais do que o dado sustenta, e mandava quem
+            # investiga procurar na direção errada.
             problemas.append(
-                f"{rotulo}: elo rompido — não aponta para a âncora precedente "
-                "(alguma foi removida do meio ou reescrita)")
+                f"{rotulo}: elo rompido — o campo `ancora_anterior` não "
+                "corresponde ao hash da linha precedente. A sequência de "
+                "linhas deste arquivo não é a que foi emitida")
 
         if anterior is not None:
             if (linha.get("total") or 0) < (anterior.get("total") or 0):

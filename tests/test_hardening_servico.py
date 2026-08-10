@@ -126,3 +126,50 @@ def test_journal_ausente_reprova_de_verdade(app, tmp_path, monkeypatch):
     assert achado.ok is False, (
         "journal ausente precisa REPROVAR: não é limitação do ambiente, é "
         "ausência do próprio artefato que se pretende proteger")
+
+
+def test_indefinido_nao_contamina_o_codigo_de_saida(app, monkeypatch):
+    """O contrato operacional: `?` reporta, `FALHA` reprova. Só isso decide.
+
+    Pinar a SEMÂNTICA e não o texto é deliberado. Congelar as mensagens faria
+    de toda melhoria de redação uma reprovação, e o hábito de atualizar o
+    snapshot sem ler é como um teste deixa de medir. O que não pode mudar em
+    silêncio é: quantas verificações reprovam, e com que código o comando sai.
+    """
+    import services.hardening as hardening
+    from services.hardening import Achado
+
+    monkeypatch.setattr(hardening, "verificar", lambda: [
+        Achado("passa", True),
+        Achado("não dá para saber aqui", None, "sem suporte no SO",
+               "chattr +a caminho"),
+    ])
+
+    resultado = app.test_cli_runner().invoke(args=["hardening-check"])
+
+    assert resultado.exit_code == 0, (
+        "uma verificação NÃO VERIFICÁVEL reprovou o comando — um portão que "
+        "reprova para sempre nesta máquina ensina a passar sem olhar")
+    assert "?" in resultado.output
+    assert "não é aprovação" in resultado.output, (
+        "o comando saiu com 0 sem dizer que há verificação não feita — "
+        "silêncio aqui é lido como aprovação")
+
+
+def test_falha_de_verdade_ainda_reprova(app, monkeypatch):
+    """O outro lado: o terceiro estado não pode ter amolecido o portão."""
+    import services.hardening as hardening
+    from services.hardening import Achado
+
+    monkeypatch.setattr(hardening, "verificar", lambda: [
+        Achado("passa", True),
+        Achado("não dá para saber aqui", None, "sem suporte no SO"),
+        Achado("reprova mesmo", False, "isto é uma falha real"),
+    ])
+
+    resultado = app.test_cli_runner().invoke(args=["hardening-check"])
+
+    assert resultado.exit_code == 1
+    assert "1 verificação(ões) falharam" in resultado.output, (
+        "a contagem de falhas passou a incluir o indefinido, ou deixou de "
+        "contar a falha real")
