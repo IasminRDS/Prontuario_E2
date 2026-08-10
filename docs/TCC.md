@@ -339,6 +339,15 @@ técnica — é a impossibilidade de responder a um pedido de titular e de apura
 acesso indevido por usuário legítimo, que é o vetor de abuso mais comum em
 sistemas de saúde.
 
+A exigência não é recente nem exclusiva da proteção de dados pessoais. A
+Resolução CFM nº 1.821/2007 (CONSELHO FEDERAL DE MEDICINA, 2007), ao aprovar as
+normas técnicas para guarda e manuseio de documento eletrônico em saúde, já
+condicionava a substituição do prontuário em papel a requisitos de autenticidade
+e rastreabilidade do registro. A convergência é relevante para o argumento deste
+trabalho: a obrigação de auditar o acesso ao prontuário precede a LGPD e chega
+por duas vias normativas independentes — a regulação profissional e a proteção
+de dados —, o que a torna requisito de projeto e não decisão de conveniência.
+
 **Continuidade operacional.** A indisponibilidade de um prontuário eletrônico tem
 efeito clínico direto. Rotina de backup que nunca foi restaurada não constitui
 garantia de continuidade: constitui a suposição de uma garantia.
@@ -757,7 +766,13 @@ O modelo relacional organiza-se em torno das seguintes entidades centrais:
 
 - **Paciente** — cadastro civil e de contato, com CPF e CNS sob restrição de
   unicidade. **Deliberadamente fora do escopo territorial**, pela razão exposta
-  em 2.2: cadastro é nacional.
+  em 2.2: cadastro é nacional. A entidade registra **nome social** em campo
+  próprio, distinto do nome civil, e toda apresentação ao usuário deriva de um
+  atributo único que privilegia o primeiro quando preenchido — de modo que a
+  escolha do tratamento não depende de a tela lembrar de fazê-la. O registro
+  atende ao Decreto nº 8.727/2016 (BRASIL, 2016), que dispõe sobre o uso do nome
+  social por pessoas travestis e transexuais no âmbito da administração pública
+  federal.
 - **Unidade de Saúde** — inquilino do modelo multi-tenant, vinculado a município
   (código IBGE) e regional de saúde.
 - **Município** — hierarquia territorial pelo código IBGE, o mesmo identificador
@@ -999,6 +1014,113 @@ periódica.
 Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: em
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
+
+Os dezenove achados relatados a seguir não constituem uma lista de defeitos
+independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
+erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
+Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
+pequeno de mecanismos recorrentes**, e cada mecanismo admite uma forma
+específica de verificação que o torna detectável antes de causar dano.
+
+Todos compartilham uma característica, e é ela que define o objeto deste
+capítulo: **nenhum produz mensagem de erro.** O sistema não interrompe, não
+registra exceção, não apresenta comportamento anômalo ao operador. Uma consulta
+retorna menos linhas do que deveria; um campo preenchido é descartado; uma trilha
+deixa de crescer. O defeito silencioso não é uma categoria entre outras — é a
+categoria que os testes convencionais não alcançam, porque testes convencionais
+verificam que o esperado aconteceu, e aqui o que falta é justamente a expectativa.
+
+A classificação abaixo foi obtida **a posteriori**, pelo exame dos achados já
+registrados, e não estabelecida antes deles. As classes se sobrepõem em três
+casos, o que é informativo e não defeito da classificação: sobreposição marca os
+achados em que dois mecanismos se somaram, e são precisamente os mais graves.
+
+**Classe I — A declaração que deixou de ser verdadeira.** O sistema evoluiu; a
+afirmação escrita sobre ele permaneceu. Não é documentação desatualizada no
+sentido trivial: a afirmação continua *literalmente* correta sobre o subconjunto
+que descreve, e por isso resiste à leitura crítica. *Instâncias: 9.4.1, 9.4.5,
+9.4.19.* **Verificação correspondente:** confrontar a declaração com o estado
+real, e não com outra declaração — a lista de tabelas protegidas derivada do
+*metadata*, o comando que interroga o servidor de banco de dados.
+
+**Classe II — A regra escrita mais de uma vez.** A mesma decisão registrada em
+dois ou mais lugares, que divergem sem que nada acuse, porque cada cópia é
+internamente consistente. É a causa isolada mais frequente deste trabalho.
+*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19.* **Verificação
+correspondente:** comparar as cópias entre si, e no nível de abstração certo —
+não os nomes das permissões, mas o conjunto de perfis que cada caminho admite.
+
+**Classe III — O caminho que não existe.** Código correto, testável e inacessível:
+nenhuma tela conduz até ele, ou a entidade não é construída por nenhuma rota. Não
+falha porque não executa. *Instâncias: 9.4.10, 9.4.11, 9.4.12, 9.4.16.*
+**Verificação correspondente:** alcançabilidade nos dois sentidos — tela sem rota
+e rota sem tela —, porque cada direção encontra um conjunto distinto.
+
+**Classe IV — O efeito que não ocorre.** A chamada acontece, e o efeito não: o
+registro de auditoria é criado e não persistido, o campo é lido e não gravado. A
+leitura do código confirma a intenção e não o resultado. *Instâncias: 9.4.4,
+9.4.8, 9.4.13.* **Verificação correspondente:** medir o efeito, nunca a chamada —
+contar linhas na tabela depois da requisição, não conferir que a função foi
+invocada.
+
+**Classe V — O próprio controle como origem do defeito.** O instrumento de
+garantia produzindo aquilo que deveria impedir: o teste que verifica o objeto
+errado, o detector cego para o próprio defeito, a correção de conformidade que
+degrada o desempenho, o endurecimento que interrompe o controle que protegia.
+*Instâncias: 9.4.2, 9.4.7, 9.4.9, 9.4.15.* **Verificação correspondente:** a
+única de segunda ordem — verificar o verificador, introduzindo deliberadamente o
+defeito que ele deve encontrar e confirmando que ele reprova.
+
+Quadro — Mecanismos recorrentes e achados correspondentes
+
+| Classe | Mecanismo | Achados | Verificação que a torna detectável |
+|---|---|---|---|
+| I | Declaração que deixou de valer | 9.4.1, 9.4.5, 9.4.19 | confronto com o estado real, não com outra declaração |
+| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19 | comparação entre as cópias, no nível de abstração do efeito |
+| III | Caminho inexistente | 9.4.10, 9.4.11, 9.4.12, 9.4.16 | alcançabilidade nos dois sentidos |
+| IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13 | medição do efeito, não da chamada |
+| V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15 | verificação de segunda ordem sobre o próprio controle |
+
+Fonte: elaborado pela autora (2026). O achado 9.4.6 reúne observações pontuais
+de interesse gerencial e não corresponde a mecanismo único. As sobreposições —
+9.4.15 nas classes IV e V, 9.4.17 nas classes II e IV, 9.4.19 nas classes I e
+II — são registradas por serem informativas: correspondem aos casos em que dois
+mecanismos se somaram.
+
+A numeração original dos achados foi preservada. Renumerá-los para acompanhar as
+classes tornaria inválidas as remissões cruzadas do texto, e a rastreabilidade
+entre o relato e o registro de correção no repositório importa mais que a ordem
+de apresentação.
+
+**Consequência metodológica.** A coluna direita do quadro é o resultado que
+transcende este sistema. Cada mecanismo admite uma verificação que o torna
+detectável por medição e não por atenção, e as cinco foram implementadas como
+casos permanentes da suíte, cada uma descrita no achado que a originou:
+
+Quadro — Instrumentos permanentes derivados de cada mecanismo
+
+| Classe | Instrumento no repositório |
+|---|---|
+| I | `hardening_check`, que interroga o servidor de banco; lista de tabelas protegidas derivada do *metadata*; conferência do vocabulário de permissões nos dois sentidos |
+| II | conferência de que rotas que gravam a mesma entidade admitem os mesmos perfis; contrato entre formulário e rota |
+| III | conferência recíproca entre telas e rotas: nenhuma tela sem rota, nenhuma rota sem porta de entrada |
+| IV | renderização de toda rota de leitura com dados semeados; conferência de que rota de escrita registra auditoria na mesma transação; medição do que ficou persistido |
+| V | listas de exceção que reprovam **nos dois sentidos** — achado novo falha, e achado já corrigido que continue listado também; conferência de que o endurecimento não impediu a função protegida |
+
+Fonte: elaborado pela autora (2026).
+
+O instrumento da classe V merece nota, por ser o único de segunda ordem. As
+listas de exceção existem porque toda verificação automatizada acumula casos
+tolerados, e casos tolerados envelhecem: o que era exceção justificada torna-se
+defeito esquecido, e a lista passa a documentar uma decisão que ninguém mais
+sustenta. Reprovar nos dois sentidos obriga a lista a permanecer verdadeira —
+remover a justificativa de um caso já corrigido é tão obrigatório quanto
+justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
+verificação que ela acompanha deixa de medir sem deixar de passar.
+
+Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
+suíte. É a diferença entre haver corrigido dezenove defeitos e haver instalado
+cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
 
