@@ -480,8 +480,6 @@ Quadro — Propriedades da segurança da informação e sua materialização no 
 | **Autenticidade** | Certeza sobre a origem da ação | Autenticação com hash de senha (*scrypt*), sessão com atributos de segurança, registro de autoria em cada mutação |
 | **Não repúdio** | Impossibilidade de negar autoria | Trilha de auditoria com usuário, ação, IP e encadeamento por hash |
 
-Fonte: elaborado pela autora (2026).
-
 A propriedade de **não repúdio** merece qualificação em dois níveis. O
 encadeamento por resumo criptográfico torna a trilha *tamper-evident*:
 adulteração se torna detectável, porque alterar um registro invalida a cadeia
@@ -511,8 +509,6 @@ Quadro — Estratégias de isolamento em arquitetura multi-tenant
 | Banco por inquilino | Máximo | Alto — *n* bancos, *n* migrações, *n* backups | Muito custosa | Inadequada: inviabiliza o prontuário longitudinal |
 | *Schema* por inquilino | Alto | Médio-alto — *n* schemas por migração | Custosa | Inadequada: mesma limitação, com complexidade adicional |
 | **Coluna discriminadora** | Médio, dependente de aplicação | Baixo — um banco, uma migração | Natural | **Adotada** |
-
-Fonte: elaborado pela autora (2026).
 
 A escolha pela coluna discriminadora (`unidade_id`) decorre de um requisito
 organizacional, não de conveniência de implementação: o cuidado longitudinal
@@ -683,8 +679,6 @@ Figura — Camadas da arquitetura e ponto de aplicação de cada controle
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Fonte: elaborado pela autora (2026).
-
 ### 6.2 Fluxo de uma requisição
 
 1. O navegador envia a requisição com o cookie de sessão.
@@ -758,7 +752,7 @@ Quadro — Dimensão do artefato construído
 | Permissões nomeadas · perfis | 27 · 7 |
 | Casos de teste automatizados | 417, em 35 arquivos |
 
-Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
+Os valores acima resultam de contagem automatizada sobre o repositório.
 
 ### 7.2 Banco de dados
 
@@ -887,8 +881,6 @@ Quadro — Matriz de riscos, controles aplicados e benefício gerencial
 | Ataque por força bruta na autenticação | Limitação de tentativas por janela | Mitiga acesso por tentativa exaustiva |
 | Configuração de produção aplicada incorretamente | Ambiente exigido explicitamente, sem valor padrão | Configuração inválida impede a inicialização em vez de degradar silenciosamente |
 | Divergência entre modelo de dados e controles | Lista de tabelas protegidas derivada do *metadata* | Reduz risco de tabela nova nascer desprotegida |
-
-Fonte: elaborado pela autora (2026).
 
 ### 8.2 Fronteira entre garantias da aplicação e dependências de infraestrutura
 
@@ -1081,7 +1073,7 @@ Quadro — Mecanismos recorrentes e achados correspondentes
 | IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13 | medição do efeito, não da chamada |
 | V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15 | verificação de segunda ordem sobre o próprio controle |
 
-Fonte: elaborado pela autora (2026). O achado 9.4.6 reúne observações pontuais
+O achado 9.4.6 reúne observações pontuais
 de interesse gerencial e não corresponde a mecanismo único. As sobreposições —
 9.4.15 nas classes IV e V, 9.4.17 nas classes II e IV, 9.4.19 nas classes I e
 II — são registradas por serem informativas: correspondem aos casos em que dois
@@ -1106,8 +1098,6 @@ Quadro — Instrumentos permanentes derivados de cada mecanismo
 | III | conferência recíproca entre telas e rotas: nenhuma tela sem rota, nenhuma rota sem porta de entrada |
 | IV | renderização de toda rota de leitura com dados semeados; conferência de que rota de escrita registra auditoria na mesma transação; medição do que ficou persistido |
 | V | listas de exceção que reprovam **nos dois sentidos** — achado novo falha, e achado já corrigido que continue listado também; conferência de que o endurecimento não impediu a função protegida |
-
-Fonte: elaborado pela autora (2026).
 
 O instrumento da classe V merece nota, por ser o único de segunda ordem. As
 listas de exceção existem porque toda verificação automatizada acumula casos
@@ -2270,8 +2260,8 @@ Quadro — Manipulações do registro de âncoras e o que é detectado
 | **Truncar o fim do registro** | **Não** | as linhas restantes seguem encadeadas e nada no arquivo indica que já foi maior |
 | **Recomputar o registro inteiro** | **Não** | quem controla o arquivo produz sequência internamente coerente; só o valor retido fora a desmascara |
 
-Fonte: elaborada pela autora (2026), por medição — cada linha corresponde a um
-caso executado em `tests/test_ancora_journal.py`.
+Cada linha da tabela corresponde a um caso executado em
+`tests/test_ancora_journal.py`.
 
 A penúltima linha da tabela merece nota, porque foi acrescentada tarde e por
 medição, não por previsão. O resumo criptográfico cobria apenas os campos
@@ -2660,8 +2650,6 @@ Quadro — Correspondência entre as disciplinas do curso e o trabalho
 | **Regulamentação e Ética Aplicada** | LGPD (arts. 5º, 9º, 11 e 37), sigilo profissional, direito do titular à transparência de acessos |
 | **Pesquisa Orientada ao TCC** | Classificação metodológica, estudo de caso aplicado, análise crítica de resultados |
 
-Fonte: elaborado pela autora (2026).
-
 ## APÊNDICE B — Glossário
 
 Quadro — Glossário dos termos técnicos empregados
@@ -2679,5 +2667,3 @@ Quadro — Glossário dos termos técnicos empregados
 | **CNES** | Cadastro Nacional de Estabelecimentos de Saúde |
 | **AIH** | Autorização de Internação Hospitalar |
 | **Preenchimento retroativo** | Atribuição de valor a coluna nova em registros preexistentes |
-
-Fonte: elaborado pela autora (2026).
