@@ -1766,23 +1766,57 @@ A quarta foi decidida no sentido oposto, pela matriz: **concedeu-se
 `triage:write` ao perfil Médico**. É a única das quatro que constitui escolha de
 produto, e não correção de defeito, e por isso o argumento fica registrado.
 
-Há norma profissional que trata a classificação de risco como atividade
-privativa do enfermeiro, e ela é razão real para negar. Três considerações
-prevaleceram em sentido contrário. Primeira, a de disponibilidade clínica: o
-sistema destina-se a rede municipal, e na unidade pequena sem enfermeiro de
-plantão negar a permissão produz paciente na fila **sem classificação de risco**
-— e é a classificação que ordena o painel de atendimento. Segunda, a de que a
-segregação de funções protege pouco neste caso específico, porque a trilha já
-registra a autoria da classificação e o controle contra classificação inadequada
-é revisão clínica, não controle de acesso. Terceira, e a mais decisiva: negar não
-impede o ato, apenas empurra para o registro por terceiro — e então a trilha
-passa a **atribuir a classificação a quem não a decidiu**, que é perda de
-rastreabilidade em nome de uma restrição que não restringiu.
+A decisão foi tomada, em primeira análise, contra o que se supunha ser uma
+restrição normativa: a de que a classificação de risco constituiria atividade
+privativa do enfermeiro. **A verificação da fonte desfez a suposição em dois
+níveis, e o registro do episódio interessa mais que a decisão em si.**
 
-O lugar próprio dessa decisão seria uma matriz de permissões configurável por
-organização, em que cada rede ajustasse a concessão à norma que observa. O
-sistema não a possui — a matriz é estrutura de código — e a limitação está
-registrada na seção 12.
+A resolução consultada — Resolução Cofen nº 423/2012 — encontrava-se
+**revogada** pela Resolução Cofen nº 661/2021 (CONSELHO FEDERAL DE ENFERMAGEM,
+2021). E o dispositivo vigente, lido na íntegra, delimita expressamente o próprio
+alcance: *"No âmbito da Equipe de Enfermagem, a classificação de Risco e
+priorização da assistência é privativa do Enfermeiro"*. A norma não menciona
+profissionais médicos, e não poderia fazê-lo — o conselho de enfermagem não
+detém competência regulatória sobre outra profissão. O que ela estabelece é a
+distinção **interna à enfermagem**, entre o enfermeiro e o técnico de
+enfermagem.
+
+Segue-se que a restrição que se imaginava opor-se à concessão não existe nos
+termos supostos, e a decisão de conceder `triage:write` ao perfil Médico não
+enfrenta objeção normativa. Permanecem válidos, e agora como fundamentação
+principal, os três argumentos de projeto. Primeiro, o de disponibilidade
+clínica: o sistema destina-se a rede municipal, e na unidade pequena sem
+enfermeiro de plantão negar a permissão produz paciente na fila **sem
+classificação de risco** — e é a classificação que ordena o painel de
+atendimento. Segundo, o de que a segregação de funções protege pouco neste caso,
+porque a trilha registra a autoria da classificação e o controle contra
+classificação inadequada é revisão clínica, não controle de acesso. Terceiro, e
+o mais decisivo: negar não impede o ato, apenas o empurra para o registro por
+terceiro — e então a trilha passa a **atribuir a classificação a quem não a
+decidiu**, que é perda de rastreabilidade em nome de uma restrição que não
+restringiu.
+
+**A norma vigente impõe, porém, uma restrição diferente — e esta o sistema não
+atende.** Ao reservar a classificação ao enfermeiro *dentro da equipe de
+enfermagem*, ela pressupõe que enfermeiro e técnico de enfermagem sejam perfis
+distintos. O modelo de perfis implementado possui um único perfil de enfermagem,
+de modo que a distinção que a norma exige não tem onde existir. Enquanto não
+houver perfil de técnico, a conformidade depende de a organização simplesmente
+não atribuir o perfil de enfermagem a técnicos — controle administrativo, não
+técnico, e portanto exatamente o tipo de garantia que este trabalho se propôs a
+tornar verificável. Registra-se como lacuna identificada e não corrigida.
+
+O episódio ilustra a classe I da taxonomia desta seção — *a declaração que
+deixou de ser verdadeira* — aplicada ao próprio texto: uma resolução revogada
+havia nove anos sustentava um argumento, e a leitura parcial de um dispositivo
+sustentava outro. A verificação que o trabalho aplica ao software teve de ser
+aplicada à sua própria fundamentação, com o mesmo resultado: a afirmação
+parecia verdadeira porque estava escrita.
+
+O lugar próprio de decisões desse tipo seria uma matriz de permissões
+configurável por organização, em que cada rede ajustasse a concessão às normas
+que observa e ao quadro de pessoal que possui. O sistema não a possui — a matriz
+é estrutura de código — e a limitação está registrada na seção 12.
 
 **Lição transferível.** Autorização não se audita rota a rota. A pergunta
 correta é por entidade e por perfil: *"quem consegue gravar isto, por todos os
@@ -2308,10 +2342,17 @@ falha pior que a ausência.
 entre perfis e permissões é estrutura de código, idêntica em toda instalação.
 A consequência aparece com nitidez na decisão registrada em 9.4.18: a concessão
 de `triage:write` ao perfil Médico foi tomada por análise de disponibilidade
-clínica, contra uma norma profissional que aponta em sentido oposto — e uma rede
-que observe estritamente essa norma não tem como revogá-la sem alterar o código.
-A decisão é global porque o sistema não oferece o lugar onde ela deveria ser
-local.
+clínica, e uma rede que prefira reservar a classificação de risco à enfermagem
+não tem como revogá-la sem alterar o código. A decisão é global porque o sistema
+não oferece o lugar onde ela deveria ser local.
+
+Do mesmo achado decorre uma segunda limitação, de natureza distinta: **o modelo
+de perfis não distingue enfermeiro de técnico de enfermagem**. A Resolução Cofen
+nº 661/2021 reserva a classificação de risco ao enfermeiro no âmbito da equipe
+de enfermagem, distinção que o sistema não consegue expressar por possuir perfil
+único. A conformidade passa a depender de a organização não atribuir o perfil de
+enfermagem a técnicos — controle administrativo, e portanto precisamente o tipo
+de garantia que este trabalho se propôs a substituir por verificação.
 
 O que a limitação **não** significa: não se trata de ausência de granularidade.
 As 27 permissões nomeadas são suficientemente finas, e a autorização é validada
@@ -2541,6 +2582,12 @@ Acesso em: ....
 BRASIL. Ministério da Saúde. **Rede Nacional de Dados em Saúde (RNDS)**.
 Brasília, DF: Ministério da Saúde, ..... Disponível em:
 https://www.gov.br/saude/pt-br/composicao/seidigi/rnds. Acesso em: ....
+
+CONSELHO FEDERAL DE ENFERMAGEM. **Resolução Cofen nº 661, de 9 de março de
+2021**. Atualiza e normatiza, no âmbito do Sistema Cofen/Conselhos Regionais de
+Enfermagem, a participação do Enfermeiro na atividade de Classificação de Risco.
+Brasília, DF: Cofen, 2021. Disponível em:
+https://www.cofen.gov.br/resolucao-cofen-no-661-2021/. Acesso em: ....
 
 CONSELHO FEDERAL DE MEDICINA. **Resolução CFM nº 1.821/2007**. Aprova as normas
 técnicas concernentes à digitalização e uso dos sistemas informatizados para a

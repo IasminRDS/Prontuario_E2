@@ -130,16 +130,26 @@ PERFIL_PERMISSOES = {
         PATIENT_READ, PATIENT_UPDATE,
         CLINICAL_READ, CLINICAL_WRITE, ENCOUNTER_WRITE, SCHEDULE_WRITE,
         PRESCRIPTION_READ, PRESCRIPTION_CREATE, PRESCRIPTION_WRITE,
-        # `TRIAGE_WRITE` é concessão decidida contra a norma profissional, e o
-        # motivo precisa ficar aqui: em unidade pequena sem enfermeiro de
-        # plantão, negar produz paciente na fila SEM classificação de risco — e
-        # é a classificação que ordena o painel do PS. O ganho de segregação
-        # seria pequeno, porque a trilha já registra a autoria; e negar empurra
-        # para o registro por terceiro, que faz a trilha mentir sobre quem
-        # classificou. Onde a organização quiser respeitar a privatividade do
-        # enfermeiro, o lugar da decisão seria uma matriz configurável por
-        # organização — que este sistema não tem, e está registrado como
-        # limitação. Enquanto não tiver, a decisão é global e é esta.
+        # `TRIAGE_WRITE`: a concessão foi decidida acreditando-se que havia
+        # norma profissional em contrário. NÃO HÁ. A Resolução Cofen 661/2021
+        # (que revogou a 423/2012, citada em toda parte como se vigente fosse)
+        # diz "NO ÂMBITO DA EQUIPE DE ENFERMAGEM, a classificação de Risco (...)
+        # é privativa do Enfermeiro" — e não menciona médicos, porque o conselho
+        # de enfermagem não regula outra profissão. A norma separa enfermeiro de
+        # TÉCNICO de enfermagem.
+        #
+        # Isto tem consequência para esta matriz, e ela é o inverso da que se
+        # supunha: o problema não é o Médico ter a permissão, é NÃO HAVER perfil
+        # de técnico de enfermagem. Enquanto ENFERMEIRO for perfil único, a
+        # distinção que a norma exige depende de a organização não dar esse
+        # perfil a técnico — controle administrativo, não técnico.
+        #
+        # O que sustenta a concessão são razões de projeto: em unidade pequena
+        # sem enfermeiro de plantão, negar produz paciente na fila SEM
+        # classificação de risco, e é ela que ordena o painel do PS; a trilha já
+        # registra a autoria, então a segregação acrescenta pouco; e negar
+        # empurra para o registro por terceiro, que faz a trilha mentir sobre
+        # quem classificou.
         TRIAGE_READ, TRIAGE_WRITE,
         INTERNMENT_WRITE, EMERGENCY_WRITE, EXAM_WRITE, SURGERY_WRITE,
         REPORTS_READ,
