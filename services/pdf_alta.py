@@ -137,7 +137,7 @@ def _resultado_do_exame(ex):
     return ""
 
 
-def gerar_alta(internacao, paciente, medico, unidade):
+def gerar_alta(internacao, paciente, medico, unidade, codigo=None):
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -508,6 +508,15 @@ def gerar_alta(internacao, paciente, medico, unidade):
             e["rodape"],
         )
     )
+
+    if codigo:
+        s.append(
+            Paragraph(
+                f"Autenticidade verificável em /verificar/{codigo}  ·  "
+                f"Código: <b>{codigo}</b>",
+                e["rodape"],
+            )
+        )
 
     doc.build(s)
     buf.seek(0)

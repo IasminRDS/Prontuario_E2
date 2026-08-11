@@ -14,6 +14,7 @@ from models.encaminhamento import Encaminhamento
 from services.pdf_service import gerar_prontuario, gerar_receituario, gerar_atestado
 from services.pdf_encaminhamento import gerar_encaminhamento
 from services.pdf_manager import PDFManager
+from routes.documentos import novo_codigo, registrar_documento
 from utils.audit import registrar
 from utils.rbac import requer_permissao
 
@@ -26,8 +27,15 @@ def prontuario(id):
     paciente = p.paciente
     medico   = p.medico
     unidade  = p.unidade
-    buf = gerar_prontuario(p, paciente, medico, unidade)
-    registrar("prontuarios", id, "read", "PDF do prontuário gerado", commit=True)
+    # O código é gerado ANTES: ele sai impresso no rodapé, e o resumo
+    # criptográfico registrado precisa cobrir o arquivo com ele dentro.
+    codigo = novo_codigo()
+    buf = gerar_prontuario(p, paciente, medico, unidade, codigo=codigo)
+    registrar_documento("prontuario", buf.getvalue(), paciente_id=paciente.id,
+                        referencia_tabela="prontuarios", referencia_id=id,
+                        assinante=current_user, codigo=codigo)
+    registrar("prontuarios", id, "read", "PDF do prontuário gerado")
+    db.session.commit()
     nome = f'prontuario_{paciente.nome.split()[0].lower()}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
@@ -41,8 +49,13 @@ def receituario(id):
     paciente = p.paciente
     medico   = p.medico
     unidade  = p.unidade
-    buf = gerar_receituario(p, paciente, medico, unidade)
-    registrar("prontuarios", id, "read", "PDF do receituário gerado", commit=True)
+    codigo = novo_codigo()
+    buf = gerar_receituario(p, paciente, medico, unidade, codigo=codigo)
+    registrar_documento("receituario", buf.getvalue(), paciente_id=paciente.id,
+                        referencia_tabela="prontuarios", referencia_id=id,
+                        assinante=current_user, codigo=codigo)
+    registrar("prontuarios", id, "read", "PDF do receituário gerado")
+    db.session.commit()
     nome = f'receituario_{paciente.nome.split()[0].lower()}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
@@ -59,8 +72,13 @@ def atestado(paciente_id):
         dias = int(request.form.get('dias', 1))
         cid  = request.form.get('cid', '').strip().upper() or None
         obs  = request.form.get('observacao', '').strip() or None
-        buf  = gerar_atestado(paciente, medico, unidade, dias, cid, obs)
-        registrar("pacientes", paciente_id, "read", "PDF de atestado gerado", commit=True)
+        codigo = novo_codigo()
+        buf  = gerar_atestado(paciente, medico, unidade, dias, cid, obs,
+                              codigo=codigo)
+        registrar_documento("atestado", buf.getvalue(), paciente_id=paciente_id,
+                            assinante=current_user, codigo=codigo)
+        registrar("pacientes", paciente_id, "read", "PDF de atestado gerado")
+        db.session.commit()
         nome = f'atestado_{paciente.nome.split()[0].lower()}.pdf'
         return send_file(buf, mimetype='application/pdf',
                          as_attachment=False, download_name=nome)
@@ -74,8 +92,14 @@ def encaminhamento(id):
     paciente = enc.paciente
     medico   = enc.medico
     unidade  = enc.unidade_origem
-    buf = gerar_encaminhamento(enc, paciente, medico, unidade)
-    registrar("encaminhamentos", id, "read", "PDF de encaminhamento gerado", commit=True)
+    codigo = novo_codigo()
+    buf = gerar_encaminhamento(enc, paciente, medico, unidade, codigo=codigo)
+    registrar_documento("encaminhamento", buf.getvalue(),
+                        paciente_id=paciente.id,
+                        referencia_tabela="encaminhamentos", referencia_id=id,
+                        assinante=current_user, codigo=codigo)
+    registrar("encaminhamentos", id, "read", "PDF de encaminhamento gerado")
+    db.session.commit()
     nome = f'encaminhamento_{enc.especialidade.lower().replace(" ","_")}_{id}.pdf'
     return send_file(buf, mimetype='application/pdf',
                      as_attachment=False, download_name=nome)
@@ -88,7 +112,14 @@ def alta_hospitalar(internacao_id):
     from services.pdf_alta import gerar_alta
 
     intern = Internacao.query.get_or_404(internacao_id)
-    buf = gerar_alta(intern, intern.paciente, intern.medico, intern.unidade)
+    codigo = novo_codigo()
+    buf = gerar_alta(intern, intern.paciente, intern.medico, intern.unidade,
+                     codigo=codigo)
+    registrar_documento("alta", buf.getvalue(),
+                        paciente_id=intern.paciente_id,
+                        referencia_tabela="internacoes",
+                        referencia_id=internacao_id,
+                        assinante=current_user, codigo=codigo)
     registrar("internacoes", internacao_id, "read", "PDF sumário de alta gerado", commit=True)
     nome = f"alta_{intern.paciente.nome.split()[0].lower()}_{internacao_id}.pdf"
     return send_file(buf, mimetype='application/pdf',

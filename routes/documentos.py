@@ -19,19 +19,29 @@ from utils.rbac import requer_permissao
 documentos_bp = Blueprint("documentos", __name__)
 
 
+def novo_codigo():
+    """Código de verificação. Gerado ANTES do PDF, porque sai impresso nele."""
+    import uuid
+
+    return uuid.uuid4().hex[:12].upper()
+
+
 def registrar_documento(tipo, conteudo, paciente_id=None, referencia_tabela=None,
-                        referencia_id=None, assinante=None):
+                        referencia_id=None, assinante=None, codigo=None):
     """Cria o registro de um documento emitido e devolve a instância.
 
     `conteudo` são os bytes do PDF. O chamador é responsável pelo commit — assim o
     documento e a mutação que o originou caem na mesma transação.
-    """
-    import uuid
 
+    `codigo` vem de fora quando o documento já foi gerado com ele impresso no
+    rodapé, que é o caso das rotas de PDF: o resumo criptográfico precisa cobrir
+    o arquivo que a pessoa tem em mãos, código incluído, e para isso o código
+    tem de existir antes da geração.
+    """
     from extensions import db
 
     doc = DocumentoAssinado(
-        codigo=uuid.uuid4().hex[:12].upper(),
+        codigo=codigo or novo_codigo(),
         tipo=tipo,
         paciente_id=paciente_id,
         referencia_tabela=referencia_tabela,

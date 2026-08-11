@@ -928,7 +928,9 @@ módulos no código, de modo que a descrição abaixo é verificável contra ele
   regulação de vagas, notificação compulsória, envio à Rede Nacional de Dados em
   Saúde (BRASIL, 2026) e terminologias oficiais (CID-10, RENAME, CBO, SIGTAP).
 - **Cidadão e conformidade** — portal de transparência ao titular e emissão de
-  documentos com verificação de autenticidade.
+  documentos clínicos com verificação pública de autenticidade: cada documento
+  emitido é registrado com o resumo criptográfico do arquivo e recebe um código
+  impresso no próprio rodapé, conferível sem sessão por quem o recebeu.
 - **Gestão e plataforma** — relatórios ambulatoriais e hospitalares, unidades e
   território, administração de contas, consulta à trilha de auditoria, alertas,
   configurações, importação e exportação de dados, cópia de segurança e geração
@@ -954,7 +956,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 417, em 35 arquivos |
+| Casos de teste automatizados | 422, em 36 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1153,8 +1155,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **417 casos de teste**, provenientes de 264
-funções distribuídas em 35 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **422 casos de teste**, provenientes de 269
+funções distribuídas em 36 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -2247,7 +2249,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 417 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 422 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

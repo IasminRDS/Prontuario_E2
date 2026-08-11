@@ -136,7 +136,7 @@ def _campo(label, valor, e):
     ]
 
 
-def _rodape(story, e, texto_extra=""):
+def _rodape(story, e, texto_extra="", codigo=None):
     story.append(Spacer(1, 0.5 * cm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=CINZA_BORDA))
     rodape = (
@@ -146,12 +146,18 @@ def _rodape(story, e, texto_extra=""):
     if texto_extra:
         rodape += f"  ·  {texto_extra}"
     story.append(Paragraph(rodape, e["rodape"]))
+    if codigo:
+        # O código PRECISA sair impresso: quem recebe o documento não tem outra
+        # origem para ele, e sem o código a verificação pública não tem entrada.
+        story.append(Paragraph(
+            f"Autenticidade verificável em /verificar/{codigo}  ·  "
+            f"Código: <b>{codigo}</b>", e["rodape"]))
 
 
 # ══════════════════════════════════════════
 # 1. PRONTUÁRIO COMPLETO
 # ══════════════════════════════════════════
-def gerar_prontuario(prontuario, paciente, medico, unidade):
+def gerar_prontuario(prontuario, paciente, medico, unidade, codigo=None):
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -343,7 +349,7 @@ def gerar_prontuario(prontuario, paciente, medico, unidade):
             )
         )
 
-    _rodape(story, e, f"Prontuário #{prontuario.id}")
+    _rodape(story, e, f"Prontuário #{prontuario.id}", codigo=codigo)
     doc.build(story)
     buf.seek(0)
     return buf
@@ -352,7 +358,7 @@ def gerar_prontuario(prontuario, paciente, medico, unidade):
 # ══════════════════════════════════════════
 # 2. RECEITUÁRIO
 # ══════════════════════════════════════════
-def gerar_receituario(prontuario, paciente, medico, unidade):
+def gerar_receituario(prontuario, paciente, medico, unidade, codigo=None):
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -440,7 +446,7 @@ def gerar_receituario(prontuario, paciente, medico, unidade):
         )
     )
 
-    _rodape(story, e)
+    _rodape(story, e, codigo=codigo)
     doc.build(story)
     buf.seek(0)
     return buf
@@ -449,7 +455,7 @@ def gerar_receituario(prontuario, paciente, medico, unidade):
 # ══════════════════════════════════════════
 # 3. ATESTADO MÉDICO
 # ══════════════════════════════════════════
-def gerar_atestado(paciente, medico, unidade, dias, cid=None, observacao=None):
+def gerar_atestado(paciente, medico, unidade, dias, cid=None, observacao=None, codigo=None):
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -545,7 +551,7 @@ def gerar_atestado(paciente, medico, unidade, dias, cid=None, observacao=None):
     if medico and medico.especialidade:
         story.append(Paragraph(medico.especialidade, e["assinatura"]))
 
-    _rodape(story, e)
+    _rodape(story, e, codigo=codigo)
     doc.build(story)
     buf.seek(0)
     return buf
