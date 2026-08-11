@@ -225,12 +225,19 @@ def test_nenhum_template_orfao():
             re.finditer(r"{%-?\s*(?:extends|include|import|from)\s+['\"]([^'\"]+)",
                         texto))
 
+    # O casamento é por caminho ENTRE ASPAS, e não por substring solta. Com
+    # substring, `templates/404.html` parecia referenciado porque o código cita
+    # `errors/404.html`, que o contém — dois órfãos ficaram escondidos assim,
+    # e o detector passava. Um verificador com casamento frouxo não acusa
+    # menos: acusa errado, e a diferença só aparece quando alguém confere.
+    citados = set(re.findall(r"['\"]([\w/.-]+\.html)['\"]", codigo))
+
     orfaos = []
     for arquivo in sorted(templates.rglob("*.html")):
         rel = arquivo.relative_to(templates).as_posix()
         if rel in referenciados or rel in TEMPLATES_SEM_ROTA_ACEITOS:
             continue
-        if rel not in codigo:
+        if rel not in citados:
             orfaos.append(f"  templates/{rel}")
 
     assert not orfaos, (

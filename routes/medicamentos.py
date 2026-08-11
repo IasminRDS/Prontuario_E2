@@ -5,7 +5,7 @@ from models.medicamento import Medicamento, Prescricao, ItemPrescricao
 from models.paciente import Paciente
 from models.medico import Medico
 from database.db import db
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import auditar_aqui
 from datetime import datetime
 from utils.rbac import requer_permissao
 

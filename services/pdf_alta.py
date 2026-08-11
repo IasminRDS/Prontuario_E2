@@ -12,7 +12,7 @@ from reportlab.platypus import (
     HRFlowable,
     KeepTogether,
 )
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_JUSTIFY
 from io import BytesIO
 from datetime import datetime
 

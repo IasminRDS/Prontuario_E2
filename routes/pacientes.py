@@ -15,7 +15,7 @@ from utils.security import (
     validar_cpf, validar_cns, pode_acessar_paciente,
     query_pacientes_no_escopo,
 )
-from utils.audit import audit_log, auditar_aqui, registrar
+from utils.audit import auditar_aqui, registrar
 from utils.rbac import requer_permissao
 
 pacientes_bp = Blueprint("pacientes", __name__, url_prefix="/pacientes")

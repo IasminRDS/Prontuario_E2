@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from flask import (Blueprint, current_app, flash, jsonify, redirect,
+from flask import (Blueprint, current_app, flash, redirect,
                    render_template, request, url_for)
 from flask_login import login_required, current_user
 from models.triagem import Triagem
 from models.paciente import Paciente
 from database.db import db
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import auditar_aqui
 from utils.numeros import decimal_de, inteiro_de
 from datetime import datetime, date
 from utils.rbac import requer_permissao

@@ -9,7 +9,7 @@ expõe o mínimo — tipo, data, emissor e validade — e nunca conteúdo clíni
 """
 import hashlib
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, render_template, request
 from flask_login import login_required
 
 from models.lgpd import DocumentoAssinado

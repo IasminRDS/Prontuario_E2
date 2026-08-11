@@ -10,8 +10,6 @@ binário, recusa em SQLite) roda em qualquer ambiente; o restore de verdade só
 roda onde há PostgreSQL **e** cliente instalado, e é pulado com motivo explícito
 no resto. Um teste de integração que se pula em silêncio é pior que não existir.
 """
-import pathlib
-import shutil
 
 import pytest
 

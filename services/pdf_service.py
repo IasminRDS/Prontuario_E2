@@ -10,7 +10,7 @@ from reportlab.platypus import (
     TableStyle,
     HRFlowable,
 )
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
 

@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
-from sqlalchemy import and_
 
 from database.db import db
 from models.agenda_evento import AgendaEvento  # crie este model (abaixo)

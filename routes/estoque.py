@@ -4,8 +4,7 @@ from flask_login import login_required, current_user
 from models.estoque import ItemEstoque, MovEstoque
 from database.db import db
 from utils.numeros import decimal_de
-from utils.audit import audit_log, auditar_aqui
-from utils.security import admin_requerido
+from utils.audit import auditar_aqui
 from datetime import datetime, date
 from utils.rbac import requer_permissao
 

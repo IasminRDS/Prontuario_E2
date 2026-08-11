@@ -125,28 +125,6 @@ def auditar_aqui(tabela, acao, descricao=None, commit=False):
     )
 
 
-def audit_log(acao_default="update", tabela_default="desconhecido"):
-    """Decorator: audita a chamada de uma rota.
-
-    ATENÇÃO: é uma fábrica de decorator — precisa ser aplicada com @, nunca
-    chamada inline. `audit_log(...)` solto no corpo da função não audita nada.
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            registro_id = kwargs.get("prontuario_id") or kwargs.get("id")
-            registrar(
-                tabela_default,
-                registro_id,
-                acao_default,
-                f"Endpoint: {request.endpoint}",
-                commit=True,
-            )
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
 def log_auditoria(tabela, acao):
     """Decorator equivalente, com tabela/ação explícitas."""
     def decorator(f):

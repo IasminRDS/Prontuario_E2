@@ -6,7 +6,7 @@ from models.internacao import Internacao
 from models.medico import Medico
 from models.medicamento import Medicamento
 from database.db import db
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import auditar_aqui
 from utils.rbac import requer_permissao
 from datetime import datetime, timedelta
 

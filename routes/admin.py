@@ -7,7 +7,7 @@ from database.db import db
 from utils.rbac import requer_permissao
 from utils.security import admin_requerido
 from utils.rbac import SUPER_ADMIN, _normalizar, perfis_atribuiveis
-from utils.audit import audit_log, auditar_aqui
+from utils.audit import auditar_aqui
 from datetime import datetime
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")

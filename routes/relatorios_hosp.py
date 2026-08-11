@@ -4,7 +4,6 @@ from flask_login import login_required, current_user
 from models.internacao import Internacao, Setor, Leito
 from models.cirurgia import Cirurgia
 from models.pronto_socorro import AtendimentoPS
-from models.faturamento import AIH
 from database.db import db
 from datetime import datetime, date
 from io import BytesIO, StringIO

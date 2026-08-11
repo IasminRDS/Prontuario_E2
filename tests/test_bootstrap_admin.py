@@ -8,7 +8,6 @@ import pytest
 
 from database.administrador import ErroBootstrap, criar_administrador
 from extensions import db
-from models.user import User
 
 SENHA = "senha-boa-123"
 

@@ -5,9 +5,6 @@ from flask import (
     render_template,
     request,
     send_file,
-    flash,
-    redirect,
-    url_for,
 )
 from flask_login import login_required, current_user
 from models.paciente import Paciente

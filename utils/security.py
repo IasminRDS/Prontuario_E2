@@ -8,7 +8,6 @@ import re
 # ===============================
 _CPF_RE = re.compile(r"^\d{11}$")
 _CNS_RE = re.compile(r"^\d{15}$")
-_IBGE_RE = re.compile(r"^\d{7}$")
 _CID10_RE = re.compile(r"^[A-TV-Z][0-9][0-9AB](\.[0-9A-KXZ]{1,2})?$")
 
 
@@ -19,10 +18,6 @@ def validar_cpf(cpf: str) -> bool:
 
 def validar_cns(cns: str) -> bool:
     return bool(_CNS_RE.fullmatch((cns or "").strip()))
-
-
-def validar_ibge(cod: str) -> bool:
-    return bool(_IBGE_RE.fullmatch((cod or "").strip()))
 
 
 def validar_cid10(cid: str) -> bool:

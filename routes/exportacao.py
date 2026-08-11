@@ -12,7 +12,7 @@ from datetime import datetime
 from io import StringIO
 
 from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from flask_login import login_required
 
 from extensions import db
 from models.audit_log import AuditLog

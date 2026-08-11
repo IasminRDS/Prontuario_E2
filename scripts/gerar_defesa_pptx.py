@@ -31,7 +31,7 @@ import sys
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.util import Emu, Inches, Pt
+from pptx.util import Inches, Pt
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 ENTRADA = RAIZ / "docs" / "defesa_roteiro.md"

@@ -35,10 +35,6 @@ def uf_do_codigo(codigo):
     return PREFIXO_UF.get(codigo[:2])
 
 
-def codigo_valido(codigo):
-    return uf_do_codigo(codigo) is not None
-
-
 class Municipio(db.Model):
     __tablename__ = "municipios"
 
