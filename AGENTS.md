@@ -145,6 +145,16 @@ informada — o planejador nem considera índice em tabela pequena.
 python scripts/gerar_tcc_docx.py
 ```
 
+`docs/defesa_roteiro.md` é o roteiro de apresentação e defesa — documento de
+trabalho, não parte da monografia, e descartável depois da banca. Tem gerador
+próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aqui
+é documento de ensaio, com uma página por slide, a fala em corpo maior com
+barra lateral e o tempo no cabeçalho.
+
+```bash
+python scripts/gerar_defesa_docx.py
+```
+
 Nunca edite o `.docx` — a próxima geração descarta a edição, e enquanto isso os
 dois arquivos afirmam coisas diferentes. O conversor é próprio porque a ABNT
 pede o que um conversor genérico não faz: capa e pré-textuais fora do sumário,

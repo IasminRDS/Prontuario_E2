@@ -48,6 +48,10 @@ node_modules/
 # cada regeracao.
 docs/TCC.docx
 
+# Mesma regra para o roteiro de defesa, gerado de docs/defesa_roteiro.md por
+# scripts/gerar_defesa_docx.py.
+docs/defesa_roteiro.docx
+
 # Lock que o LibreOffice cria ao abrir o .docx e deixa para tras quando o
 # processo e encerrado a forca. Aparece no `git status` como arquivo novo.
 .~lock.*#
