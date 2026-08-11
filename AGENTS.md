@@ -152,8 +152,14 @@ próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aq
 barra lateral e o tempo no cabeçalho.
 
 ```bash
-python scripts/gerar_defesa_docx.py
+python scripts/gerar_defesa_docx.py   # o roteiro, para ensaiar
+python scripts/gerar_defesa_pptx.py   # os slides, para projetar
 ```
+
+Os slides saem do mesmo roteiro, e a divisão é a que importa: **o corpo do
+slide é escrito no gerador** — a rubrica "Visual" do roteiro descreve o que
+desenhar, e não é texto projetável —, enquanto **a fala vai para as notas do
+apresentador**, que é onde ela serve. Nada da fala é projetado na parede.
 
 Nunca edite o `.docx` — a próxima geração descarta a edição, e enquanto isso os
 dois arquivos afirmam coisas diferentes. O conversor é próprio porque a ABNT
