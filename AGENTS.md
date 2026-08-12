@@ -49,6 +49,7 @@ flask backup-validar backups/<arquivo>.dump   # restaura num schema e confere
 flask backup-validar --apenas-restore <arq>   # para arquivo antigo
 flask hardening-check                         # confere o banco, sai 1 se falhar
 flask seed-volume --pacientes 50000           # carga para medir; --limpar remove
+flask medir-desempenho --repeticoes 15        # mediana e dispersao, com protocolo
 flask auditoria-ancora                        # acrescenta uma âncora ao journal
 flask auditoria-ancora --conferir             # confere o journal e a trilha
 flask auditoria-ancora --retida <hash>        # valida o prefixo até a âncora guardada fora
@@ -132,6 +133,14 @@ Verificador rodando na mesma máquina, com as mesmas credenciais de quem emite,
 não separou nada — duplicou a autoridade. A separação só significa alguma coisa
 quando o destino do passo 2 é um coletor que a aplicação não controla, e é por
 isso que `--destino stdout` existe.
+
+`medir-desempenho` mede as consultas críticas **com protocolo**: descarta as
+primeiras execuções, que medem a partida e não o regime; repete; e reporta
+mediana com amplitude interquartil. Média esconderia uma pausa do coletor de
+lixo; valor sem dispersão não diz se a próxima execução o repete. O relatório
+acusa quando a dispersão passa de um quarto da mediana — ali o número não deve
+ser citado como estável. Rode depois do `seed-volume`: com base pequena o
+planejador nem considera índice.
 
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é

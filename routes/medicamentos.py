@@ -8,6 +8,7 @@ from database.db import db
 from utils.audit import auditar_aqui
 from datetime import datetime
 from utils.rbac import requer_permissao
+from utils.seguranca_http import limitar
 
 medicamentos_bp = Blueprint('medicamentos', __name__, url_prefix='/medicamentos')
 
@@ -196,6 +197,8 @@ def novo_medicamento():
 
 @medicamentos_bp.route('/buscar')
 @login_required
+# Autocomplete de medicamento — mesma razão do de paciente.
+@limitar(maximo=300, janela_segundos=300)
 def buscar():
     """API de autocomplete para o formulário de prescrição."""
     q = request.args.get('q', '').strip()

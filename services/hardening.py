@@ -49,10 +49,14 @@ def verificar():
     from extensions import db
     from utils import rls
 
-    achados = []
+    # As duas verificações do journal são de SISTEMA DE ARQUIVOS e não têm
+    # relação com o dialeto do banco. Ficavam depois do retorno antecipado
+    # abaixo, de modo que em SQLite ninguém as executava — o portão silenciava
+    # justamente na configuração em que ele é mais fácil de esquecer.
+    achados = [_journal_append_only(), _journal_ainda_aceita_acrescimo()]
 
     if db.engine.dialect.name != "postgresql":
-        return [Achado("dialeto", False,
+        return achados + [Achado("dialeto", False,
                        f"banco é {db.engine.dialect.name}, não PostgreSQL",
                        "RLS e estas verificações só existem em PostgreSQL")]
 
@@ -184,8 +188,6 @@ def verificar():
             f"GRANT INSERT ON audit_logs TO {papel}; "
             f"GRANT USAGE, SELECT ON SEQUENCE audit_logs_id_seq TO {papel}"))
 
-    achados.append(_journal_append_only())
-
     return achados
 
 
@@ -211,26 +213,20 @@ def _journal_append_only():
 
     if not caminho.is_file():
         return Achado(
-            "journal de âncoras é append-only no sistema de arquivos",
+            NOME_APPEND_ONLY,
             False,
             f"não existe journal em {caminho} — sem âncora não há o que "
             "proteger nem o que comparar",
             "flask auditoria-ancora")
 
+    if os.name == "nt":
+        return _append_only_windows(caminho)
+
     if os.name != "posix":
-        # Windows expõe a permissão por ACL (`icacls`), e a leitura confiável
-        # exige interpretar herança e negações — mais superfície de engano do
-        # que de garantia. Declarar não-verificável é mais honesto que devolver
-        # um OK que ninguém mediu: o pior resultado possível aqui seria
-        # confirmar uma proteção inexistente.
         return Achado(
-            "journal de âncoras é append-only no sistema de arquivos",
-            None,
-            f"não verificável neste sistema operacional ({os.name}) — o "
-            "atributo existe no Windows via ACL, mas esta verificação só sabe "
-            "lê-lo em Linux",
-            'icacls "%s" /grant "usuario:(WD,AD)" /deny "usuario:(WDAC)"'
-            % caminho)
+            NOME_APPEND_ONLY, None,
+            f"não verificável neste sistema operacional ({os.name})",
+            "")
 
     import subprocess
     try:
@@ -238,7 +234,7 @@ def _journal_append_only():
                                capture_output=True, text=True, timeout=5)
     except (OSError, subprocess.SubprocessError) as exc:
         return Achado(
-            "journal de âncoras é append-only no sistema de arquivos",
+            NOME_APPEND_ONLY,
             None, f"não consegui ler os atributos: {exc}",
             f"chattr +a {caminho}")
 
@@ -247,9 +243,104 @@ def _journal_append_only():
     tem_append_only = "a" in atributos
 
     return Achado(
-        "journal de âncoras é append-only no sistema de arquivos",
+        NOME_APPEND_ONLY,
         tem_append_only,
         "" if tem_append_only else
         (f"{caminho} pode ser reescrito e truncado — o modo de anexação da "
          "aplicação é convenção, não garantia"),
         f"sudo chattr +a {caminho}")
+
+
+NOME_APPEND_ONLY = "journal de âncoras é append-only no sistema de arquivos"
+
+# Direito de ESCRITA em posição arbitrária. É o que precisa estar NEGADO para
+# que o arquivo seja de acréscimo: sem ele, sobra `AD` (append) e o conteúdo já
+# gravado não pode ser reescrito nem truncado.
+_ESCRITA_ARBITRARIA = ("WD", "WDAC", "(W)", "(M)", "(F)")
+
+_REMEDIO_WINDOWS = (
+    'icacls "{caminho}" /deny "{usuario}:(WD)" '
+    '/grant "{usuario}:(AD,RD)"'
+)
+
+
+def _append_only_windows(caminho):
+    """Lê a ACL com `icacls` e procura a NEGAÇÃO da escrita arbitrária.
+
+    A leitura é deliberadamente conservadora, e convém dizer por quê: ACL do
+    Windows tem herança, ordenação entre negações e concessões, e grupos que se
+    sobrepõem. Interpretar tudo isso aqui produziria uma resposta que parece
+    precisa e não é.
+
+    Então a verificação responde uma pergunta estreita e honesta: **existe uma
+    entrada de NEGAÇÃO cobrindo escrita arbitrária para o usuário corrente ou
+    para um grupo que o contenha?** Havendo, aprova. Não havendo, REPROVA — e
+    reprovar é o resultado correto na dúvida, porque o custo de confirmar uma
+    proteção inexistente é maior que o de pedir uma conferência a mais.
+    """
+    import getpass
+    import subprocess
+
+    try:
+        saida = subprocess.run(["icacls", str(caminho)], capture_output=True,
+                               text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return Achado(NOME_APPEND_ONLY, None,
+                      f"não consegui executar icacls: {exc}", "")
+
+    if saida.returncode != 0:
+        return Achado(NOME_APPEND_ONLY, None,
+                      f"icacls falhou: {(saida.stderr or '').strip()[:120]}", "")
+
+    usuario = getpass.getuser()
+    remedio = _REMEDIO_WINDOWS.format(caminho=caminho, usuario=usuario)
+
+    negacoes = [l.strip() for l in saida.stdout.splitlines() if "(DENY)" in l]
+    nega_escrita = any(
+        any(d in l for d in _ESCRITA_ARBITRARIA) for l in negacoes)
+
+    if nega_escrita:
+        return Achado(NOME_APPEND_ONLY, True, "", remedio)
+
+    return Achado(
+        NOME_APPEND_ONLY, False,
+        f"{caminho} não tem negação de escrita arbitrária na ACL: o arquivo "
+        "pode ser reescrito e truncado, e o modo de anexação da aplicação é "
+        "convenção, não garantia",
+        remedio)
+
+
+def _journal_ainda_aceita_acrescimo():
+    """A aplicação ainda consegue ACRESCENTAR ao journal?
+
+    De sinal contrário à verificação anterior, e pela mesma razão que a oitava
+    existe: o endurecimento prescrito ali pode quebrar o que protege. Negar
+    escrita arbitrária sem conceder acréscimo deixa a emissão de âncoras
+    falhando em silêncio — e journal que parou de crescer produz o mesmo
+    arquivo que um sistema sem uso.
+
+    A sonda ABRE em modo de anexação e fecha sem escrever nada: mede a
+    permissão sem sujar o artefato que se pretende proteger.
+    """
+    import os
+    import pathlib
+
+    caminho = pathlib.Path(
+        os.environ.get("ANCORA_JOURNAL", "backups/ancora_auditoria.jsonl"))
+    nome = "aplicação ainda consegue acrescentar ao journal"
+
+    if not caminho.is_file():
+        return Achado(nome, None, f"não há journal em {caminho} para sondar", "")
+
+    try:
+        with caminho.open("a", encoding="utf-8"):
+            pass
+    except OSError as exc:
+        return Achado(
+            nome, False,
+            f"não consigo abrir {caminho} para acréscimo: {exc} — o "
+            "endurecimento da ACL foi longe demais e a emissão de âncoras "
+            "vai falhar",
+            'icacls "%s" /grant "%s:(AD,RD)"' % (caminho, os.getlogin()))
+
+    return Achado(nome, True, "", "")

@@ -7,6 +7,7 @@ from utils.numeros import decimal_de
 from utils.audit import auditar_aqui
 from datetime import datetime, date
 from utils.rbac import requer_permissao
+from utils.seguranca_http import limitar
 
 estoque_bp = Blueprint('estoque', __name__, url_prefix='/estoque')
 
@@ -224,6 +225,8 @@ def alertas():
 
 @estoque_bp.route('/api/buscar')
 @login_required
+# Autocomplete de item de estoque — mesma razão.
+@limitar(maximo=300, janela_segundos=300)
 def api_buscar():
     q = request.args.get('q', '').strip()
     itens = ItemEstoque.query.filter(

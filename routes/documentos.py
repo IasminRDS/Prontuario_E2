@@ -15,6 +15,7 @@ from flask_login import login_required
 from models.lgpd import DocumentoAssinado
 from models.user import User
 from utils.rbac import requer_permissao
+from utils.seguranca_http import limitar
 
 documentos_bp = Blueprint("documentos", __name__)
 
@@ -63,6 +64,10 @@ def registrar_documento(tipo, conteudo, paciente_id=None, referencia_tabela=None
 
 
 @documentos_bp.get("/verificar/<codigo>")
+# Rota PÚBLICA que aceita código: é a superfície de enumeração mais
+# exposta do sistema. Trinta em cinco minutos cobre com folga quem
+# confere um documento recebido, e corta varredura automatizada.
+@limitar(maximo=30, janela_segundos=300)
 def verificar(codigo):
     """Página PÚBLICA de verificação — sem login."""
     doc = DocumentoAssinado.query.filter_by(codigo=(codigo or "").strip().upper()).first()

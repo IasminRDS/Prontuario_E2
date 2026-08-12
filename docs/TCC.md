@@ -956,7 +956,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 14 |
 | Telas (*templates*) | 118 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 422, em 36 arquivos |
+| Casos de teste automatizados | 432, em 37 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1125,8 +1125,19 @@ pendentes durante a maior parte do desenvolvimento — e declara um nono como
 
 Essa terceira resposta merece justificação, porque a alternativa era mais
 simples. A nona verificação pergunta se o registro sequencial de âncoras é de
-acréscimo no sistema de arquivos, atributo que o ambiente de desenvolvimento
-utilizado não expõe de forma legível. Tratá-la como reprovação produziria um
+acréscimo no sistema de arquivos. Ela foi posteriormente implementada também
+para o sistema operacional utilizado no desenvolvimento — que expõe o atributo
+por lista de controle de acesso —, e passou a **reprovar**, informando o comando
+exato de correção. A leitura é deliberadamente conservadora: responde apenas se
+existe negação explícita de escrita arbitrária, e reprova na dúvida, porque
+confirmar proteção inexistente custa mais que pedir uma conferência a mais.
+
+Acrescentou-se, junto dela, uma décima de sinal contrário: **a aplicação ainda
+consegue acrescentar ao registro?** É a lição de 9.4.15 aplicada antes do dano —
+o endurecimento prescrito pela nona pode, se excessivo, interromper a emissão de
+âncoras, e registro que parou de crescer produz o mesmo arquivo que um sistema
+sem uso. A sonda abre o arquivo em modo de anexação e o fecha sem escrever,
+medindo a permissão sem sujar o artefato que se pretende proteger. Tratá-la como reprovação produziria um
 comando que falha permanentemente naquele ambiente — e conviver com um controle
 que sempre reprova ensina quem o executa a ignorá-lo, de modo que a reprovação
 verdadeira, quando ocorresse, não seria percebida. Distinguir "não verificável"
@@ -1155,8 +1166,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **422 casos de teste**, provenientes de 269
-funções distribuídas em 36 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **432 casos de teste**, provenientes de 279
+funções distribuídas em 37 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -2249,7 +2260,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 422 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 432 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -2582,15 +2593,23 @@ lacuna exigiria persistir a matriz por unidade ou por rede, com precedência
 definida e com auditoria das próprias alterações de permissão, o que constitui
 trabalho autônomo e está indicado entre as continuações possíveis.
 
-**Medição de desempenho sem tratamento estatístico.** Os tempos apresentados em
-11.2 correspondem a observações em ambiente de desenvolvimento e **não são
-acompanhados de número de repetições nem de medida de dispersão**. Servem, com
-essa ressalva, ao propósito para o qual foram produzidos: evidenciar diferenças
-de ordem de grandeza — de 185,9 ms para 0,96 ms, ou de 106 consultas para 17 —,
-magnitude em que a variação entre execuções não altera a conclusão. Não servem
-para comparação fina entre alternativas de implementação, nem como referência de
-capacidade, e a precisão decimal com que são apresentados não deve ser lida como
-indicação de repetibilidade.
+**Medição de desempenho: protocolo implementado, ambiente ainda limitado.**
+Os tempos apresentados em 11.2 foram obtidos por observação, sem número de
+repetições nem medida de dispersão — o que tornava a precisão decimal com que
+aparecem indicativa de uma repetibilidade que o dado não sustentava.
+
+A lacuna de método foi fechada: um comando específico executa cada consulta sob
+protocolo declarado — descarte das primeiras execuções, que medem a partida e
+não o regime; repetição registrada no resultado; **mediana** em lugar de média,
+porque uma pausa do coletor de lixo desloca a segunda e não a primeira; e
+**amplitude interquartil** explícita, sem a qual um valor central não informa se
+a próxima execução o repetirá. O relatório assinala quando a dispersão excede um
+quarto da mediana, caso em que o valor central não deve ser citado como estável.
+
+O que **permanece** limitação é de ambiente, e não de método: a medição continua
+sendo feita em máquina de desenvolvimento e sobre volume sintético. Protocolo
+não converte dado sintético em dado real, e os valores seguem servindo para
+evidenciar ordem de grandeza — não como referência de capacidade.
 
 **Medição limitada a volume sintético.** Os planos de execução foram analisados
 com 50 mil pacientes gerados artificialmente. O comportamento sob a distribuição
@@ -2608,17 +2627,44 @@ por rota produziu a falha descrita em 9.4.3.
 `FORCE` ativo, papel da aplicação sem `BYPASSRLS` e escopo corretamente publicado.
 Erro de administração desativa o controle sem sinal perceptível na aplicação.
 
-**Limitação de escopo do controle de tentativas.** A limitação de requisições está
-aplicada apenas às rotas de autenticação. Rotas de dados não são limitadas, de
-modo que a enumeração de identificadores permanece possível, ainda que sem
-retorno de conteúdo após as correções de autorização.
+**Controle de tentativas: estendido às superfícies de enumeração, não a
+todas as rotas.** A limitação de requisições vivia apenas nas rotas de
+autenticação, deixando abertas as consultas: mesmo negando conteúdo, a resposta
+distingue registro existente de inexistente, e a distinção é enumerável.
+
+O controle passou a alcançar as rotas em que essa distinção é obtida — a
+verificação pública de documento, as buscas por código e as consultas de
+sugestão e de agenda. **Os limites não são uniformes, e a assimetria é
+deliberada:** a verificação pública não tem uso legítimo em rajada e recebeu
+limite estrito; já as consultas de sugestão disparam a cada digitação, e um
+limite apertado ali quebraria o uso normal de uma recepção antes de incomodar
+qualquer varredura — restrição que barra o trabalho legítimo é falha de
+disponibilidade, não segurança, e o trabalho registra isso em outros pontos.
+
+Permanece como limitação a **ausência de limitação global**: as rotas de leitura
+de registro clínico não são limitadas, e a decisão é a mesma — o custo de barrar
+o atendimento excede o de tolerar enumeração já contida pela autorização.
 
 **Ausência de auditoria externa.** Não foi realizado teste de intrusão nem
 avaliação por terceiro independente. As conclusões de segurança limitam-se aos
 controles verificados pelos meios descritos.
 
-**Política de retenção de cópias não implementada.** O sistema gera e valida
-backups, mas não implementa rotação, versionamento ou custódia externa.
+**Retenção de cópias: rotação implementada, custódia externa ausente.** O
+sistema gera cópias, valida a restauração e **expurga as mais antigas**,
+mantendo um número configurável — porque gerar sem expurgar enche o disco em
+silêncio, e disco cheio derruba justamente o banco que se queria proteger. A
+ordenação para o expurgo é por data de modificação e não por nome: nome com
+carimbo de tempo ordena bem por acaso, e basta um arquivo renomeado à mão para
+o critério passar a apagar a cópia errada.
+
+Registre-se que esta afirmação esteve **desatualizada no próprio texto**: a
+rotação já operava quando a limitação foi redigida como ausente. É a classe I da
+taxonomia da seção 9.4 incidindo sobre a redação deste capítulo, e o caso foi
+mantido no relato em vez de silenciosamente corrigido.
+
+O que permanece ausente é a **custódia externa**: as cópias residem no mesmo
+servidor que o banco, de modo que a perda do servidor as leva junto. É
+dependência de infraestrutura, e não de software.
 
 **Validação de usabilidade sem usuários.** Conforme registrado em 10.1.
 

@@ -17,6 +17,7 @@ from utils.security import (
 )
 from utils.audit import auditar_aqui, registrar
 from utils.rbac import requer_permissao
+from utils.seguranca_http import limitar
 
 pacientes_bp = Blueprint("pacientes", __name__, url_prefix="/pacientes")
 
@@ -212,6 +213,10 @@ def listar_pacientes_api():
 @pacientes_bp.get("/buscar")
 @login_required
 @requer_permissao("patient:read")
+# Autocomplete: dispara a cada digitação, com 300 ms de espera no
+# gabarito. O limite é folgado de propósito — apertá-lo quebraria a
+# digitação normal antes de incomodar uma varredura.
+@limitar(maximo=300, janela_segundos=300)
 def buscar():
     """Autocomplete de paciente dos formulários clínicos e da busca do topo.
 
@@ -270,6 +275,9 @@ def buscar():
 # =========================================================
 @pacientes_bp.get("/buscar-codigo")
 @login_required
+# Busca por código: não é digitada caractere a caractere, então o
+# limite pode ser bem menor que o do autocomplete.
+@limitar(maximo=60, janela_segundos=300)
 def buscar_codigo():
     q = (request.args.get("q") or "").strip()
     if not q:

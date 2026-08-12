@@ -8,6 +8,7 @@ from database.db import db
 from utils.audit import auditar_aqui
 from datetime import datetime, date, timedelta
 from utils.rbac import requer_permissao
+from utils.seguranca_http import limitar
 
 agendamento_bp = Blueprint('agendamento', __name__, url_prefix='/agendamento')
 
@@ -155,6 +156,9 @@ def editar(id):
 
 @agendamento_bp.route('/api/horarios')
 @login_required
+# Consulta de horários: responde por data e profissional, e varrer o
+# calendário inteiro revela a agenda de quem atende.
+@limitar(maximo=120, janela_segundos=300)
 def api_horarios():
     data_str = request.args.get('data', date.today().strftime('%Y-%m-%d'))
     try:

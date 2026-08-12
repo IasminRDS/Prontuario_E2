@@ -517,6 +517,70 @@ def _registrar_cli(app):
         print("Journal que a aplicação pode reescrever não prova nada; é a "
               "linha guardada noutro lugar que prova.")
 
+    @app.cli.command("medir-desempenho")
+    @click.option("--repeticoes", default=15, show_default=True,
+                  help="Execuções que entram na estatística.")
+    @click.option("--aquecimentos", default=3, show_default=True,
+                  help="Execuções descartadas antes de medir.")
+    def medir_desempenho(repeticoes, aquecimentos):
+        """Mede as consultas críticas com protocolo, e não por observação.
+
+        Os tempos relatados na monografia vinham de observação: sem número de
+        repetições e sem medida de dispersão, com uma precisão decimal que
+        sugeria repetibilidade que o dado não sustentava. Este comando fecha
+        essa lacuna — descarta aquecimento, repete, e reporta MEDIANA com
+        intervalo interquartil.
+
+        Rode depois de `flask seed-volume`: com dezenas de linhas o planejador
+        nem considera índice, e a medição não informa decisão nenhuma.
+        """
+        from sqlalchemy import func as sa_func
+
+        from models.paciente import Paciente
+        from models.prontuario import Prontuario
+        from services.medicao import medir, relatorio
+
+        termo = "%SILVA%"
+
+        def listagem():
+            return Paciente.query.filter_by(ativo=True).order_by(
+                Paciente.nome).limit(20).all()
+
+        def contagem():
+            return db.session.query(sa_func.count(Paciente.id)).filter_by(
+                ativo=True).scalar()
+
+        def sugestao():
+            return Paciente.query.filter(
+                Paciente.ativo.is_(True),
+                Paciente.nome.ilike(termo)).limit(10).all()
+
+        def prontuarios_do_paciente():
+            alvo = Paciente.query.filter_by(ativo=True).first()
+            if alvo is None:
+                return []
+            return Prontuario.query.filter_by(paciente_id=alvo.id).order_by(
+                Prontuario.id.desc()).limit(20).all()
+
+        total = Paciente.query.count()
+        if total < 1000:
+            print(f"AVISO: só {total} pacientes na base. Com volume pequeno o "
+                  "planejador não considera índice, e a medição não informa "
+                  "decisão. Rode `flask seed-volume` antes.\n")
+
+        medidas = [
+            medir("listagem paginada de pacientes", listagem,
+                  repeticoes, aquecimentos),
+            medir("contagem para paginação", contagem,
+                  repeticoes, aquecimentos),
+            medir("sugestão de paciente (ILIKE)", sugestao,
+                  repeticoes, aquecimentos),
+            medir("prontuários de um paciente", prontuarios_do_paciente,
+                  repeticoes, aquecimentos),
+        ]
+        print(f"base: {total:,} pacientes\n")
+        print(relatorio(medidas))
+
     @app.cli.command("seed-volume")
     @click.option("--pacientes", default=50_000, show_default=True)
     @click.option("--limpar", is_flag=True, help="Remove os dados sintéticos.")
