@@ -954,7 +954,7 @@ Quadro — Dimensão do artefato construído
 | Tabelas no modelo de dados | 42, com 532 colunas e 114 chaves estrangeiras |
 | Tabelas sob política de RLS | 23 |
 | Migrações de esquema versionadas | 14 |
-| Telas (*templates*) | 118 |
+| Telas (*templates*) | 116 |
 | Permissões nomeadas · perfis | 27 · 7 |
 | Casos de teste automatizados | 432, em 37 arquivos |
 

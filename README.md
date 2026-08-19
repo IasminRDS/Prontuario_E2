@@ -208,7 +208,7 @@ Acesse `http://localhost:5000`.
 | Módulos (blueprints) | 45 |
 | Rotas | 213 |
 | Models | 29 arquivos, 42 tabelas |
-| Templates | 118 |
+| Templates | 116 |
 | Migrations | 14, exercitadas do zero e em reversa no CI |
 | Testes | 279 funções → 432 casos, em 37 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |

@@ -89,6 +89,16 @@ CENTRALIZADOS = ("FOLHA DE ROSTO", "FOLHA DE APROVAÇÃO", "DEDICATÓRIA",
                  "AGRADECIMENTOS", "EPÍGRAFE", "RESUMO", "ABSTRACT",
                  "LISTA DE", "SUMÁRIO", "REFERÊNCIAS", "APÊNDICE", "ANEXO")
 
+# Elementos que ABREM PÁGINA mas cujo título NÃO é impresso: a página é o
+# próprio elemento e não se anuncia. A folha de rosto é identificada pelo que
+# traz — autor, título, natureza, orientação, local e ano —, e imprimir
+# "FOLHA DE ROSTO" no alto dela é o mesmo que rotular a capa de "CAPA".
+#
+# Dedicatória e epígrafe seguem a mesma lógica. A folha de aprovação NÃO entra
+# aqui: a prática institucional costuma imprimi-la, e é decisão do regulamento
+# do curso, não da norma.
+SILENCIOSOS = ("FOLHA DE ROSTO", "DEDICATÓRIA", "EPÍGRAFE")
+
 
 # --------------------------------------------------------------------------
 # Auxiliares de XML — o que a API do python-docx não expõe
@@ -536,7 +546,8 @@ def converter():
                 elif elemento and not conv.primeiro_bloco:
                     conv.quebra_de_pagina()
                 conv.primeiro_bloco = False
-                conv.titulo_de_capa(titulo, nivel)
+                if not titulo.upper().startswith(SILENCIOSOS):
+                    conv.titulo_de_capa(titulo, nivel)
             else:
                 conv.titulo(nivel, titulo)
             i += 1
