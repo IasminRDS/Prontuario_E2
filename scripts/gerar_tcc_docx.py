@@ -50,7 +50,8 @@ import sys
 from docx import Document
 from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.text import (WD_ALIGN_PARAGRAPH, WD_BREAK, WD_TAB_ALIGNMENT,
+                            WD_TAB_LEADER)
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
@@ -226,6 +227,27 @@ def _margens(secao):
     secao.footer_distance = Cm(1.5)
 
 
+def _contar_a_partir_da_folha_de_rosto(secao):
+    """Faz a contagem começar na folha de rosto, e não na capa.
+
+    A NBR 14724 conta as folhas a partir da FOLHA DE ROSTO; a capa não entra.
+    O campo PAGE do Word, porém, devolve a posição física — com a capa dentro.
+    Numerar a primeira seção a partir de zero resolve sem aritmética de campo:
+    a capa passa a ser a folha 0, a folha de rosto vira 1, e daí em diante o
+    número impresso já é o número contado.
+
+    Fazer isso com `{= {PAGE} - 1}` também funcionaria, mas quebra quando
+    alguém recorta ou acrescenta uma folha pré-textual — e o erro apareceria
+    calado, no meio do documento.
+    """
+    propriedades = secao._sectPr
+    numeracao = propriedades.find(qn("w:pgNumType"))
+    if numeracao is None:
+        numeracao = OxmlElement("w:pgNumType")
+        propriedades.append(numeracao)
+    numeracao.set(qn("w:start"), "0")
+
+
 def _numerar_paginas(secao):
     """Número no canto superior direito, a 2 cm da borda (NBR 14724, 5.3).
 
@@ -234,6 +256,13 @@ def _numerar_paginas(secao):
     cabeçalho desvinculado, e não numa numeração reiniciada: reiniciar exigiria
     adivinhar quantas páginas o pré-textual ocupa depois de diagramado.
     """
+    # A seção nova herda o `sectPr` da anterior, `pgNumType` incluído — e com
+    # ele reiniciaria a contagem no zero em vez de continuá-la. Remover a marca
+    # aqui é o que faz o número seguir de onde parou.
+    herdado = secao._sectPr.find(qn("w:pgNumType"))
+    if herdado is not None:
+        secao._sectPr.remove(herdado)
+
     secao.header.is_linked_to_previous = False
     paragrafo = secao.header.paragraphs[0]
     paragrafo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -284,6 +313,8 @@ class Conversor:
         self.doc = doc
         self.capa = True          # antes da folha de rosto
         self.pre_textual = True   # antes da introdução
+        self.indices = {}         # marcador -> [(texto, pág, nível)]
+        self.reservas = {}        # marcador -> linhas a reservar
         self.primeiro_bloco = True
         self.contador = {"Quadro": 0, "Tabela": 0, "Figura": 0}
         self.legenda_pendente = None
@@ -348,6 +379,45 @@ class Conversor:
             run.font.color.rgb = RGBColor(0, 0, 0)
 
     # -- legenda e fonte ---------------------------------------------------
+
+    def indice(self, marcador):
+        """Escreve o sumário ou uma das listas.
+
+        Duas formas convivem, e a razão é prática. O campo do Word monta o
+        índice sozinho e acerta a paginação — mas só depois que alguém abre o
+        arquivo no Word e atualiza os campos. Enviado a quem lê no navegador,
+        num visualizador de PDF ou no LibreOffice, ele aparece VAZIO, e o
+        documento se apresenta como se não tivesse sumário.
+
+        Por isso o índice é escrito como TEXTO, com a paginação medida numa
+        passagem anterior (ver `_paginas_medidas`), e o campo do Word é mantido
+        ao lado, oculto: quem abrir no Word e atualizar recebe a numeração
+        recalculada; quem não abrir vê o índice correto assim mesmo.
+        """
+        entradas = self.indices.get(marcador, [])
+
+        if not entradas:
+            # Primeira passagem: ainda não há paginação medida. Reserva-se uma
+            # linha por entrada prevista, para que a segunda passagem encontre
+            # a mesma quantidade de páginas — sem isso o índice empurraria o
+            # texto e invalidaria os números que ele próprio anuncia.
+            for _ in range(self.reservas.get(marcador, 0)):
+                self._p(WD_ALIGN_PARAGRAPH.LEFT, entrelinhas=ENTRELINHAS)
+            return
+
+        for texto, pagina, nivel in entradas:
+            p = self._p(WD_ALIGN_PARAGRAPH.LEFT, entrelinhas=ENTRELINHAS,
+                        depois=0)
+            pf = p.paragraph_format
+            pf.left_indent = Cm(0.6 * nivel)
+            # Tabulação com pontilhado até a margem: é o traço que a NBR 6027
+            # espera e o que torna o número legível na coluna direita.
+            pf.tab_stops.add_tab_stop(Cm(16.0 - 0.6 * nivel),
+                                      WD_TAB_ALIGNMENT.RIGHT,
+                                      WD_TAB_LEADER.DOTS)
+            _escrever_inline(p, texto)
+            p.add_run("\t" + str(pagina)).font.name = FONTE
+
     def legenda(self, tipo, titulo):
         """Legenda numerada automaticamente, acima do bloco (NBR 14724, 5.8).
 
@@ -443,13 +513,14 @@ _CAMPOS = {
 }
 
 
-def converter():
+def converter(indices=None, reservas=None):
     if not ORIGEM.is_file():
         sys.exit(f"não encontrei {ORIGEM}")
 
     doc = Document()
     _configurar_estilos(doc)
     _margens(doc.sections[0])
+    _contar_a_partir_da_folha_de_rosto(doc.sections[0])
 
     doc.core_properties.title = TITULO
     doc.core_properties.author = AUTORA
@@ -460,6 +531,8 @@ def converter():
         f"{datetime.date.today():%d/%m/%Y}. Edite o markdown, não este arquivo.")
 
     conv = Conversor(doc)
+    conv.indices = indices or {}
+    conv.reservas = reservas or {}
     linhas = ORIGEM.read_text(encoding="utf-8").splitlines()
     i = 0
     dentro_de_codigo = False
@@ -507,9 +580,7 @@ def converter():
             continue
 
         if marcador and marcador.group(1) in _CAMPOS:
-            p = conv._p(WD_ALIGN_PARAGRAPH.LEFT, entrelinhas=ENTRELINHAS)
-            _campo(p, _CAMPOS[marcador.group(1)],
-                   marcador="[atualize os campos: Ctrl+A, F9]")
+            conv.indice(marcador.group(1))
             i += 1
             continue
 
@@ -622,13 +693,168 @@ def converter():
 
     _atualizar_campos_ao_abrir(doc)
     doc.save(DESTINO)
+    return conv
+
+
+# --------------------------------------------------------------------------
+# Índices preenchidos: duas passagens, com a paginação medida
+# --------------------------------------------------------------------------
+# O campo de sumário do Word só se preenche depois que alguém abre o arquivo e
+# atualiza os campos. Enviado a quem lê no navegador, no LibreOffice ou já em
+# PDF, ele aparece VAZIO — e um trabalho sem sumário se apresenta como
+# rascunho, por mais completo que esteja.
+#
+# A saída é medir. Gera-se uma vez reservando o espaço exato que os índices
+# ocuparão, renderiza-se em PDF, lê-se em que página cada título e cada legenda
+# caiu, e gera-se de novo escrevendo os índices como TEXTO. A reserva de espaço
+# na primeira passagem é o que faz os dois resultados terem a mesma paginação:
+# sem ela, o índice escrito empurraria o texto e invalidaria os números que ele
+# próprio anuncia.
+import subprocess  # noqa: E402
+import tempfile  # noqa: E402
+
+_SOFFICE = (
+    r"C:\Program Files\LibreOffice\program\soffice.exe",
+    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+    "soffice", "libreoffice",
+)
+
+
+def _localizar_soffice():
+    for caminho in _SOFFICE:
+        if pathlib.Path(caminho).is_file():
+            return caminho
+    from shutil import which
+    for nome in ("soffice", "libreoffice"):
+        achado = which(nome)
+        if achado:
+            return achado
+    return None
+
+
+def _paginas_medidas(docx, soffice):
+    """Renderiza em PDF e devolve {texto normalizado: página}."""
+    from pypdf import PdfReader
+
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run([soffice, "--headless", "--convert-to", "pdf",
+                        "--outdir", tmp, str(docx)],
+                       capture_output=True, timeout=300)
+        pdf = pathlib.Path(tmp) / (docx.stem + ".pdf")
+        if not pdf.is_file():
+            return {}
+        leitor = PdfReader(str(pdf))
+        paginas = [(leitor.pages[n].extract_text() or "")
+                   for n in range(len(leitor.pages))]
+
+    mapa = {}
+    for numero, texto in enumerate(paginas, start=1):
+        achatado = re.sub(r"\s+", " ", texto)
+        for linha in texto.splitlines():
+            chave = _normalizar(linha)
+            if chave and chave not in mapa:
+                # A medição enxerga a folha física; o documento imprime a
+                # contagem da NBR 14724, que começa na folha de rosto. Sem
+                # este desconto o índice anunciaria um número e a folha
+                # exibiria outro — e o leitor confiaria no índice.
+                mapa[chave] = numero - 1
+        mapa.setdefault("__achatado_%d" % numero, achatado)
+    return mapa
+
+
+def _normalizar(texto):
+    return re.sub(r"\s+", " ", texto).strip().lower()
+
+
+def _coletar_entradas(fonte):
+    """Lê o markdown e devolve o que cada índice deve conter, em ordem."""
+    titulos, quadros, tabelas, figuras = [], [], [], []
+    contador = {"Quadro": 0, "Tabela": 0, "Figura": 0}
+    pre_textual = True
+
+    for linha in fonte.splitlines():
+        cab = _CABECALHO.match(linha)
+        if cab:
+            nivel = len(cab.group(1))
+            texto = _LINK.sub(r"\1", cab.group(2).strip()).replace("**", "")
+            if INICIO_DO_TEXTO.match(linha):
+                pre_textual = False
+            # O sumário lista do início do texto em diante, mais os
+            # pós-textuais. Capa e pré-textuais ficam de fora (NBR 6027).
+            if not pre_textual and nivel >= 2:
+                titulos.append((texto, max(0, nivel - 2)))
+            continue
+
+        leg = _LEGENDA.match(linha.strip())
+        if leg:
+            tipo = leg.group(1).capitalize()
+            if tipo in contador:
+                contador[tipo] += 1
+                rotulo = f"{tipo} {contador[tipo]} — {leg.group(2).strip()}"
+                {"Quadro": quadros, "Tabela": tabelas,
+                 "Figura": figuras}[tipo].append((rotulo, 0))
+    return titulos, quadros, tabelas, figuras
+
+
+def gerar_com_indices():
+    """Duas passagens: mede a paginação, depois escreve os índices."""
+    fonte = ORIGEM.read_text(encoding="utf-8")
+    titulos, quadros, tabelas, figuras = _coletar_entradas(fonte)
+
+    reservas = {
+        "sumario": len(titulos),
+        "lista-de-quadros": len(quadros),
+        "lista-de-tabelas": len(tabelas),
+        "lista-de-figuras": len(figuras),
+    }
+
+    soffice = _localizar_soffice()
+    if soffice is None:
+        conv = converter(reservas=reservas)
+        print("AVISO: LibreOffice não encontrado — os índices ficaram em "
+              "branco. Instale-o e gere de novo, ou abra o .docx no Word e "
+              "atualize os campos com Ctrl+A e F9.")
+        return conv
+
+    # 1ª passagem: reserva o espaço para a paginação já sair definitiva.
+    converter(reservas=reservas)
+    mapa = _paginas_medidas(DESTINO, soffice)
+
+    def pagina_de(texto):
+        chave = _normalizar(texto)
+        if chave in mapa:
+            return mapa[chave]
+        # Título quebrado em duas linhas no PDF: procura pelo começo dele.
+        inicio = chave[:38]
+        for k, v in mapa.items():
+            if k.startswith(inicio):
+                return v
+        return "—"
+
+    indices = {
+        "sumario": [(txt, pagina_de(txt), nivel) for txt, nivel in titulos],
+        "lista-de-quadros": [(r, pagina_de(r), 0) for r, _ in quadros],
+        "lista-de-tabelas": [(r, pagina_de(r), 0) for r, _ in tabelas],
+        "lista-de-figuras": [(r, pagina_de(r), 0) for r, _ in figuras],
+    }
+
+    # 2ª passagem: agora com os números.
+    conv = converter(indices=indices, reservas=reservas)
+
+    achados = sum(1 for lista in indices.values()
+                  for _, pag, _ in lista if pag != "—")
+    total = sum(len(l) for l in indices.values())
     print(f"gerado:  {DESTINO}")
     print(f"tamanho: {DESTINO.stat().st_size:,} bytes")
     print(f"blocos:  {conv.contador['Quadro']} quadros, "
           f"{conv.contador['Tabela']} tabelas, {conv.contador['Figura']} figuras")
-    print("O sumário e as listas se preenchem ao abrir no Word. Se o editor não "
-          "atualizar sozinho, use Ctrl+A e F9.")
+    print(f"índices: {total} entradas, {achados} com página medida "
+          f"({len(titulos)} no sumário, {len(quadros)} quadros, "
+          f"{len(tabelas)} tabelas, {len(figuras)} figuras)")
+    if achados < total:
+        print(f"AVISO: {total - achados} entrada(s) sem página — saíram com '—'.")
+    return conv
 
 
 if __name__ == "__main__":
-    converter()
+    gerar_com_indices()

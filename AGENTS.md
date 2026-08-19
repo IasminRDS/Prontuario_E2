@@ -170,6 +170,24 @@ slide é escrito no gerador** — a rubrica "Visual" do roteiro descreve o que
 desenhar, e não é texto projetável —, enquanto **a fala vai para as notas do
 apresentador**, que é onde ela serve. Nada da fala é projetado na parede.
 
+O sumário e as três listas saem **preenchidos, com paginação medida**, e não
+como campo vazio do Word. O motivo é prático: campo de sumário só se preenche
+depois que alguém abre o arquivo no Word e aperta F9 — enviado a quem lê no
+navegador, no LibreOffice ou já em PDF, ele aparece em branco, e um trabalho
+sem sumário se apresenta como rascunho.
+
+Por isso a geração é em **duas passagens**: a primeira reserva o espaço exato
+que os índices vão ocupar e é renderizada em PDF pelo LibreOffice; lê-se em que
+folha cada título e cada legenda caiu; a segunda escreve os índices como texto,
+com os números. A reserva de espaço é o que faz as duas passagens terem a mesma
+paginação — sem ela o índice empurraria o texto e invalidaria os números que
+ele próprio anuncia. Sem LibreOffice instalado o comando avisa e deixa os
+índices em branco, em vez de inventar número.
+
+A numeração segue a NBR 14724: conta desde a folha de rosto (a capa não entra)
+e só aparece a partir da introdução. Os índices descontam a capa pela mesma
+razão — o número anunciado tem de ser o número impresso na folha.
+
 Nunca edite o `.docx` — a próxima geração descarta a edição, e enquanto isso os
 dois arquivos afirmam coisas diferentes. O conversor é próprio porque a ABNT
 pede o que um conversor genérico não faz: capa e pré-textuais fora do sumário,
