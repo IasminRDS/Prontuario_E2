@@ -360,19 +360,49 @@ def converter():
             continue
 
         # --- lista -------------------------------------------------------
+        # Item que ocupa duas linhas precisa ser juntado pela mesma razão do
+        # parágrafo: negrito partido pela quebra sai com os asteriscos à vista.
+        # A continuação é a linha indentada que NÃO abre outro item.
         m = re.match(r"^(\s*)[-*] (.+)$", crua)
         if m:
-            conv.item(m.group(2), nivel=len(m.group(1)) // 2)
-            i += 1
+            partes = [m.group(2)]
+            j = i + 1
+            while j < len(linhas):
+                seguinte = linhas[j]
+                if (not seguinte.strip()
+                        or re.match(r"^(\s*)[-*] ", seguinte)
+                        or not seguinte.startswith((" ", "\t"))):
+                    break
+                partes.append(seguinte.strip())
+                j += 1
+            conv.item(" ".join(partes), nivel=len(m.group(1)) // 2)
+            i = j
             continue
 
         # --- parágrafo ---------------------------------------------------
+        # As linhas de um mesmo parágrafo são JUNTADAS antes de formatar. Sem
+        # isso, negrito que atravessa a quebra de linha do markdown chegava
+        # partido ao formatador — que só reconhece `**...**` fechado na mesma
+        # linha — e os asteriscos saíam impressos no documento entregue.
         if texto:
-            italico = texto.startswith("*") and texto.endswith("*") \
-                and "**" not in texto
-            conv.paragrafo(texto,
+            bloco = [texto]
+            j = i + 1
+            while j < len(linhas):
+                seguinte = linhas[j].strip()
+                if (not seguinte
+                        or seguinte.startswith((">", "|", "#", "-", "*", "`"))
+                        or re.fullmatch(r"-{3,}", seguinte)):
+                    break
+                bloco.append(seguinte)
+                j += 1
+            junto = " ".join(bloco)
+            italico = (junto.startswith("*") and junto.endswith("*")
+                       and "**" not in junto)
+            conv.paragrafo(junto,
                            cor=CINZA_TEXTO if italico else None,
                            italico=False)
+            i = j
+            continue
         i += 1
 
     if dentro_da_fala:

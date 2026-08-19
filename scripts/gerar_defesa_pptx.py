@@ -152,8 +152,8 @@ CONTEUDO = {
       [["Módulos funcionais", "45"],
        ["Rotas expostas", "213 — 152 aceitam GET; 105, mutação"],
        ["Tabelas no modelo de dados", "42, com 532 colunas"],
-       ["Telas e migrações", "118 telas · 14 migrações versionadas"],
-       ["Casos de teste", "417, em 264 funções e 35 arquivos"]])],
+       ["Telas e migrações", "116 telas · 14 migrações versionadas"],
+       ["Casos de teste", "432, em 279 funções e 37 arquivos"]])],
 
  7: [("p", "Chong, Carraro e Wolter (2006) descrevem três estratégias de "
       "isolamento, dispostas num contínuo entre isolamento e compartilhamento. "
@@ -190,7 +190,7 @@ CONTEUDO = {
       "que a rota lê; que conciliam telas e rotas nos dois sentidos; que geram "
       "os documentos e conferem o que saiu; e que consultam o catálogo do "
       "PostgreSQL para ver se as políticas estão ativas."),
-     ("p", "São 417 casos de teste, em 264 funções e 35 arquivos, executados "
+     ("p", "São 432 casos de teste, em 279 funções e 37 arquivos, executados "
       "integralmente sobre os dois bancos do projeto. A medição de cobertura de "
       "execução entrou como mapa, e não como meta: a lista dos trechos que "
       "nenhum teste percorre diz onde nenhuma evidência foi produzida.")],
@@ -231,7 +231,7 @@ CONTEUDO = {
        [["Isolamento", "10 → 15 → 23 tabelas sob política"],
         ["Desempenho", "185,9 ms → 0,96 ms (ordem de grandeza)"],
         ["Continuidade", "restauração conferida em 13 tabelas"],
-        ["Configuração", "8 verificações aprovadas, 1 não verificável"]]),
+        ["Configuração", "10 verificações: 9 aprovadas, 1 reprovada"]]),
       ("d", "Declarar honestamente uma lacuna é melhor que ocultá-la — e não é o "
        "mesmo que corrigi-la.")],
 
@@ -256,7 +256,7 @@ CONTEUDO = {
       ("t", ["Limitação", "Natureza"],
        [["Não repúdio", "detectável, não irrefutável"],
         ["Âncora de auditoria", "a custódia é externa ao software"],
-        ["Desempenho", "ordem de grandeza, sem tratamento estatístico"],
+        ["Desempenho", "protocolo implementado; ambiente ainda sintético"],
         ["Usabilidade", "inspeção pela equipe, sem usuários finais"],
         ["Matriz de permissões", "não configurável por organização"]])],
 

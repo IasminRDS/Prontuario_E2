@@ -232,7 +232,7 @@ de não repúdio, que fecha no slide 8 e no 14.
 - A figura de camadas da monografia (usuário → aplicação → ORM → PostgreSQL),
   com o ponto de aplicação de cada controle marcado
 - Números do quadro de dimensão, em rodapé discreto: **45 módulos · 213 rotas ·
-  42 tabelas · 118 telas · 14 migrações**
+  42 tabelas · 116 telas · 14 migrações**
 
 **Fala (1 min 15)**
 
@@ -243,7 +243,7 @@ de não repúdio, que fecha no slide 8 e no 14.
 > cidadão e conformidade; e gestão e plataforma.
 >
 > A dimensão está registrada porque condiciona a leitura dos resultados: 45
-> módulos, 213 rotas, 42 tabelas, 118 telas, 14 migrações versionadas. **A
+> módulos, 213 rotas, 42 tabelas, 116 telas, 14 migrações versionadas. **A
 > cobertura de um controle sobre 42 tabelas e 213 rotas é afirmação de natureza
 > diferente da mesma cobertura sobre meia dúzia de telas de demonstração.**
 >
@@ -355,7 +355,7 @@ mais impressiona banca de gestão.
   verificar controles de segurança."**
 - Abaixo, quatro ícones/linhas: instrumentar · exercitar · confrontar nos dois
   sentidos · medir cobertura como mapa
-- Números: **417 casos · 264 funções · 35 arquivos · dois bancos**
+- Números: **432 casos · 279 funções · 37 arquivos · dois bancos**
 
 **Fala (1 min 15)**
 
@@ -371,7 +371,7 @@ mais impressiona banca de gestão.
 > conciliam telas e rotas **nos dois sentidos**; e que consultam o catálogo do
 > PostgreSQL para ver se as políticas estão de fato ativas.
 >
-> São 417 casos de teste, provenientes de 264 funções em 35 arquivos, executados
+> São 432 casos de teste, provenientes de 279 funções em 37 arquivos, executados
 > integralmente sobre os dois bancos usados no projeto.
 >
 > E acrescentei a medição de cobertura de execução — **não como meta percentual,
@@ -481,7 +481,7 @@ frase devagar.
 - **Isolamento:** 10 → 15 → **23** tabelas sob política
 - **Desempenho:** 185,9 ms → **0,96 ms** *(ordem de grandeza; ver limitações)*
 - **Continuidade:** restauração conferida em **13 tabelas**, correspondência exata
-- **Configuração:** `hardening-check` — **8 verificadas, 1 não verificável**
+- **Configuração:** `hardening-check` — **10 verificações: 9 aprovadas, 1 reprovada**
 
 **Fala (1 min 30)**
 
@@ -508,10 +508,16 @@ frase devagar.
 > capacidade.**
 >
 > A restauração do backup foi conferida em treze tabelas, com correspondência
-> exata de contagens. E o comando de verificação de configuração confirma oito
-> pressupostos e declara um nono como não verificável no ambiente utilizado —
-> distinção que fiz de propósito, porque tratar "não verificável" como
-> "reprovado" ensinaria a ignorar o comando.
+> exata de contagens. E o comando de verificação de configuração roda dez
+> verificações: nove passam e **uma reprova** — a que pergunta se o registro de
+> âncoras é de acréscimo no sistema de arquivos. Ela reprova porque o atributo
+> não foi aplicado, e o comando informa a linha exata que o aplica.
+>
+> Faço questão de mostrar isso reprovando, e não de esconder: um verificador que
+> nunca acusa nada é indistinguível de um que parou de verificar. E ao lado dela
+> existe uma décima, de sinal contrário, que pergunta se a aplicação **ainda
+> consegue** escrever no registro — porque o endurecimento que a nona prescreve
+> pode, se excessivo, interromper aquilo que ela protege.
 
 **Objetivo.** Entregar resultados com as ressalvas já embutidas — tira a munição
 da banca e demonstra maturidade metodológica.
@@ -576,7 +582,7 @@ que sustenta a contribuição do slide 15.
 verificável"*:
 - Não repúdio: **detectável, não irrefutável**
 - Âncora de auditoria: **custódia é externa**
-- Desempenho: **ordem de grandeza, sem tratamento estatístico**
+- Desempenho: **protocolo implementado; ambiente ainda sintético**
 - Usabilidade: **inspeção pela equipe, sem usuários finais**
 - RBAC: **não configurável por organização**
 
@@ -596,9 +602,13 @@ verificável"*:
 > fecha** — truncar o fim do próprio registro de âncoras. O que resta de
 > limitação é a custódia, que é decisão organizacional, não de software.
 >
-> Os tempos de desempenho não trazem número de repetições nem medida de
-> dispersão. Servem para ordem de grandeza, onde a variação entre execuções não
-> muda a conclusão; não servem como referência de capacidade.
+> Em desempenho, a limitação mudou de natureza durante o trabalho. Os tempos
+> vinham de observação, sem repetições nem dispersão. Isso foi fechado: há um
+> comando que descarta aquecimento, repete, e reporta mediana com amplitude
+> interquartil — e que acusa quando a dispersão passa de um quarto da mediana,
+> caso em que o número não deve ser citado como estável. **O que permanece é de
+> ambiente, e não de método:** a medição continua em máquina de desenvolvimento e
+> sobre volume sintético, e protocolo não converte dado sintético em dado real.
 >
 > A usabilidade foi avaliada por inspeção heurística conduzida pela própria
 > equipe, sem avaliadores independentes e sem usuários finais. Os resultados
@@ -843,7 +853,7 @@ o atendimento como parcial.
 ### 10. Quais são as limitações do sistema?
 
 **Curta.** Cinco declaradas: não repúdio parcial; custódia da âncora de auditoria
-é externa ao software; medição de desempenho sem tratamento estatístico;
+é externa ao software; medição de desempenho limitada a ambiente sintético;
 usabilidade avaliada sem usuários finais; e matriz de permissões não configurável
 por organização.
 
@@ -878,7 +888,7 @@ achados já registrados. As classes se sobrepõem em três casos, e mantive as
 sobreposições registradas em vez de forçar exclusividade, porque elas marcam
 exatamente os achados em que dois mecanismos se somaram — que são os mais graves.
 
-### 13. Como você sabe que os 417 casos são suficientes?
+### 13. Como você sabe que os 432 casos são suficientes?
 
 **Curta.** Não sei, e o trabalho não afirma isso. Suficiência não é demonstrável.
 O que os casos garantem é outra coisa: que um defeito de qualquer das cinco
@@ -894,16 +904,20 @@ código instancia não aparece em varredura alguma.
 
 ### 14. Por que 0,96 ms não deve ser tratado como benchmark?
 
-**Curta.** Porque a medição não traz número de repetições nem medida de
-dispersão, e foi feita em ambiente de desenvolvimento com volume sintético. Ela
-demonstra **ordem de grandeza** — de 185,9 para 0,96 milissegundos —, magnitude em
-que a variação entre execuções não altera a conclusão.
+**Curta.** Porque foi feita em ambiente de desenvolvimento e sobre volume
+sintético. Ela demonstra **ordem de grandeza** — de 185,9 para 0,96
+milissegundos —, magnitude em que a variação entre execuções não altera a
+conclusão.
 
-**Aprofundamento.** O propósito era decidir indexação de forma informada, e para
-isso a ordem de grandeza basta. O que a medição **não** sustenta é comparação fina
-entre alternativas de implementação ou referência de capacidade. A precisão
-decimal não deve ser lida como indicação de repetibilidade, e isso está declarado
-nas limitações.
+**Aprofundamento.** Esse número específico veio de observação, sem repetições
+nem dispersão. Reconhecida a falha de método, ela foi corrigida: há um comando
+que executa cada consulta sob protocolo — descarta aquecimento, porque a
+primeira execução mede a partida e não o regime; repete; e reporta **mediana**
+com **amplitude interquartil**, assinalando quando a dispersão passa de um
+quarto da mediana. Mas protocolo não converte dado sintético em dado real: o
+que a medição continua **não** sustentando é comparação fina entre alternativas
+de implementação ou referência de capacidade, e isso segue declarado nas
+limitações.
 
 ### 15. O que a Resolução Cofen revelou sobre o próprio processo de pesquisa?
 
@@ -1051,7 +1065,7 @@ externa, que registra total, último identificador e resumo final. Guardado um
 > escopo territorial. A auditoria registra leituras e escritas, encadeadas por
 > hash. E o backup tem validação automatizada de restauração.
 >
-> A verificação — 417 casos de teste — revelou dezenove defeitos, e todos
+> A verificação — 432 casos de teste — revelou dezenove defeitos, e todos
 > compartilham uma propriedade: **nenhum gera mensagem de erro**. Entre eles, o
 > Row-Level Security estava corretamente implementado e cinco tabelas clínicas
 > centrais estavam integralmente fora dele, enquanto a documentação afirmava
@@ -1097,7 +1111,7 @@ uma delas entrega à banca uma contradição contra o próprio documento.
   ISO/IEC 27000; falta prova oponível ao operador.
 
 **Sobre os testes**
-- ❌ "417 testes provam que não há mais defeitos." → provam que um defeito das
+- ❌ "432 testes provam que não há mais defeitos." → provam que um defeito das
   classes conhecidas reprova a execução. Suficiência não é demonstrável.
 - ❌ "A cobertura de testes é alta." → cobertura foi usada como **mapa**, não
   como meta; percentual não mede qualidade.
