@@ -650,7 +650,12 @@ def gerar():
     _escrever(quadro, AUTORA, 18, RGBColor(0xC8, 0xD8, 0xF5))
 
     prs.save(SAIDA)
-    com_notas = sum(1 for s in slides if s["fala"])
+    # Conta o que FOI ESCRITO no arquivo, e não o que o roteiro trazia: a capa
+    # e o encerramento não viram slide de conteúdo, então relatar 18 aqui seria
+    # a ferramenta afirmando duas notas que ela não gravou.
+    com_notas = sum(1 for s in prs.slides
+                    if s.has_notes_slide
+                    and s.notes_slide.notes_text_frame.text.strip())
     print(f"gerado:  {SAIDA}")
     print(f"tamanho: {SAIDA.stat().st_size:,} bytes")
     print(f"slides:  {len(prs.slides.__iter__.__self__._sldIdLst)} ao todo "
