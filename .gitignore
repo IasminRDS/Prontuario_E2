@@ -53,6 +53,10 @@ docs/TCC.docx
 docs/defesa_roteiro.docx
 docs/defesa_slides.pptx
 
+# Mesma regra para o resumo do sistema, gerado por
+# scripts/gerar_resumo_pdf.py. O conteudo mora no script.
+docs/RESUMO_SISTEMA.pdf
+
 # Lock que o LibreOffice cria ao abrir o .docx e deixa para tras quando o
 # processo e encerrado a forca. Aparece no `git status` como arquivo novo.
 .~lock.*#
