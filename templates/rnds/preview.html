@@ -13,13 +13,19 @@
   <div class="card__header">
     <div>
       <div class="card__title">{{ tipo }} <span class="mono text-muted">#{{ entity_id }}</span></div>
-      <div class="text-xs text-muted">Recurso FHIR R4 exatamente como seria despachado.</div>
+      <div class="text-xs text-muted">
+        {% if quantidade and quantidade > 1 %}
+          {{ quantidade }} recursos FHIR R4 &mdash; cada um vira um envio próprio na fila.
+        {% else %}
+          Recurso FHIR R4 exatamente como seria despachado.
+        {% endif %}
+      </div>
     </div>
     <form method="post" action="{{ url_for('rnds.enviar') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="hidden" name="tipo" value="{{ tipo }}" />
       <input type="hidden" name="entity_id" value="{{ entity_id }}" />
-      <button class="btn btn--primary btn--sm" type="submit">{{ icon('send') }} Enviar este recurso</button>
+      <button class="btn btn--primary btn--sm" type="submit">{{ icon('send') }} Enviar {% if quantidade and quantidade > 1 %}os {{ quantidade }} recursos{% else %}este recurso{% endif %}</button>
     </form>
   </div>
   <div class="card__body">
