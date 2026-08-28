@@ -18,8 +18,8 @@ CONFORMIDADE = (
      "verificado nos temas claro e escuro e VLibras."),
     ("Padrão Digital de Governo (DSGov)", "Barra gov.br, paleta institucional "
      "(#1351B4 / #FFCD07), tipografia e componentes do padrão."),
-    ("FHIR R4 / RNDS", "Envio de Patient, Encounter, MedicationRequest e "
-     "Observation à Rede Nacional de Dados em Saúde."),
+    ("FHIR R4 / RNDS", "Envio de Patient, Encounter e Observation à Rede "
+     "Nacional de Dados em Saúde, por fila durável com reenvio."),
     ("Classificação de risco Manchester", "Cinco níveis com cores oficiais e "
      "tempo-alvo de atendimento."),
     ("Notificação compulsória (SINAN)", "Detecção automática de agravos a partir "
