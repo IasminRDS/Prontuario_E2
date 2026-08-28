@@ -210,7 +210,7 @@ Acesse `http://localhost:5000`.
 | Models | 29 arquivos, 42 tabelas |
 | Templates | 116 |
 | Migrations | 14, exercitadas do zero e em reversa no CI |
-| Testes | 279 funções → 432 casos, em 37 arquivos, nos dois bancos |
+| Testes | 303 funções → 463 casos, em 37 arquivos, nos dois bancos |
 | Tabelas sob RLS | 23 |
 | Permissões RBAC | 27, em 7 perfis |
 | Terminologias | 151 CID-10 · 92 RENAME · 17 CBO · 15 SIGTAP · 6 CNES |
