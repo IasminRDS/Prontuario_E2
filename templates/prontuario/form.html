@@ -109,8 +109,12 @@
                  value="{{ prontuario.peso if prontuario and prontuario.peso is not none else '' }}" />
         </div>
         <div class="field col-3">
-          <label class="field__label" for="altura">Altura (cm)</label>
+          <label class="field__label" for="altura">Altura (m)</label>
+          {# Metros, e não centímetros: é o que o IMC do model calcula
+             (peso / altura²), o que a triagem pede e o que a tela de
+             visualização rotula. O label dizia cm e era o único lugar. #}
           <input class="input" id="altura" name="altura" inputmode="decimal"
+                 placeholder="1.70"
                  value="{{ prontuario.altura if prontuario and prontuario.altura is not none else '' }}" />
         </div>
       </div>
