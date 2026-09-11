@@ -63,25 +63,25 @@
         </div>
         <div class="form-group">
           <label class="form-label">CID principal</label>
-          <input type="text" name="cid_principal" class="form-control font-mono"
+          <input type="text" name="cid_principal" data-terminologia="cid10" class="form-control font-mono"
                  placeholder="Ex: J18.9" maxlength="10" style="text-transform:uppercase"
                  value="{{ aih.cid_principal if aih else (intern_sel.cid_principal if intern_sel else '') }}"
                  id="cid_principal">
         </div>
         <div class="form-group">
           <label class="form-label">CID secundário</label>
-          <input type="text" name="cid_secundario" class="form-control font-mono"
+          <input type="text" name="cid_secundario" data-terminologia="cid10" class="form-control font-mono"
                  placeholder="Ex: I10" maxlength="10" style="text-transform:uppercase"
                  value="{{ aih.cid_secundario if aih else '' }}">
         </div>
         <div class="form-group">
           <label class="form-label">Procedimento principal (SIGTAP)</label>
-          <input type="text" name="procedimento_principal" class="form-control font-mono"
+          <input type="text" name="procedimento_principal" data-terminologia="sigtap" class="form-control font-mono"
                  placeholder="0301060037" value="{{ aih.procedimento_principal if aih else '' }}">
         </div>
         <div class="form-group">
           <label class="form-label">Procedimento secundário</label>
-          <input type="text" name="procedimento_secundario" class="form-control font-mono"
+          <input type="text" name="procedimento_secundario" data-terminologia="sigtap" class="form-control font-mono"
                  value="{{ aih.procedimento_secundario if aih else '' }}">
         </div>
         <div class="form-group">

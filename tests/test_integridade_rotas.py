@@ -272,6 +272,12 @@ ROTAS_SEM_PORTA_ACEITAS = {
     "medicamentos.buscar",
     "pacientes.buscar",
     "pacientes.buscar_codigo",
+    # Entrou aqui quando o autocomplete de terminologia saiu de dentro de
+    # `prontuario/form.html` e virou `static/js/terminologia.js`, ligado por
+    # `data-terminologia` nos quinze campos de CID e de procedimento. A tela de
+    # consulta (`terminologia.index`) continua ligada por link; é só a rota
+    # JSON que passou a ser chamada por JavaScript.
+    "terminologia.api",
     "pacientes.atualizar_paciente",
     "pacientes.desativar_paciente",
     # --- Compatibilidade: URL antiga que redireciona para a tela nova --------

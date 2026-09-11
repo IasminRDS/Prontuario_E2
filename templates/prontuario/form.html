@@ -134,8 +134,8 @@
       <div class="form-grid">
         <div class="field col-4">
           <label class="field__label" for="cid_principal">CID-10 principal</label>
-          <input class="input mono" id="cid_principal" name="cid_principal"
-                 list="lista-cid" maxlength="10" placeholder="ex.: A90"
+          <input class="input mono" id="cid_principal" name="cid_principal" data-terminologia="cid10"
+                 maxlength="10" placeholder="ex.: A90"
                  value="{{ prontuario.cid_principal or '' if prontuario else '' }}" />
           <span class="field__hint">
             CID de notificação compulsória gera ficha SINAN automaticamente.
@@ -143,8 +143,8 @@
         </div>
         <div class="field col-4">
           <label class="field__label" for="cid_secundario">CID-10 secundário</label>
-          <input class="input mono" id="cid_secundario" name="cid_secundario"
-                 list="lista-cid" maxlength="10"
+          <input class="input mono" id="cid_secundario" name="cid_secundario" data-terminologia="cid10"
+                 maxlength="10"
                  value="{{ prontuario.cid_secundario or '' if prontuario else '' }}" />
         </div>
         <div class="field col-4">
@@ -164,7 +164,6 @@
         </div>
       </div>
 
-      <datalist id="lista-cid"></datalist>
     </div>
   </div>
 
@@ -175,42 +174,4 @@
     <a class="btn btn--ghost" href="{{ url_for('pacientes.perfil', id=paciente.id) }}">Cancelar</a>
   </div>
 </form>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  // Autocomplete de CID-10 contra /tabelas/api/cid10 — o mesmo catálogo que a
-  // tela de terminologias usa, sem duplicar a lista no cliente.
-  (function () {
-    var lista = document.getElementById('lista-cid');
-    var campos = [
-      document.getElementById('cid_principal'),
-      document.getElementById('cid_secundario'),
-    ].filter(Boolean);
-    var timer = null;
-
-    function buscar(termo) {
-      if (!termo || termo.length < 2) return;
-      fetch('{{ url_for("terminologia.api", tabela="cid10") }}?q=' + encodeURIComponent(termo))
-        .then(function (r) { return r.ok ? r.json() : []; })
-        .then(function (itens) {
-          lista.innerHTML = '';
-          itens.forEach(function (i) {
-            var o = document.createElement('option');
-            o.value = i.codigo;
-            o.label = i.codigo + ' — ' + i.descricao;
-            lista.appendChild(o);
-          });
-        })
-        .catch(function () { /* offline: o campo segue aceitando digitação livre */ });
-    }
-
-    campos.forEach(function (campo) {
-      campo.addEventListener('input', function () {
-        clearTimeout(timer);
-        timer = setTimeout(function () { buscar(campo.value.trim()); }, 250);
-      });
-    });
-  })();
-</script>
 {% endblock %}
