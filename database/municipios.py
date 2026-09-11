@@ -11,6 +11,16 @@ Baixe a relação em https://www.ibge.gov.br/ (Municípios do Brasil) e rode:
 
 O CSV precisa ter as colunas `codigo_ibge`, `nome` e `uf` (o cabeçalho é lido
 pelo nome, então a ordem não importa).
+
+Duas colunas **opcionais** carregam o denominador: `populacao` e
+`populacao_ano`. Sem elas o sistema conta; com elas, calcula taxa por cem mil
+habitantes. A estimativa populacional por município sai da mesma origem — o
+IBGE —, e o portal de transferência do DATASUS também a publica, na fonte
+"Base Populacional" (ver `docs/datasus_levantamento.md`).
+
+O ano é pedido junto porque população é estimativa datada: taxa de 2024 sobre
+denominador de 2010 não é comparável com taxa de 2024 sobre denominador de
+2024, e nada no número denuncia a mistura.
 """
 import csv
 
@@ -66,11 +76,40 @@ def _validar(codigo, uf):
     return None
 
 
+def _populacao(bruto, codigo):
+    """Converte o campo de população, ou explica por que recusou.
+
+    Devolve `(valor, problema)`. O valor é `None` quando a coluna não veio —
+    que é diferente de zero: zero seria um denominador, e denominador zero
+    produz divisão por zero ou taxa absurda. Ausência tem de continuar ausência
+    o caminho inteiro.
+    """
+    texto = (bruto or "").strip().replace(".", "").replace(" ", "")
+    if not texto:
+        return None, None
+    if not texto.isdigit():
+        return None, f"município {codigo}: população '{bruto}' não é um número"
+    valor = int(texto)
+    if valor <= 0:
+        return None, f"município {codigo}: população {valor} não é utilizável"
+    return valor, None
+
+
 def carregar(linhas):
-    """Insere ou atualiza municípios. Devolve (gravados, erros)."""
+    """Insere ou atualiza municípios. Devolve (gravados, erros).
+
+    Cada linha é `(codigo, nome, uf)` ou `(codigo, nome, uf, populacao, ano)`.
+    A população é opcional porque a relação do IBGE circula nas duas formas, e
+    exigir a coluna impediria carregar a tabela territorial de quem só tem a
+    lista de municípios.
+    """
     gravados, erros = 0, []
 
-    for codigo, nome, uf in linhas:
+    for linha in linhas:
+        codigo, nome, uf = linha[0], linha[1], linha[2]
+        bruto_populacao = linha[3] if len(linha) > 3 else None
+        bruto_ano = linha[4] if len(linha) > 4 else None
+
         codigo = (codigo or "").strip()
         nome = (nome or "").strip()
         uf = (uf or "").strip().upper()
@@ -80,12 +119,27 @@ def carregar(linhas):
             erros.append(problema)
             continue
 
+        populacao, problema = _populacao(bruto_populacao, codigo)
+        if problema:
+            erros.append(problema)
+            continue
+
+        ano = (str(bruto_ano) or "").strip()
+        ano = int(ano) if ano.isdigit() else None
+
         existente = db.session.get(Municipio, codigo)
         if existente:
             existente.nome = nome
             existente.uf = uf
+            # Só sobrescreve o denominador quando o arquivo traz um. Carregar a
+            # lista simples do IBGE depois da lista com população apagaria a
+            # população — e o relatório voltaria a contar sem dizer que voltou.
+            if populacao is not None:
+                existente.populacao = populacao
+                existente.populacao_ano = ano
         else:
-            db.session.add(Municipio(codigo_ibge=codigo, nome=nome, uf=uf))
+            db.session.add(Municipio(codigo_ibge=codigo, nome=nome, uf=uf,
+                                     populacao=populacao, populacao_ano=ano))
         gravados += 1
 
     db.session.commit()
@@ -107,5 +161,7 @@ def importar_csv(caminho):
         if faltando:
             raise ValueError(
                 f"CSV sem as colunas obrigatórias: {', '.join(sorted(faltando))}")
-        linhas = [(l["codigo_ibge"], l["nome"], l["uf"]) for l in leitor]
+        linhas = [(l["codigo_ibge"], l["nome"], l["uf"],
+                   l.get("populacao"), l.get("populacao_ano"))
+                  for l in leitor]
     return carregar(linhas)

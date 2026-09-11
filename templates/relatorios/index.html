@@ -37,6 +37,16 @@
   </article>
 
   <article class="report-card">
+    <h3>Comparativo territorial</h3>
+    <p>Produção por município, estado ou país, agrupada pelo código IBGE.</p>
+    {% if 'relatorios.territorio' in available_endpoints %}
+      <a class="btn" href="{{ url_for('relatorios.territorio') }}">Acessar →</a>
+    {% else %}
+      <span class="btn" style="opacity:.5;pointer-events:none;">Indisponível</span>
+    {% endif %}
+  </article>
+
+  <article class="report-card">
     <h3>Triagem</h3>
     <p>Relatório por período e classificação de risco.</p>
     {% if 'relatorios.triagem' in available_endpoints %}

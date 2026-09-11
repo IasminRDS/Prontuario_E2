@@ -49,6 +49,28 @@ class Municipio(db.Model):
                             nullable=True, index=True)
     regional = db.relationship("Regional", backref="municipios")
 
+    # O denominador. Sem ele o sistema só sabe CONTAR: "487 óbitos" em Salvador
+    # e em Bom Jesus da Lapa aparecem iguais numa tabela e significam coisas
+    # opostas. Contagem é contagem; indicador é contagem dividida por população.
+    #
+    # `populacao_ano` não é enfeite: população é estimativa referida a um ano, e
+    # taxa calculada com denominadores de anos diferentes não é comparável.
+    # Guardar o número sem o ano seria guardar um número sem saber o que ele
+    # mede — e a tela precisa poder dizer de quando é.
+    populacao = db.Column(db.Integer, nullable=True)
+    populacao_ano = db.Column(db.Integer, nullable=True)
+
+    def por_cem_mil(self, quantidade):
+        """Taxa por 100 mil habitantes, ou None se não há denominador.
+
+        Devolve `None`, e não zero: zero é um valor, e um valor errado aqui se
+        lê como resultado. Município sem população carregada precisa aparecer
+        como "sem denominador" na tela, nunca como "taxa zero".
+        """
+        if not self.populacao or quantidade is None:
+            return None
+        return quantidade * 100000.0 / self.populacao
+
     @property
     def regiao(self):
         """Região geográfica (N, NE, SE, S, CO)."""

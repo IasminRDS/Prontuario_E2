@@ -281,6 +281,11 @@ def _registrar_cli(app):
         Colunas obrigatórias: codigo_ibge, nome, uf. A UF é conferida contra os
         dois primeiros dígitos do código — linha divergente é recusada em vez de
         contaminar a tabela territorial.
+
+        Colunas opcionais: populacao e populacao_ano. São o denominador dos
+        indicadores — sem elas os relatórios contam, com elas calculam taxa por
+        cem mil habitantes. Arquivo sem a coluna não apaga a população já
+        carregada.
         """
         from database.municipios import importar_csv
 

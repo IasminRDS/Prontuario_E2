@@ -506,7 +506,8 @@ def historia():
           "hash do conteúdo."],
          ["<font face=\"Courier\">flask municipios-importar</font>",
           "Carrega a tabela territorial do IBGE, recusando linha cujo código não "
-          "corresponda à UF declarada."]],
+          "corresponda à UF declarada. As colunas opcionais de população são o "
+          "denominador dos indicadores por cem mil habitantes."]],
         [5.3 * cm, 12.1 * cm])]))
 
     # ── 12 ─────────────────────────────────────────────────────────────────

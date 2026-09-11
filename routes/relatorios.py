@@ -16,6 +16,7 @@ from models.exame import ExameSolicitado
 from models.encaminhamento import Encaminhamento
 from models.vacina import VacinaAplicada
 from database.db import db
+from utils.rbac import requer_permissao
 from datetime import datetime, date
 from io import BytesIO, StringIO
 import csv
@@ -380,3 +381,231 @@ def triagem():
 relatorios_bp.add_url_rule(
     "/producao/unidade", endpoint="producao_unidade", view_func=producao
 )
+
+
+# ── 5. Comparativo territorial ────────────────────────────────────────────
+#
+# Os quatro relatórios acima respondem "quanto esta unidade produziu". Este
+# responde outra pergunta: "quanto cada município produziu, comparado aos
+# outros". A diferença não é de filtro, é de eixo — aqui a linha é o município,
+# e não o registro.
+#
+# O agrupamento é pelo **código IBGE**, nunca por `cidade` em texto: é o
+# argumento que `models/municipio.py` faz por escrito, e é aqui que ele deixa de
+# ser teórico. "Feira de Santana" digitado de três jeitos viraria três linhas no
+# comparativo, cada uma com um terço do movimento.
+#
+# O que este relatório NÃO faz, e a tela diz: dividir pela população. Comparar
+# por contagem favorece município grande por construção — Salvador sempre terá
+# mais atendimentos que Bom Jesus da Lapa, e isso não informa nada sobre
+# desempenho. Taxa exigiria o denominador populacional, que o sistema ainda não
+# guarda (o levantamento em `docs/datasus_levantamento.md` identificou a base do
+# IBGE que o fornece).
+
+# (chave, rótulo, model, coluna de data). A coluna de data é escolhida pelo
+# evento que o indicador conta, e não pela data de criação da linha: internação
+# conta pela entrada, vacina pela aplicação, exame pela solicitação.
+def _indicadores():
+    """Importado sob demanda: o módulo já carrega sete models no topo."""
+    from models.internacao import Internacao
+
+    return (
+        ("atendimentos", "Atendimentos", Atendimento, Atendimento.data_hora),
+        ("prontuarios", "Prontuários", Prontuario, Prontuario.criado_em),
+        ("triagens", "Triagens", Triagem, Triagem.criado_em),
+        ("internacoes", "Internações", Internacao, Internacao.data_entrada),
+        ("exames", "Exames", ExameSolicitado, ExameSolicitado.data_solicitacao),
+        ("encaminhamentos", "Encaminhamentos", Encaminhamento,
+         Encaminhamento.data_solicitacao),
+        ("vacinas", "Vacinas", VacinaAplicada, VacinaAplicada.data_aplicacao),
+    )
+
+
+ABRANGENCIAS = (
+    ("brasil", "Brasil"),
+    ("uf", "Estado"),
+    ("municipio", "Município"),
+)
+
+
+def _escopo_do_usuario_legivel():
+    """O recorte territorial em vigor, em português, e se ele limita a tela.
+
+    Existe porque o RLS **nega silenciosamente**: um usuário de nível MUNICÍPIO
+    que escolher "Brasil" não recebe erro, recebe uma linha só. Sem esta
+    explicação na tela, o comparativo pareceria quebrado exatamente para quem
+    está protegido como deveria.
+    """
+    from utils.rls import escopo_do_usuario
+
+    escopo = escopo_do_usuario(current_user)
+    nivel = escopo.get("nivel", "UNIDADE")
+    rotulos = {
+        "SISTEMA": ("todo o país", False),
+        "ESTADO": ("o estado %s" % (escopo.get("uf") or "?"), True),
+        "REGIONAL": ("a sua região de saúde", True),
+        "MUNICIPIO": ("o seu município", True),
+        "UNIDADE": ("a sua unidade", True),
+    }
+    texto, limita = rotulos.get(nivel, ("a sua unidade", True))
+    return {
+        "nivel": nivel,
+        "texto": texto,
+        "limita": limita,
+        "irresoluvel": escopo.get("irresoluvel", False),
+    }
+
+
+@relatorios_bp.route("/territorio")
+@login_required
+@requer_permissao("reports:read")
+def territorio():
+    from sqlalchemy import func
+
+    from models.municipio import Municipio
+    from models.unidade_saude import UnidadeSaude
+
+    abrangencia = request.args.get("abrangencia", "brasil")
+    if abrangencia not in dict(ABRANGENCIAS):
+        abrangencia = "brasil"
+    uf = (request.args.get("uf") or "").strip().upper()[:2]
+    codigo_ibge = "".join(c for c in (request.args.get("municipio") or "")
+                          if c.isdigit())[:7]
+
+    data_ini = request.args.get("data_ini",
+                                _hoje().replace(day=1).strftime("%Y-%m-%d"))
+    data_fim = request.args.get("data_fim", _hoje().strftime("%Y-%m-%d"))
+    try:
+        di = datetime.strptime(data_ini, "%Y-%m-%d")
+        df = datetime.strptime(data_fim, "%Y-%m-%d").replace(hour=23, minute=59)
+    except ValueError:
+        di = datetime.utcnow().replace(day=1)
+        df = datetime.utcnow()
+
+    def _territorial(consulta):
+        """Aplica o recorte escolhido. O do RLS já veio antes, no banco."""
+        if abrangencia == "uf" and uf:
+            consulta = consulta.filter(Municipio.uf == uf)
+        elif abrangencia == "municipio" and codigo_ibge:
+            consulta = consulta.filter(Municipio.codigo_ibge == codigo_ibge)
+        return consulta
+
+    # Uma consulta agregada por indicador, em vez de uma por município: com 5570
+    # municípios possíveis, o laço seria N+1 na sua pior forma.
+    linhas = {}
+    for chave, _rotulo, model, coluna in _indicadores():
+        consulta = (
+            db.session.query(
+                Municipio.codigo_ibge, Municipio.nome, Municipio.uf,
+                Municipio.populacao, Municipio.populacao_ano,
+                func.count(model.id),
+            )
+            # A tabela de fatos é a origem, e não `municipios`, que só entra
+            # para dar nome ao agrupamento. Medido: no SQLAlchemy 2.0.23 o SQL
+            # sai idêntico com ou sem esta linha — a cadeia de `join` já
+            # determina o FROM. Fica porque torna a origem explícita para quem
+            # lê, e não porque corrija alguma coisa.
+            .select_from(model)
+            .join(UnidadeSaude, UnidadeSaude.id == model.unidade_id)
+            .join(Municipio,
+                  Municipio.codigo_ibge == UnidadeSaude.municipio_ibge)
+            .filter(coluna.between(di, df))
+            .group_by(Municipio.codigo_ibge, Municipio.nome, Municipio.uf,
+                      Municipio.populacao, Municipio.populacao_ano)
+        )
+        for ibge, nome, sigla, populacao, ano, quantidade in \
+                _territorial(consulta).all():
+            linha = linhas.setdefault(ibge, {
+                "codigo_ibge": ibge, "nome": nome, "uf": sigla, "total": 0,
+                "populacao": populacao, "populacao_ano": ano,
+            })
+            linha[chave] = quantidade
+            linha["total"] += quantidade
+
+    colunas = [(chave, rotulo) for chave, rotulo, _m, _c in _indicadores()]
+    for linha in linhas.values():
+        for chave, _rotulo in colunas:
+            linha.setdefault(chave, 0)
+        # `None`, e não zero, quando não há denominador. Zero é um valor, e
+        # valor errado aqui lê-se como resultado: um município sem população
+        # carregada apareceria como o de menor produção do estado.
+        linha["por_cem_mil"] = (
+            linha["total"] * 100000.0 / linha["populacao"]
+            if linha.get("populacao") else None
+        )
+
+    # A ordem padrão continua sendo a contagem. Ordenar por taxa por padrão
+    # esconderia os municípios sem denominador no fim da lista, que é onde
+    # ninguém olha — e a ausência do denominador é justamente o que precisa
+    # ser visto para alguém resolver.
+    ordem = request.args.get("ordem", "total")
+    if ordem == "taxa":
+        municipios = sorted(
+            linhas.values(),
+            key=lambda l: (l["por_cem_mil"] is None,
+                           -(l["por_cem_mil"] or 0), l["nome"]))
+    else:
+        municipios = sorted(linhas.values(),
+                            key=lambda l: (-l["total"], l["nome"]))
+
+    sem_denominador = [l for l in linhas.values() if not l.get("populacao")]
+
+    totais = {chave: sum(l[chave] for l in municipios) for chave, _r in colunas}
+    totais["total"] = sum(l["total"] for l in municipios)
+
+    if request.args.get("exportar") == "csv":
+        buf = StringIO()
+        w = csv.writer(buf, delimiter=";")
+        w.writerow(["Código IBGE", "Município", "UF"]
+                   + [rotulo for _c, rotulo in colunas]
+                   + ["Total", "População", "Ano da população",
+                      "Total por 100 mil hab."])
+        for linha in municipios:
+            taxa = linha["por_cem_mil"]
+            w.writerow([linha["codigo_ibge"], linha["nome"], linha["uf"]]
+                       + [linha[chave] for chave, _r in colunas]
+                       + [linha["total"],
+                          linha.get("populacao") or "",
+                          linha.get("populacao_ano") or "",
+                          # Célula vazia, e não zero: quem abrir a planilha
+                          # somaria zeros como se fossem medições.
+                          ("%.1f" % taxa).replace(".", ",") if taxa is not None else ""])
+        w.writerow(["", "TOTAL", ""]
+                   + [totais[chave] for chave, _r in colunas]
+                   + [totais["total"], "", "", ""])
+        buf.seek(0)
+        return send_file(
+            BytesIO(buf.getvalue().encode("utf-8-sig")),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=f"territorio_{_hoje()}.csv",
+        )
+
+    # As listas de seleção saem do que EXISTE em `unidades_saude`, e não da
+    # tabela de municípios inteira: oferecer 5570 opções, das quais 5568 dariam
+    # tela vazia, é oferecer engano.
+    ufs = [u for (u,) in db.session.query(UnidadeSaude.uf)
+           .filter(UnidadeSaude.uf.isnot(None)).distinct().order_by(UnidadeSaude.uf)]
+    opcoes_municipios = (
+        db.session.query(Municipio.codigo_ibge, Municipio.nome, Municipio.uf)
+        .join(UnidadeSaude, UnidadeSaude.municipio_ibge == Municipio.codigo_ibge)
+        .distinct().order_by(Municipio.uf, Municipio.nome).all()
+    )
+
+    return render_template(
+        "relatorios/territorio.html",
+        abrangencias=ABRANGENCIAS,
+        abrangencia=abrangencia,
+        uf=uf,
+        codigo_ibge=codigo_ibge,
+        ufs=ufs,
+        opcoes_municipios=opcoes_municipios,
+        colunas=colunas,
+        municipios=municipios,
+        totais=totais,
+        ordem=ordem,
+        sem_denominador=sem_denominador,
+        data_ini=data_ini,
+        data_fim=data_fim,
+        escopo=_escopo_do_usuario_legivel(),
+    )

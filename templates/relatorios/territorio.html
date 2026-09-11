@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Comparativo territorial{% endblock %}
+{% block page_title %}Comparativo territorial{% endblock %}
+
+{% block content %}
+
+{# O recorte do RLS precisa ser dito. Sem isto, o usuário de nível municipal
+   que escolher "Brasil" veria uma linha só e concluiria que o relatório está
+   quebrado — quando na verdade é a proteção funcionando. #}
+{% if escopo.irresoluvel %}
+  <div class="alert alert--danger" role="status">
+    <strong>Escopo territorial indefinido.</strong>
+    O seu usuário está no nível <strong>{{ escopo.nivel }}</strong>, mas o campo
+    correspondente não está preenchido no cadastro. O banco nega tudo nesse
+    caso — por isso a tela aparece vazia. Peça a um administrador para
+    completar o seu cadastro.
+  </div>
+{% elif escopo.limita %}
+  <div class="alert alert--info" role="status">
+    Você enxerga <strong>{{ escopo.texto }}</strong>. Municípios fora desse
+    recorte não aparecem aqui, e não é filtro de tela: o banco não os entrega.
+  </div>
+{% endif %}
+
+<form method="get" class="filters card" style="padding:1rem">
+  <div class="form-grid">
+    <div class="field col-3">
+      <label class="field__label" for="abrangencia">Abrangência</label>
+      <select class="input" id="abrangencia" name="abrangencia">
+        {% for valor, rotulo in abrangencias %}
+          <option value="{{ valor }}" {% if abrangencia == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field col-3">
+      <label class="field__label" for="uf">Estado</label>
+      <select class="input" id="uf" name="uf">
+        <option value="">Todos</option>
+        {% for sigla in ufs %}
+          <option value="{{ sigla }}" {% if uf == sigla %}selected{% endif %}>{{ sigla }}</option>
+        {% endfor %}
+      </select>
+      <span class="field__hint">Usado quando a abrangência é Estado.</span>
+    </div>
+
+    <div class="field col-3">
+      <label class="field__label" for="municipio">Município</label>
+      <select class="input" id="municipio" name="municipio">
+        <option value="">Todos</option>
+        {% for ibge, nome, sigla in opcoes_municipios %}
+          <option value="{{ ibge }}" {% if codigo_ibge == ibge %}selected{% endif %}>
+            {{ nome }}/{{ sigla }}
+          </option>
+        {% endfor %}
+      </select>
+      <span class="field__hint">Só municípios com unidade cadastrada.</span>
+    </div>
+
+    <div class="field col-3">
+      <label class="field__label" for="data_ini">Período</label>
+      <div style="display:flex;gap:.4rem">
+        <input class="input" type="date" id="data_ini" name="data_ini" value="{{ data_ini }}">
+        <input class="input" type="date" name="data_fim" value="{{ data_fim }}">
+      </div>
+    </div>
+
+    <div class="field col-3">
+      <label class="field__label" for="ordem">Ordenar por</label>
+      <select class="input" id="ordem" name="ordem">
+        <option value="total" {% if ordem != 'taxa' %}selected{% endif %}>Contagem total</option>
+        <option value="taxa" {% if ordem == 'taxa' %}selected{% endif %}>Taxa por 100 mil hab.</option>
+      </select>
+      <span class="field__hint">Municípios sem população vão para o fim.</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">{{ icon('search') }} Comparar</button>
+    <a class="btn btn--ghost"
+       href="{{ url_for('relatorios.territorio', abrangencia=abrangencia, uf=uf, municipio=codigo_ibge, data_ini=data_ini, data_fim=data_fim, ordem=ordem, exportar='csv') }}">
+      {{ icon('download') }} Exportar CSV
+    </a>
+  </div>
+</form>
+
+{% if municipios %}
+  <div class="card">
+    <div class="card__header">
+      <h3>{{ municipios|length }} município{{ 's' if municipios|length != 1 }} no período</h3>
+    </div>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Município</th>
+            <th>UF</th>
+            <th class="mono">IBGE</th>
+            {% for chave, rotulo in colunas %}<th style="text-align:right">{{ rotulo }}</th>{% endfor %}
+            <th style="text-align:right">Total</th>
+            <th style="text-align:right">Por 100 mil hab.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in municipios %}
+            <tr>
+              <td>{{ linha.nome }}</td>
+              <td>{{ linha.uf }}</td>
+              <td class="mono" style="font-size:.8rem">{{ linha.codigo_ibge }}</td>
+              {% for chave, rotulo in colunas %}
+                <td style="text-align:right">{{ linha[chave] }}</td>
+              {% endfor %}
+              <td style="text-align:right"><strong>{{ linha.total }}</strong></td>
+              <td style="text-align:right">
+                {% if linha.por_cem_mil is not none %}
+                  {{ '%.1f'|format(linha.por_cem_mil)|replace('.', ',') }}
+                  {% if linha.populacao_ano %}
+                    <span class="field__hint" style="display:block;font-size:.7rem">
+                      pop. {{ linha.populacao_ano }}
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span title="sem população carregada para este município">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="3">Total</th>
+            {% for chave, rotulo in colunas %}
+              <th style="text-align:right">{{ totais[chave] }}</th>
+            {% endfor %}
+            <th style="text-align:right">{{ totais.total }}</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  {# Barras em CSS puro, como no painel epidemiológico: a tela precisa
+     funcionar em rede restrita de unidade de saúde. #}
+  <div class="card">
+    <div class="card__header"><h3>Produção total por município</h3></div>
+    <div class="card__body">
+      {% set maior = municipios[0].total or 1 %}
+      {% for linha in municipios[:15] %}
+        <div style="margin-bottom:.55rem">
+          <div style="display:flex;justify-content:space-between;font-size:.85rem">
+            <span>{{ linha.nome }}/{{ linha.uf }}</span>
+            <span class="mono">{{ linha.total }}</span>
+          </div>
+          <div style="background:var(--surface-2, #e9edf5);border-radius:3px;height:.5rem">
+            <div style="width:{{ (linha.total * 100 // maior) }}%;background:var(--color-primary, #1351B4);height:.5rem;border-radius:3px"></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if sem_denominador %}
+    <div class="alert alert--warning" role="status" style="margin-top:.8rem">
+      <strong>{{ sem_denominador|length }}</strong>
+      município{{ 's' if sem_denominador|length != 1 }} sem população carregada
+      {{ 'aparecem' if sem_denominador|length != 1 else 'aparece' }} com
+      <strong>—</strong> na coluna de taxa:
+      {{ sem_denominador[:5]|map(attribute='nome')|join(', ') }}{% if sem_denominador|length > 5 %} e outros{% endif %}.
+      Sem denominador não há taxa, e mostrar zero ali seria pior do que mostrar
+      nada. Carregue com
+      <code>flask municipios-importar</code>, incluindo as colunas
+      <code>populacao</code> e <code>populacao_ano</code>.
+    </div>
+  {% endif %}
+
+  <p class="field__hint" style="margin-top:.8rem">
+    Ordenado por <strong>{{ 'taxa' if ordem == 'taxa' else 'contagem' }}</strong>.
+    Contagem favorece município grande por construção — Salvador terá sempre mais
+    atendimentos que Bom Jesus da Lapa, e disso não se conclui nada sobre
+    desempenho. É a taxa que compara.
+  </p>
+{% else %}
+  <div class="card">
+    <div class="card__body">
+      <p>Nenhum movimento no período para o recorte escolhido.</p>
+      <p class="field__hint">
+        Só aparecem aqui municípios com <strong>unidade cadastrada e código
+        IBGE preenchido</strong>. Unidade sem código IBGE não entra em nenhuma
+        agregação territorial — é o motivo de o campo existir.
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
