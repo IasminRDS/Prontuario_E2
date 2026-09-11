@@ -148,3 +148,69 @@ def test_erro_na_importacao_devolve_os_motivos_por_linha(app, admin):
     assert "nome vazio" in html
     assert "data_nascimento vazia" in html
     assert "AAAA-MM-DD" in html, "o formato esperado não é informado"
+
+
+# ---------------------------------------------------------------------------
+# Codificação do arquivo importado
+#
+# O leitor decodificava com `errors="ignore"`, e nenhum teste percebia porque
+# todos os CSVs da suíte eram escritos em UTF-8 — a suíte confirmava o único
+# caso que já funcionava. Planilha salva pelo Excel em português sai em cp1252,
+# e ali `errors="ignore"` descartava cada byte acentuado: o paciente entrava no
+# banco com o nome mutilado, sem exceção e sem aviso.
+#
+# Os dois primeiros casos existem para essa correção não regredir; o terceiro
+# guarda o lado oposto, que é onde uma "correção" de codificação costuma quebrar
+# o que estava certo.
+# ---------------------------------------------------------------------------
+def _importar(admin, bruto, nome="pacientes.csv"):
+    return admin.post(
+        "/importacao/csv",
+        data={"arquivo": (io.BytesIO(bruto), nome)},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+
+def test_csv_do_excel_brasileiro_preserva_os_acentos(app, admin):
+    """cp1252 é o que o Excel em português grava. Antes desta correção,
+    "José Antônio Conceição" era gravado como "Jos Antnio Conceio"."""
+    csv = (
+        "nome;data_nascimento;sexo\n"
+        "José Antônio Conceição;1985-04-12;M\n"
+    )
+    resposta = _importar(admin, csv.encode("cp1252"))
+    assert resposta.status_code == 200
+
+    from models.paciente import Paciente
+    with app.app_context():
+        salvo = Paciente.query.filter(
+            Paciente.nome.like("Jos%Conceiç%")).first()
+        assert salvo is not None, "o paciente não foi importado"
+        assert salvo.nome == "José Antônio Conceição", (
+            "acentos perdidos na importação: %r" % salvo.nome)
+
+
+def test_a_codificacao_reconhecida_aparece_para_o_usuario(admin):
+    """Ler em silêncio é o que causou o defeito. O relatório precisa dizer
+    COMO o arquivo foi interpretado, para o usuário desconfiar antes de nós."""
+    csv = "nome;data_nascimento;sexo\nMaria Antônia;1990-01-01;F\n"
+    html = _importar(admin, csv.encode("cp1252")).get_data(as_text=True)
+    assert "Windows-1252" in html, "a codificação usada não é informada"
+
+
+def test_utf8_continua_sendo_lido_como_utf8(admin):
+    """A rede de segurança não pode virar o caminho principal: latin-1 aceita
+    qualquer byte, e se fosse tentado antes o acento em UTF-8 viraria 'Ã§'."""
+    csv = "nome;data_nascimento;sexo\nAntônio Gonçalves;1979-03-08;M\n"
+    html = _importar(admin, csv.encode("utf-8-sig")).get_data(as_text=True)
+    assert "UTF-8" in html
+    assert "Ã" not in html, "UTF-8 foi lido como latin-1"
+
+
+def test_arquivo_binario_e_recusado_em_vez_de_virar_lixo(admin):
+    """latin-1 decodifica qualquer byte, inclusive os de um .xlsx renomeado.
+    Sem a guarda de byte nulo, o cabeçalho viraria lixo silencioso."""
+    binario = b"PK\x03\x04\x14\x00\x00\x00\x08\x00" + bytes(range(256)) * 4
+    html = _importar(admin, binario).get_data(as_text=True)
+    assert "binário" in html, "arquivo binário não foi recusado"

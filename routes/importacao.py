@@ -57,6 +57,48 @@ def modelo_csv():
     )
 
 
+# Codificações tentadas, na ordem. A ordem não é arbitrária: UTF-8 **falha** em
+# byte inválido, então testá-la primeiro é seguro; cp1252 é o que o Excel em
+# português grava; latin-1 decodifica QUALQUER byte e por isso vem por último —
+# é a rede de segurança, não um palpite.
+CODIFICACOES = (
+    ("utf-8-sig", "UTF-8"),
+    ("cp1252", "Windows-1252"),
+    ("latin-1", "ISO-8859-1"),
+)
+
+
+def _decodificar(bruto):
+    """Devolve `(texto, rótulo da codificação)`, ou `(None, None)` se não for texto.
+
+    O leitor fazia `decode("utf-8-sig", errors="ignore")`. Planilha salva como
+    CSV pelo Excel em português sai em **cp1252**, e ali cada caractere acentuado
+    é um byte inválido em UTF-8 — que `errors="ignore"` simplesmente DESCARTA.
+    "José Antônio Conceição" era gravado no banco como "Jos Antnio Conceio":
+    sem exceção, sem aviso na tela e sem entrar na lista de problemas, porque
+    para o validador o nome continuava preenchido.
+
+    É o defeito que não falha, só corrompe — e o pior lugar para ele acontecer,
+    porque nome de paciente errado no cadastro não se descobre por sintoma: se
+    descobre quando alguém procura a pessoa e não encontra.
+    """
+    # Byte nulo é a assinatura mais barata de arquivo binário. Sem esta guarda,
+    # um .xlsx renomeado para .csv seria "decodificado" com sucesso em latin-1
+    # e viraria um cabeçalho de lixo.
+    if b"\x00" in bruto[:4096]:
+        return None, None
+
+    for codec, rotulo in CODIFICACOES:
+        try:
+            return bruto.decode(codec), rotulo
+        except UnicodeDecodeError:
+            continue
+
+    # Inalcançável enquanto latin-1 for o último item — ele aceita qualquer
+    # byte. Fica como guarda explícita para quem editar CODIFICACOES.
+    return None, None
+
+
 def _delimitador(conteudo):
     """Separador de campos do arquivo enviado, decidido pelo cabeçalho.
 
@@ -84,7 +126,15 @@ def csv_importar():
         flash("Envie um arquivo CSV válido.", "warning")
         return redirect(url_for("importacao.csv_form"))
 
-    conteudo = arquivo.read().decode("utf-8-sig", errors="ignore")
+    conteudo, codificacao = _decodificar(arquivo.read())
+    if conteudo is None:
+        flash(
+            "Não consegui ler o arquivo como texto — ele parece ser binário. "
+            "Se for uma planilha, exporte como CSV antes de enviar.",
+            "danger",
+        )
+        return redirect(url_for("importacao.csv_form"))
+
     reader = csv.DictReader(io.StringIO(conteudo), delimiter=_delimitador(conteudo))
 
     colunas = set(reader.fieldnames or [])
@@ -180,9 +230,11 @@ def csv_importar():
 
     from utils.audit import registrar
 
+    # A codificação entra na trilha porque é o que permite, meses depois,
+    # explicar um lote de nomes estranhos sem ter o arquivo original em mãos.
     registrar("pacientes", None, "create",
-              f"Importação CSV: {inseridos} inserido(s), {ignorados} duplicado(s), "
-              f"{erros} com erro", commit=True)
+              f"Importação CSV ({codificacao}): {inseridos} inserido(s), "
+              f"{ignorados} duplicado(s), {erros} com erro", commit=True)
 
     resultado = {
         "inseridos": inseridos,
@@ -193,7 +245,7 @@ def csv_importar():
     }
     flash(
         f"Importação concluída: {inseridos} inserido(s), {ignorados} duplicado(s), "
-        f"{erros} com erro.",
+        f"{erros} com erro. Arquivo lido como {codificacao}.",
         "success" if not erros else "warning",
     )
     return render_template("importacao/csv.html", preview=preview, resultado=resultado,
