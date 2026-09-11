@@ -10,3 +10,8 @@ python-docx==1.2.0
 
 # Geração dos slides da defesa (scripts/gerar_defesa_pptx.py).
 python-pptx==1.0.2
+
+# Validação FHIR em tests/test_fhir_validacao.py. Os modelos deste pacote são
+# gerados da FHIR 4.0.1 — a mesma versão que o sistema declara. Não substitui o
+# validador oficial do HL7, que confere também os perfis e exige Java 11.
+fhirclient==4.4.0

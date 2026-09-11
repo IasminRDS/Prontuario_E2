@@ -59,6 +59,12 @@ PERFIL_SINAL_VITAL = "http://hl7.org/fhir/StructureDefinition/vitalsigns"
 PERFIL_PRESSAO = "http://hl7.org/fhir/StructureDefinition/bp"
 
 SISTEMA_CID = "http://hl7.org/fhir/sid/icd-10"
+
+# O Condition do diagnóstico vai contido no Encounter; `BRCondicaoSaude` NÃO
+# serve aqui: ela exige `stage.assessment` apontando para diagnóstico de
+# laboratório e liga o `code` a uma terminologia de suspeita diagnóstica. É
+# perfil do documento de exame, não de diagnóstico clínico.
+ID_DIAGNOSTICO = "diagnostico-principal"
 SISTEMA_LOINC = "http://loinc.org"
 SISTEMA_UCUM = "http://unitsofmeasure.org"
 SISTEMA_CATEGORIA = "http://terminology.hl7.org/CodeSystem/observation-category"
@@ -87,6 +93,17 @@ PRESSAO = re.compile(r"^\s*(\d{2,3})\s*[/xX]\s*(\d{2,3})\s*$")
 
 def _digitos(valor):
     return "".join(c for c in (valor or "") if c.isdigit())
+
+
+def _instante(momento):
+    """`dateTime` do FHIR com fuso, que a especificação exige quando há hora.
+
+    `isoformat()` sozinho devolve "2026-03-04T10:30:00", sem fuso, e isso NÃO é
+    um dateTime válido — o validador reprova. As colunas do sistema são gravadas
+    com `datetime.utcnow()`, então o instante já está em UTC e o que falta é
+    dizê-lo. Foi o validador que achou isto; nenhum teste anterior acusava.
+    """
+    return (momento or datetime.utcnow()).replace(microsecond=0).isoformat() + "Z"
 
 
 def _referencia_paciente(paciente):
@@ -170,6 +187,8 @@ def _map_patient(paciente):
 
 
 def _map_encounter(prontuario):
+    sujeito = _referencia_paciente(prontuario.paciente)
+
     # Sem `meta.profile`: a RNDS não publica perfil de Encounter, e o modelo
     # computacional do RAC — que seria o lugar dele — ainda está em construção
     # no guia. Declarar uma URL inventada é pior que declarar nada.
@@ -183,19 +202,30 @@ def _map_encounter(prontuario):
             "code": "AMB",
             "display": "ambulatory",
         },
-        "subject": _referencia_paciente(prontuario.paciente),
+        "subject": sujeito,
     }
     if prontuario.criado_em:
-        recurso["period"] = {"start": prontuario.criado_em.isoformat()}
+        recurso["period"] = {"start": _instante(prontuario.criado_em)}
     if prontuario.cid_principal:
+        # `Encounter.diagnosis.condition` é uma REFERÊNCIA a um Condition, não um
+        # CodeableConcept. A versão anterior punha o CID-10 direto ali: o
+        # validador descarta o campo inteiro por não reconhecê-lo, e o
+        # diagnóstico simplesmente não viajava. Nada acusava.
+        #
+        # O Condition vai `contained` porque não há id que a RNDS resolva — a
+        # mesma razão que fez a referência ao paciente ser por identificador.
+        recurso["contained"] = [{
+            "resourceType": "Condition",
+            "id": ID_DIAGNOSTICO,
+            "code": {"coding": [{
+                "system": SISTEMA_CID,
+                "code": prontuario.cid_principal,
+                "display": descricao_cid(prontuario.cid_principal) or "",
+            }]},
+            "subject": sujeito,
+        }]
         recurso["diagnosis"] = [{
-            "condition": {
-                "coding": [{
-                    "system": SISTEMA_CID,
-                    "code": prontuario.cid_principal,
-                    "display": descricao_cid(prontuario.cid_principal) or "",
-                }]
-            },
+            "condition": {"reference": f"#{ID_DIAGNOSTICO}"},
             "rank": 1,
         }]
     return recurso
@@ -254,7 +284,7 @@ def _map_pressao(prontuario, sujeito, momento):
 def _map_observations(prontuario):
     """Um Observation por grandeza medida. Lista vazia se não houve medição."""
     sujeito = _referencia_paciente(prontuario.paciente)
-    momento = (prontuario.criado_em or datetime.utcnow()).isoformat()
+    momento = _instante(prontuario.criado_em)
 
     recursos = []
     pressao = _map_pressao(prontuario, sujeito, momento)
