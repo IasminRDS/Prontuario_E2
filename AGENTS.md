@@ -154,6 +154,19 @@ informada — o planejador nem considera índice em tabela pequena.
 python scripts/gerar_tcc_docx.py
 ```
 
+`docs/LEITURAS.pdf` é o levantamento de referências — norma, especificação da
+RNDS, literatura, ferramenta e software comparável —, gerado por
+`scripts/gerar_leituras_pdf.py`, com o conteúdo no próprio script. Cada item
+diz se foi **lido na fonte primária ou se é indicação de busca**: referência
+copiada de agregador entra na monografia com data errada, e foi o que quase
+aconteceu com o Decreto 12.560/2025.
+
+`docs/sbis_gap_analysis.md` confronta o sistema com os requisitos de certificação
+S-RES da SBIS (planilha oficial v5.2), requisito a requisito. Vale a mesma regra
+dos números da monografia: **nenhum "Atende" sem o arquivo ou o teste que prova**,
+e requisito não verificado aparece como não verificado, nunca como atendido.
+Refaça a classificação quando o código mudar — ela é um retrato datado.
+
 `docs/defesa_roteiro.md` é o roteiro de apresentação e defesa — documento de
 trabalho, não parte da monografia, e descartável depois da banca. Tem gerador
 próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aqui
