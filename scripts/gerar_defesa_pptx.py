@@ -153,7 +153,7 @@ CONTEUDO = {
        ["Rotas expostas", "213 — 152 aceitam GET; 105, mutação"],
        ["Tabelas no modelo de dados", "42, com 532 colunas"],
        ["Telas e migrações", "116 telas · 14 migrações versionadas"],
-       ["Casos de teste", "432, em 279 funções e 37 arquivos"]])],
+       ["Casos de teste", "494, em 324 funções e 39 arquivos"]])],
 
  7: [("p", "Chong, Carraro e Wolter (2006) descrevem três estratégias de "
       "isolamento, dispostas num contínuo entre isolamento e compartilhamento. "
@@ -190,7 +190,7 @@ CONTEUDO = {
       "que a rota lê; que conciliam telas e rotas nos dois sentidos; que geram "
       "os documentos e conferem o que saiu; e que consultam o catálogo do "
       "PostgreSQL para ver se as políticas estão ativas."),
-     ("p", "São 432 casos de teste, em 279 funções e 37 arquivos, executados "
+     ("p", "São 494 casos de teste, em 324 funções e 39 arquivos, executados "
       "integralmente sobre os dois bancos do projeto. A medição de cobertura de "
       "execução entrou como mapa, e não como meta: a lista dos trechos que "
       "nenhum teste percorre diz onde nenhuma evidência foi produzida.")],

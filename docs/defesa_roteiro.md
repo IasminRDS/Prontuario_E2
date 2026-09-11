@@ -355,7 +355,7 @@ mais impressiona banca de gestão.
   verificar controles de segurança."**
 - Abaixo, quatro ícones/linhas: instrumentar · exercitar · confrontar nos dois
   sentidos · medir cobertura como mapa
-- Números: **463 casos · 303 funções · 37 arquivos · dois bancos**
+- Números: **494 casos · 324 funções · 39 arquivos · dois bancos**
 
 **Fala (1 min 15)**
 
@@ -371,7 +371,7 @@ mais impressiona banca de gestão.
 > conciliam telas e rotas **nos dois sentidos**; e que consultam o catálogo do
 > PostgreSQL para ver se as políticas estão de fato ativas.
 >
-> São 463 casos de teste, provenientes de 303 funções em 37 arquivos, executados
+> São 494 casos de teste, provenientes de 324 funções em 39 arquivos, executados
 > integralmente sobre os dois bancos usados no projeto.
 >
 > E acrescentei a medição de cobertura de execução — **não como meta percentual,
@@ -888,7 +888,7 @@ achados já registrados. As classes se sobrepõem em três casos, e mantive as
 sobreposições registradas em vez de forçar exclusividade, porque elas marcam
 exatamente os achados em que dois mecanismos se somaram — que são os mais graves.
 
-### 13. Como você sabe que os 463 casos são suficientes?
+### 13. Como você sabe que os 494 casos são suficientes?
 
 **Curta.** Não sei, e o trabalho não afirma isso. Suficiência não é demonstrável.
 O que os casos garantem é outra coisa: que um defeito de qualquer das cinco
@@ -1065,7 +1065,7 @@ externa, que registra total, último identificador e resumo final. Guardado um
 > escopo territorial. A auditoria registra leituras e escritas, encadeadas por
 > hash. E o backup tem validação automatizada de restauração.
 >
-> A verificação — 463 casos de teste — revelou dezenove defeitos, e todos
+> A verificação — 494 casos de teste — revelou dezenove defeitos, e todos
 > compartilham uma propriedade: **nenhum gera mensagem de erro**. Entre eles, o
 > Row-Level Security estava corretamente implementado e cinco tabelas clínicas
 > centrais estavam integralmente fora dele, enquanto a documentação afirmava
@@ -1111,7 +1111,7 @@ uma delas entrega à banca uma contradição contra o próprio documento.
   ISO/IEC 27000; falta prova oponível ao operador.
 
 **Sobre os testes**
-- ❌ "463 testes provam que não há mais defeitos." → provam que um defeito das
+- ❌ "494 testes provam que não há mais defeitos." → provam que um defeito das
   classes conhecidas reprova a execução. Suficiência não é demonstrável.
 - ❌ "A cobertura de testes é alta." → cobertura foi usada como **mapa**, não
   como meta; percentual não mede qualidade.
