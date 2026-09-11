@@ -19,6 +19,15 @@ O que sobra é contagem sobre o repositório — a suíte de testes, o mapa de r
 da aplicação, o metadata do ORM —, e é o mesmo que consta no README e na
 monografia; divergência entre os três é defeito, não versão.
 
+Uma seção foge à regra de propósito, e o desvio é declarado: a de **posição
+diante dos dados nacionais** fala de algo que o sistema **não** faz. Existe
+porque a pergunta aparece — um prontuário do SUS deveria consumir dados do
+DATASUS? — e deixá-la sem resposta é pior do que respondê-la. A forma de
+mantê-la honesta é dupla: o texto diz "levantado e não implementado" com todas
+as letras, e a limitação correspondente aparece na última seção, junto com as
+outras. Seção que descrevesse a integração como se existisse seria exatamente o
+tipo de afirmação que este documento recusa.
+
 Uso:
     python scripts/gerar_resumo_pdf.py
 """
@@ -421,6 +430,45 @@ def historia():
         "duplicata quando a resposta anterior se perde."))
 
     # ── 9 ──────────────────────────────────────────────────────────────────
+    h.append(p("Posição diante dos dados nacionais do SUS", secao))
+    h.append(p(
+        "Quanto aos sistemas nacionais de informação, este sistema está do lado de "
+        "<b>quem produz o dado</b>, e não de quem o consulta depois de consolidado. "
+        "A AIH e a APAC que ele emite são a matéria-prima do SIH e do SIA — a ponto de "
+        "o arquivo central do SIHSUS no portal do DATASUS se chamar literalmente "
+        "<b>RD, AIH Reduzida</b>, e o do SIASUS, <b>PA, Produção Ambulatorial</b>."))
+    h.append(tabela(
+        ["O que o sistema registra", "Para onde isso desagua nacionalmente"],
+        [["AIH — Autorização de Internação Hospitalar",
+          "SIHSUS, arquivo <font face=\"Courier\">RD</font>"],
+         ["APAC e produção ambulatorial",
+          "SIASUS, arquivo <font face=\"Courier\">PA</font>"],
+         ["Notificação compulsória", "SINAN"],
+         ["Registro clínico em FHIR R4", "RNDS — envio pela fila descrita acima"],
+         ["Município por código IBGE",
+          "Chave de agregação comum a CNES, SIA/SIH e SINAN"]],
+        [8.0 * cm, 9.4 * cm]))
+    h.append(p(
+        "O caminho inverso — <b>consumir</b> os dados públicos já consolidados para "
+        "comparar o desempenho da unidade com o do município — foi <b>levantado e não "
+        "implementado</b>, e é registrado aqui como posição, não como recurso. O "
+        "levantamento está em "
+        "<font face=\"Courier\">docs/datasus_levantamento.md</font> e apurou, nas "
+        "fontes oficiais, que o portal de transferência publica <b>18 fontes em 167 "
+        "tipos de arquivo</b>, com séries desde 1979, no formato <b>.DBC</b> — um DBF "
+        "comprimido com o algoritmo <i>implode</i> da PKWare, que nenhuma biblioteca "
+        "padrão lê. Apurou também que a função já existe em ferramenta oficial: o "
+        "<b>TabWin</b>, do próprio DATASUS, tabula, calcula indicadores e desenha "
+        "mapas — o que uma implementação nova precisaria superar não é a função, e sim "
+        "a forma de entrega, já que o TabWin é executável Windows de instalação "
+        "manual."))
+    h.append(p(
+        "Um detalhe do levantamento decide o desenho de qualquer trabalho futuro nessa "
+        "direção: a base populacional do IBGE é servida pelo mesmo portal, e sem ela "
+        "não há indicador. Contagem de óbitos é contagem; óbito por cem mil habitantes "
+        "é indicador, e a diferença entre os dois é o denominador."))
+
+    # ── 10 ─────────────────────────────────────────────────────────────────
     h.append(p("Interface", secao))
     h.append(p(
         "Padrão Digital de Governo (<b>DSGov / gov.br</b>): barra institucional, azul "
@@ -437,7 +485,7 @@ def historia():
         "(eMAG / WCAG 2.1 AA): atalho para o conteúdo, foco visível em todo controle, "
         "contraste verificado nos dois temas e VLibras."))
 
-    # ── 10 ─────────────────────────────────────────────────────────────────
+    # ── 11 ─────────────────────────────────────────────────────────────────
     h.append(KeepTogether([
         p("Operação", secao),
         tabela(
@@ -461,7 +509,7 @@ def historia():
           "corresponda à UF declarada."]],
         [5.3 * cm, 12.1 * cm])]))
 
-    # ── 11 ─────────────────────────────────────────────────────────────────
+    # ── 12 ─────────────────────────────────────────────────────────────────
     h.append(p("O que o sistema não garante", secao))
     h.append(p("Declarar os limites faz parte do controle. Os principais:"))
     h.append(li(
@@ -478,6 +526,11 @@ def historia():
         "<b>O envio à RNDS é simulado</b> enquanto não houver certificado ICP-Brasil e "
         "credenciais do DATASUS. Está isolado numa única função, os protocolos saem "
         "marcados como simulados e a tela avisa — nada sai da máquina."))
+    h.append(li(
+        "<b>O sistema não consome os dados públicos do DATASUS.</b> A seção anterior "
+        "descreve o levantamento dessas fontes e a posição do sistema diante delas; "
+        "não há importação, indicador comparativo nem relatório a partir de base "
+        "pública, e a incorporação consta de trabalhos futuros na monografia."))
     h.append(li(
         "<b>As cópias de segurança residem no mesmo servidor que o banco</b>: a rotação "
         "existe, a custódia externa não."))

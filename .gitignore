@@ -61,6 +61,11 @@ docs/RESUMO_SISTEMA.pdf
 # scripts/gerar_leituras_pdf.py. O conteudo mora no script.
 docs/LEITURAS.pdf
 
+# Mesma regra para o levantamento do DATASUS: a FONTE e docs/datasus_levantamento.md
+# e o gerador e scripts/gerar_datasus_docx.py. Editar o .docx e perder a edicao
+# na proxima geracao, com os dois arquivos afirmando coisas diferentes ate la.
+docs/datasus_levantamento.docx
+
 # Lock que o LibreOffice cria ao abrir o .docx e deixa para tras quando o
 # processo e encerrado a forca. Aparece no `git status` como arquivo novo.
 .~lock.*#
