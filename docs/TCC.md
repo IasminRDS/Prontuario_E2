@@ -940,7 +940,7 @@ Todos são acompanhados de camadas transversais de autorização, auditoria, esc
 territorial e identidade de pacientes.
 
 A dimensão do artefato é registrada abaixo porque condiciona a leitura dos
-resultados: a cobertura de um controle sobre 42 tabelas e 213 rotas é uma
+resultados: a cobertura de um controle sobre 42 tabelas e 214 rotas é uma
 afirmação de natureza diferente da mesma cobertura sobre meia dúzia de telas de
 demonstração. Os valores foram obtidos por contagem automatizada sobre o código-fonte e sobre
 o *metadata* do mapeador objeto-relacional, e não por estimativa.
@@ -950,13 +950,13 @@ Quadro — Dimensão do artefato construído
 | Elemento | Quantidade |
 |---|---|
 | Módulos funcionais (*blueprints*) | 45 |
-| Rotas expostas | 213 — 152 aceitam GET; 105, método de mutação |
-| Tabelas no modelo de dados | 42, com 532 colunas e 114 chaves estrangeiras |
+| Rotas expostas | 214 — 153 aceitam GET; 105, método de mutação |
+| Tabelas no modelo de dados | 42, com 534 colunas e 114 chaves estrangeiras |
 | Tabelas sob política de RLS | 23 |
-| Migrações de esquema versionadas | 14 |
-| Telas (*templates*) | 116 |
+| Migrações de esquema versionadas | 15 |
+| Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 494, em 39 arquivos |
+| Casos de teste automatizados | 535, em 43 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1166,8 +1166,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **494 casos de teste**, provenientes de 324
-funções distribuídas em 39 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **535 casos de teste**, provenientes de 361
+funções distribuídas em 43 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -2260,7 +2260,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 494 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 535 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

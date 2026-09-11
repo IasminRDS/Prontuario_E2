@@ -200,7 +200,7 @@ def historia():
         "Sistema de <b>prontuário eletrônico hospitalar</b> para a rede pública de "
         "saúde, escrito em Python/Flask sobre PostgreSQL. Cobre o ciclo assistencial "
         "completo — do cadastro do cidadão à alta hospitalar e ao faturamento SUS — "
-        "com <b>116 telas</b> distribuídas em 45 módulos, interface no Padrão Digital "
+        "com <b>117 telas</b> distribuídas em 45 módulos, interface no Padrão Digital "
         "de Governo (gov.br) e acessibilidade eMAG/WCAG 2.1 AA."))
     h.append(p(
         "A característica que o define é ser <b>multi-tenant</b>: uma única instância "
@@ -238,10 +238,10 @@ def historia():
     h.append(tabela(
         None,
         [["Módulos (blueprints)", "<b>45</b>", "Testes",
-          "<b>463</b> casos, em 303 funções e 37 arquivos"],
-         ["Rotas", "<b>213</b> (152 GET, 105 mutação)", "Tabelas sob RLS", "<b>23</b>"],
-         ["Telas (templates)", "<b>116</b>", "Permissões RBAC", "<b>27</b>, em 7 perfis"],
-         ["Modelos de dados", "<b>42</b> tabelas, 532 colunas, 114 FKs", "Migrações", "<b>14</b>"],
+          "<b>535</b> casos, em 361 funções e 43 arquivos"],
+         ["Rotas", "<b>214</b> (153 GET, 105 mutação)", "Tabelas sob RLS", "<b>23</b>"],
+         ["Telas (templates)", "<b>117</b>", "Permissões RBAC", "<b>27</b>, em 7 perfis"],
+         ["Modelos de dados", "<b>42</b> tabelas, 534 colunas, 114 FKs", "Migrações", "<b>15</b>"],
          ["Terminologias oficiais", "CID-10, RENAME, CBO, SIGTAP, CNES", "Bancos exercitados",
           "PostgreSQL e SQLite, no CI"]],
         [3.9 * cm, 4.9 * cm, 3.3 * cm, 5.3 * cm]))
