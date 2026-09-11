@@ -145,7 +145,7 @@ def lista_paciente(paciente_id):
     )
 
     registrar("exames_solicitados", paciente.id, "read",
-              f"Exames do paciente consultados ({paciente.nome})", commit=True)
+              "Exames do paciente consultados", commit=True)
 
     # A tela separa o que ainda se espera do que já tem resultado. A separação
     # vem daqui e não do template: é regra de domínio, e no template ficaria
@@ -325,9 +325,10 @@ def registrar_resultado(id):
         if not e.data_coleta:
             e.data_coleta = e.data_solicitacao
 
+        # A interpretação é laudo: fica no exame, não na trilha.
         registrar("exames_solicitados", e.id, "update",
                   "Resultado registrado"
-                  + (f" — {e.interpretacao}" if e.interpretacao else ""))
+                  + (" — com interpretação" if e.interpretacao else ""))
         db.session.commit()
 
         flash("Resultado registrado.", "success")

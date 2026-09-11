@@ -131,8 +131,9 @@ def enviar(id):
     n.resolvido_em = datetime.utcnow()
     n.resolvido_por = current_user.id
 
+    # Agravo e CID são diagnóstico; a notificação já os guarda.
     registrar("notificacoes_compulsorias", n.id, "update",
-              f"Notificação de {n.agravo} (CID {n.cid}) enviada ao SINAN")
+              f"Notificação #{n.id} enviada ao SINAN")
     db.session.commit()
 
     flash(f"Notificação de {n.agravo} registrada como enviada ao SINAN.", "success")
@@ -155,7 +156,7 @@ def descartar(id):
     n.resolvido_por = current_user.id
 
     registrar("notificacoes_compulsorias", n.id, "update",
-              f"Notificação de {n.agravo} descartada: {motivo}")
+              f"Notificação #{n.id} descartada: {motivo}")
     db.session.commit()
 
     flash("Notificação descartada.", "info")

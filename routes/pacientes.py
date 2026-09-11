@@ -364,7 +364,7 @@ def perfil(id):
     )
 
     registrar("pacientes", paciente.id, "read",
-              f"Sumário do paciente aberto ({paciente.nome})", commit=True)
+              "Sumário do paciente aberto", commit=True)
 
     return render_template(
         "pacientes/perfil.html",
@@ -583,7 +583,7 @@ def criar_paciente():
     # transação, então o evento e a escrita persistem juntos ou não persistem.
     db.session.flush()
     registrar("pacientes", p.id, "create",
-              f"Paciente {p.nome} criado via {request.endpoint}")
+              f"Paciente criado via {request.endpoint}")
     db.session.commit()
 
     return jsonify({"mensagem": "Paciente criado com sucesso", "id": p.id}), 201

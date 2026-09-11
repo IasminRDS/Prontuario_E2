@@ -144,9 +144,10 @@ def novo(paciente_id):
 
         _gerar_notificacao_se_compulsorio(p)
 
+        # O CID é diagnóstico: registra-se que houve, não qual.
         registrar("prontuarios", p.id, "create",
-                  f"Prontuário criado para {paciente.nome}"
-                  + (f" — CID {p.cid_principal}" if p.cid_principal else ""))
+                  "Prontuário criado"
+                  + (" — com CID registrado" if p.cid_principal else ""))
         db.session.commit()
 
         flash("Prontuário registrado.", "success")
@@ -228,7 +229,7 @@ def historico(paciente_id):
     )
 
     registrar("prontuarios", paciente.id, "read",
-              f"Histórico clínico consultado ({paciente.nome})", commit=True)
+              "Histórico clínico consultado", commit=True)
 
     return render_template("prontuario/historico.html",
                            paciente=paciente, prontuarios=prontuarios)

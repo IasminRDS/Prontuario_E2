@@ -81,7 +81,7 @@ def cartao(paciente_id):
         })
 
     registrar("pacientes", paciente.id, "read",
-              f"Cartão de vacinas consultado ({paciente.nome})", commit=True)
+              "Cartão de vacinas consultado", commit=True)
 
     return render_template(
         "vacinas/cartao.html",
@@ -137,7 +137,7 @@ def registrar_dose(paciente_id):
     db.session.add(dose)
 
     registrar("vacinas_aplicadas", paciente.id, "create",
-              f"{dose.dose} de {vacina.nome} aplicada")
+              f"{dose.dose} aplicada (imunobiológico #{vacina.id})")
     db.session.commit()
 
     flash(f"{dose.dose} de {vacina.nome} registrada.", "success")
@@ -163,7 +163,7 @@ def excluir_dose(id):
         return redirect(url_for("vacinas.cartao", paciente_id=paciente_id))
 
     registrar("vacinas_aplicadas", paciente_id, "delete",
-              f"Dose removida ({dose.nome_vacina} — {dose.dose}): {motivo}")
+              f"Dose {dose.dose} removida: {motivo}")
     db.session.delete(dose)
     db.session.commit()
 

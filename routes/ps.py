@@ -214,8 +214,10 @@ def entrada(paciente_id=None):
             db.session.add(a)
             db.session.flush()
 
+            # A queixa é dado clínico e o nome identifica: nenhum dos
+            # dois entra na trilha. Ambos estão no atendimento.
             registrar("atendimentos_ps", a.id, "create",
-                      f"Entrada no PS: {paciente.nome} — {queixa[:80]}")
+                      "Entrada no PS registrada")
             db.session.commit()
 
             flash(f"{paciente.nome} registrado na fila do pronto-socorro.", "success")

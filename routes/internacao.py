@@ -191,7 +191,7 @@ def nova(paciente_id=None):
             db.session.flush()
 
             registrar("internacoes", intern.id, "create",
-                      f"Internação de {paciente.nome} no leito {leito.numero}")
+                      f"Internação registrada no leito {leito.numero}")
             db.session.commit()
 
             flash(f"{paciente.nome} internado no leito {leito.numero}.", "success")

@@ -70,7 +70,7 @@ def index(paciente_id):
         vigentes.setdefault(r.finalidade, r)
 
     registrar("consentimentos_lgpd", paciente.id, "read",
-              f"Consentimentos consultados ({paciente.nome})", commit=True)
+              "Consentimentos consultados", commit=True)
 
     return render_template(
         "consentimentos/index.html",
@@ -117,7 +117,7 @@ def registrar_consentimento(paciente_id):
     registrar("consentimentos_lgpd", registro.id, "create",
               f"{rotulo} — base {base_legal}, "
               f"{'concedido' if concedido else 'recusado'} "
-              f"(termo {VERSAO_TERMO}), paciente {paciente.nome}")
+              f"(termo {VERSAO_TERMO})")
     db.session.commit()
 
     flash(f"{rotulo}: registro gravado.", "success")
@@ -144,8 +144,7 @@ def revogar(paciente_id, registro_id):
 
     registro.revogado_em = datetime.utcnow()
     registrar("consentimentos_lgpd", registro.id, "update",
-              f"Consentimento revogado — {registro.rotulo}, "
-              f"paciente {paciente.nome}")
+              f"Consentimento revogado — {registro.rotulo}")
     db.session.commit()
 
     flash(f"{registro.rotulo}: consentimento revogado.", "success")
