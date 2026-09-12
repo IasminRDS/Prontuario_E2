@@ -238,7 +238,14 @@ def _vigilancia():
 
 # A tela agrega estoque, fila de urgência e notificações compulsórias de toda a
 # unidade. Só `@login_required` deixava a recepção ver o painel operacional
-# inteiro; `reports:read` é a mesma permissão que os demais relatórios exigem.
+# inteiro; `reports:read` é a permissão dos relatórios consolidados.
+#
+# A versão anterior deste comentário afirmava que `reports:read` era "a mesma
+# permissão que os demais relatórios exigem". Era falso quando foi escrito:
+# cinco das seis rotas de `relatorios` tinham apenas `@login_required`, e a
+# recepção alcançava a lista nominal de pacientes com exportação em CSV. O
+# comentário descrevia a intenção como se fosse o estado — e sobreviveu porque
+# ninguém mede comentário.
 @alertas_bp.get("/")
 @login_required
 @requer_permissao("reports:read")

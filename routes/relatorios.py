@@ -40,6 +40,7 @@ relatorios_bp = Blueprint("relatorios", __name__, url_prefix="/relatorios")
 
 @relatorios_bp.route("/")
 @login_required
+@requer_permissao("reports:read", "triage:read")
 def index():
     return render_template("relatorios/index.html")
 
@@ -47,6 +48,7 @@ def index():
 # ── 1. Relatório de Pacientes ──
 @relatorios_bp.route("/pacientes")
 @login_required
+@requer_permissao("reports:read")
 def pacientes():
     sexo = request.args.get("sexo", "")
     municipio = request.args.get("municipio", "").strip()
@@ -151,6 +153,7 @@ def _csv_pacientes(pacientes):
 # ── 2. Relatório de Atendimentos ──
 @relatorios_bp.route("/atendimentos")
 @login_required
+@requer_permissao("reports:read")
 def atendimentos():
     data_ini = request.args.get(
         "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
@@ -216,6 +219,7 @@ def atendimentos():
 # ── 3. Relatório de Produção ──
 @relatorios_bp.route("/producao")
 @login_required
+@requer_permissao("reports:read")
 def producao():
     data_ini = request.args.get(
         "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
@@ -303,6 +307,7 @@ def producao():
 # ── 4. Relatório de Triagem ──
 @relatorios_bp.route("/triagem")
 @login_required
+@requer_permissao("triage:read", "reports:read")
 def triagem():
     data_ini = request.args.get(
         "data_ini", _hoje().replace(day=1).strftime("%Y-%m-%d")
