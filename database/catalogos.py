@@ -56,13 +56,30 @@ VACINAS = [
 
 # Estabelecimentos de demonstração. Os códigos CNES são fictícios; a rede real
 # entra pelo cadastro em `/unidades/` ou por carga a partir do CNES aberto.
+#
+# A rede está distribuída por QUATRO municípios e DOIS estados, e isso não é
+# enfeite: o comparativo territorial agrega por município, e uma rede inteira
+# numa cidade só produz uma tabela de uma linha — que não compara nada e não
+# demonstra nada. Com esta distribuição, o filtro por UF também passa a ter o
+# que separar.
+#
+# `Clínica Pública Municipal I` nasceu sem código IBGE, e isso a deixava fora
+# de TODA agregação territorial: a junção é com `municipios`, então a unidade
+# sumia do relatório sem erro nenhum. Semente que distribui a rede e depois
+# esconde um quarto dela é pior do que semente que não distribui — o código foi
+# conferido na API de localidades do IBGE.
 UNIDADES = [
     ("UBS Central", "UBS", "0000001", "João Pessoa", "PB", "2507507"),
     ("UBS Bairro Norte", "UBS", "0000002", "João Pessoa", "PB", "2507507"),
     ("Clínica Pública Municipal I", "Clínica Pública", "0000003",
-     "Campina Grande", "PB", None),
+     "Campina Grande", "PB", "2504009"),
     ("Hospital Municipal São Lucas", "Hospital", "0000004",
      "João Pessoa", "PB", "2507507"),
+    ("UBS Barra", "UBS", "0000005", "Salvador", "BA", "2927408"),
+    ("Hospital Geral do Subúrbio", "Hospital", "0000006",
+     "Salvador", "BA", "2927408"),
+    ("Hospital Municipal de Bom Jesus da Lapa", "Hospital", "0000007",
+     "Bom Jesus da Lapa", "BA", "2903904"),
 ]
 
 
@@ -100,7 +117,14 @@ def seed_unidades():
 
     criadas = 0
     for nome, tipo, cnes, cidade, uf, ibge in UNIDADES:
-        if UnidadeSaude.query.filter_by(cnes=cnes).first():
+        existente = UnidadeSaude.query.filter_by(cnes=cnes).first()
+        if existente:
+            # Preenche a chave territorial quando ela FALTA, e só nesse caso.
+            # Não é sobrescrever cadastro: é reparar unidade semeada antes de a
+            # semente ter o código, que sem isso ficaria invisível em todo
+            # relatório agregado — sem erro, sem aviso, sem linha.
+            if ibge and not existente.municipio_ibge:
+                existente.municipio_ibge = ibge
             continue
         db.session.add(UnidadeSaude(
             nome=nome, tipo=tipo, cnes=cnes, cidade=cidade, uf=uf,

@@ -72,6 +72,19 @@ CAPITAIS = [
 ]
 
 
+# Municípios não-capitais referenciados pelas unidades de demonstração em
+# `database/catalogos.py`. Precisam existir aqui: a agregação territorial é uma
+# junção com esta tabela, e unidade que aponte para município inexistente
+# simplesmente não aparece em relatório nenhum — some sem erro.
+#
+# Mesma fonte e mesmo ano das capitais (IBGE/SIDRA, estimativa para 2026), e os
+# códigos foram conferidos na API de localidades do IBGE, não de memória.
+MUNICIPIOS_DE_DEMONSTRACAO = [
+    ("2504009", "Campina Grande", "PB", 446720, 2026),
+    ("2903904", "Bom Jesus da Lapa", "BA", 68869, 2026),
+]
+
+
 def _validar(codigo, uf):
     """A UF declarada precisa bater com a embutida no código.
 
@@ -174,10 +187,10 @@ def seed_capitais():
     de corrigir a si mesma não protege nada; adia.
 
     O que reaplicar significa, dito para não surpreender: os nomes, UFs e
-    populações DESTES 27 municípios voltam ao valor desta lista. Os outros
-    5.543, carregados por `municipios-importar`, não são tocados.
+    populações DESTES municípios voltam ao valor desta lista. Os demais,
+    carregados por `municipios-importar`, não são tocados.
     """
-    return carregar(CAPITAIS)
+    return carregar(CAPITAIS + MUNICIPIOS_DE_DEMONSTRACAO)
 
 
 def importar_csv(caminho):
