@@ -30,34 +30,45 @@ from models.municipio import Municipio, uf_do_codigo
 # Capitais, para o sistema nascer utilizável. O código IBGE carrega a UF nos
 # dois primeiros dígitos, e `_validar` confere isso na carga — um código trocado
 # não passa silenciosamente.
+#
+# A população é a **estimativa oficial do IBGE para 1º de julho de 2026**,
+# obtida da tabela 6579 do SIDRA (variável 9324, "População residente
+# estimada"):
+#
+#     https://apisidra.ibge.gov.br/values/t/6579/n6/all/v/9324/p/last
+#
+# O ano viaja junto com o número porque a estimativa é datada: comparar taxa
+# calculada sobre denominadores de anos diferentes produz um número de
+# aparência normal e significado nenhum. Quando a estimativa nova sair, é esta
+# lista que se refaz — e o ano na tela passa a dizer outro.
 CAPITAIS = [
-    ("1100205", "Porto Velho", "RO"),
-    ("1200401", "Rio Branco", "AC"),
-    ("1302603", "Manaus", "AM"),
-    ("1400100", "Boa Vista", "RR"),
-    ("1501402", "Belém", "PA"),
-    ("1600303", "Macapá", "AP"),
-    ("1721000", "Palmas", "TO"),
-    ("2111300", "São Luís", "MA"),
-    ("2211001", "Teresina", "PI"),
-    ("2304400", "Fortaleza", "CE"),
-    ("2408102", "Natal", "RN"),
-    ("2507507", "João Pessoa", "PB"),
-    ("2611606", "Recife", "PE"),
-    ("2704302", "Maceió", "AL"),
-    ("2800308", "Aracaju", "SE"),
-    ("2927408", "Salvador", "BA"),
-    ("3106200", "Belo Horizonte", "MG"),
-    ("3205309", "Vitória", "ES"),
-    ("3304557", "Rio de Janeiro", "RJ"),
-    ("3550308", "São Paulo", "SP"),
-    ("4106902", "Curitiba", "PR"),
-    ("4205407", "Florianópolis", "SC"),
-    ("4314902", "Porto Alegre", "RS"),
-    ("5002704", "Campo Grande", "MS"),
-    ("5103403", "Cuiabá", "MT"),
-    ("5208707", "Goiânia", "GO"),
-    ("5300108", "Brasília", "DF"),
+    ("1100205", "Porto Velho", "RO", 520379, 2026),
+    ("1200401", "Rio Branco", "AC", 390058, 2026),
+    ("1302603", "Manaus", "AM", 2327101, 2026),
+    ("1400100", "Boa Vista", "RR", 500965, 2026),
+    ("1501402", "Belém", "PA", 1396157, 2026),
+    ("1600303", "Macapá", "AP", 491987, 2026),
+    ("1721000", "Palmas", "TO", 333154, 2026),
+    ("2111300", "São Luís", "MA", 1090229, 2026),
+    ("2211001", "Teresina", "PI", 908012, 2026),
+    ("2304400", "Fortaleza", "CE", 2582360, 2026),
+    ("2408102", "Natal", "RN", 783196, 2026),
+    ("2507507", "João Pessoa", "PB", 906093, 2026),
+    ("2611606", "Recife", "PE", 1588983, 2026),
+    ("2704302", "Maceió", "AL", 995134, 2026),
+    ("2800308", "Aracaju", "SE", 623328, 2026),
+    ("2927408", "Salvador", "BA", 2559945, 2026),
+    ("3106200", "Belo Horizonte", "MG", 2415451, 2026),
+    ("3205309", "Vitória", "ES", 343935, 2026),
+    ("3304557", "Rio de Janeiro", "RJ", 6731133, 2026),
+    ("3550308", "São Paulo", "SP", 11911337, 2026),
+    ("4106902", "Curitiba", "PR", 1832183, 2026),
+    ("4205407", "Florianópolis", "SC", 598370, 2026),
+    ("4314902", "Porto Alegre", "RS", 1388791, 2026),
+    ("5002704", "Campo Grande", "MS", 970843, 2026),
+    ("5103403", "Cuiabá", "MT", 698917, 2026),
+    ("5208707", "Goiânia", "GO", 1511709, 2026),
+    ("5300108", "Brasília", "DF", 3009996, 2026),
 ]
 
 
@@ -84,7 +95,13 @@ def _populacao(bruto, codigo):
     produz divisão por zero ou taxa absurda. Ausência tem de continuar ausência
     o caminho inteiro.
     """
-    texto = (bruto or "").strip().replace(".", "").replace(" ", "")
+    # `bruto` chega como texto quando vem de CSV e como inteiro quando vem de
+    # CAPITAIS. E o teste é por `is None`, não por `or ""`: com `or`, o inteiro
+    # zero viraria "coluna ausente" e passaria como município sem denominador,
+    # em vez de ser recusado como o valor inutilizável que é.
+    if bruto is None:
+        return None, None
+    texto = str(bruto).strip().replace(".", "").replace(" ", "")
     if not texto:
         return None, None
     if not texto.isdigit():
@@ -147,9 +164,19 @@ def carregar(linhas):
 
 
 def seed_capitais():
-    """Idempotente: só insere o que falta."""
-    if Municipio.query.count():
-        return 0, []
+    """Reaplica as capitais. Idempotente porque `carregar` é upsert.
+
+    A versão anterior desistia se a tabela tivesse qualquer linha. O efeito
+    disso só apareceu quando a população entrou na lista: numa base que já
+    tinha as capitais — isto é, em toda base existente — o `seed` não
+    acrescentava o denominador, e o comparativo territorial continuava
+    mostrando "—" sem que nada explicasse por quê. Guarda que impede a semente
+    de corrigir a si mesma não protege nada; adia.
+
+    O que reaplicar significa, dito para não surpreender: os nomes, UFs e
+    populações DESTES 27 municípios voltam ao valor desta lista. Os outros
+    5.543, carregados por `municipios-importar`, não são tocados.
+    """
     return carregar(CAPITAIS)
 
 

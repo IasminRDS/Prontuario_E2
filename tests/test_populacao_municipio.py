@@ -27,24 +27,36 @@ POPULACAO_SALVADOR = 2417678      # valor de exemplo, só para exercitar a conta
 
 @pytest.fixture
 def salvador_com_populacao(app, dois_municipios):
-    """Carrega o denominador de Salvador e o remove ao final.
+    """Salvador COM denominador e Recife SEM, para os dois ramos na mesma tela.
 
-    Recife fica de propósito SEM população: os dois estados do comparativo
-    exercitam os dois ramos na mesma tela.
+    Os dois lados são postos aqui de propósito, inclusive a ausência. A versão
+    anterior só carregava Salvador e contava com Recife estar vazio porque a
+    semente ainda não trazia população — e quando ela passou a trazer, três
+    casos falharam de uma vez. Teste que depende do que a semente por acaso
+    não tem mede o acaso.
     """
     from extensions import db
     from models.municipio import Municipio
 
+    original = {}
     with app.app_context():
-        municipio = db.session.get(Municipio, SALVADOR[0])
-        municipio.populacao = POPULACAO_SALVADOR
-        municipio.populacao_ano = 2024
+        for codigo in (SALVADOR[0], RECIFE[0]):
+            municipio = db.session.get(Municipio, codigo)
+            original[codigo] = (municipio.populacao, municipio.populacao_ano)
+
+        salvador = db.session.get(Municipio, SALVADOR[0])
+        salvador.populacao, salvador.populacao_ano = POPULACAO_SALVADOR, 2024
+
+        recife = db.session.get(Municipio, RECIFE[0])
+        recife.populacao, recife.populacao_ano = None, None
         db.session.commit()
+
     yield POPULACAO_SALVADOR
+
     with app.app_context():
-        municipio = db.session.get(Municipio, SALVADOR[0])
-        municipio.populacao = None
-        municipio.populacao_ano = None
+        for codigo, (populacao, ano) in original.items():
+            municipio = db.session.get(Municipio, codigo)
+            municipio.populacao, municipio.populacao_ano = populacao, ano
         db.session.commit()
 
 
