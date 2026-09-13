@@ -60,6 +60,19 @@ class Municipio(db.Model):
     populacao = db.Column(db.Integer, nullable=True)
     populacao_ano = db.Column(db.Integer, nullable=True)
 
+    # Referência externa: quanto o MUNICÍPIO inteiro produz de evento vital,
+    # independentemente de quem atendeu. É o termo que falta para a pergunta
+    # deixar de ser "onde minha rede trabalhou mais" e passar a ser "como minha
+    # rede se situa no município".
+    #
+    # `vitais_fonte` existe porque a procedência é parte do dado. Registro Civil
+    # (IBGE) e SIM/SINASC (DATASUS) contam o mesmo evento por vias diferentes e
+    # NÃO coincidem; um número sem a fonte não é comparável com nada.
+    nascidos_vivos = db.Column(db.Integer, nullable=True)
+    obitos = db.Column(db.Integer, nullable=True)
+    vitais_ano = db.Column(db.Integer, nullable=True)
+    vitais_fonte = db.Column(db.String(60), nullable=True)
+
     def por_cem_mil(self, quantidade):
         """Taxa por 100 mil habitantes, ou None se não há denominador.
 

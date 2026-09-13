@@ -141,6 +141,52 @@
     </div>
   </div>
 
+  {# Referência externa em tabela SEPARADA, e não como mais colunas da tabela
+     acima. São grandezas de naturezas diferentes: lá é a produção DESTA REDE,
+     isolada por unidade e restrita ao período escolhido; aqui é o município
+     INTEIRO num ano fechado, de outra fonte. Lado a lado na mesma linha, com
+     a mesma aparência, elas se leriam como se fossem comparáveis — e não são.
+     A diferença entre as duas é justamente a informação. #}
+  {% if fonte_externa %}
+  <div class="card">
+    <div class="card__header">
+      <h3>Referência externa do município — {{ ano_externo }}</h3>
+    </div>
+    <div class="card__body">
+      <p class="field__hint" style="margin-top:0">
+        Eventos vitais do <strong>município inteiro</strong>, de todas as redes,
+        no ano de {{ ano_externo }}. Fonte: <strong>{{ fonte_externa }}</strong>.
+        Não é o SIM/SINASC do DATASUS — contam os mesmos fatos por outra via, e
+        os totais não coincidem.
+      </p>
+      <div class="table-wrap" style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Município</th>
+              <th style="text-align:right">Nascidos vivos</th>
+              <th style="text-align:right">Óbitos</th>
+              <th style="text-align:right">População</th>
+              <th style="text-align:right">Sua rede no período</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for linha in municipios %}
+              <tr>
+                <td>{{ linha.nome }}/{{ linha.uf }}</td>
+                <td style="text-align:right">{{ linha.nascidos_vivos if linha.nascidos_vivos is not none else '—' }}</td>
+                <td style="text-align:right">{{ linha.obitos if linha.obitos is not none else '—' }}</td>
+                <td style="text-align:right">{{ linha.populacao or '—' }}</td>
+                <td style="text-align:right"><strong>{{ linha.total }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# Barras em CSS puro, como no painel epidemiológico: a tela precisa
      funcionar em rede restrita de unidade de saúde. #}
   <div class="card">

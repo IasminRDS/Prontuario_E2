@@ -296,6 +296,59 @@ def _registrar_cli(app):
         if len(erros) > 20:
             print(f"  ... e mais {len(erros) - 20} linha(s) recusada(s)")
 
+    @app.cli.command("municipios-ibge")
+    @click.option("--ano", type=int, default=2024, show_default=True,
+                  help="Ano de referência dos eventos vitais.")
+    @click.option("--populacao/--sem-populacao", default=True,
+                  show_default=True, help="Atualiza também o denominador.")
+    def municipios_ibge(ano, populacao):
+        """Busca no IBGE os eventos vitais e a população dos municípios.
+
+        Fonte: API de agregados do IBGE — tabelas 2609 (nascidos vivos), 2654
+        (óbitos) e 6579 (população estimada). **Não é o DATASUS:** os eventos
+        vêm do Registro Civil, e o SIM/SINASC conta os mesmos fatos por outra
+        via, com totais que não coincidem.
+
+        Roda sob demanda, nunca durante uma requisição: relatório que depende
+        de API externa para renderizar quebra quando a rede da unidade cai.
+        """
+        from models.municipio import Municipio
+        from services import ibge
+
+        codigos = [c for (c,) in db.session.query(Municipio.codigo_ibge).all()]
+        if not codigos:
+            raise click.ClickException(
+                "nenhum município cadastrado; rode `flask seed` antes")
+        print(f"consultando o IBGE para {len(codigos)} município(s)...")
+
+        try:
+            vitais = ibge.eventos_vitais(codigos, ano)
+            habitantes = ibge.populacao(codigos) if populacao else {}
+        except ibge.ErroIBGE as erro:
+            raise click.ClickException(str(erro))
+
+        atualizados = 0
+        for codigo in codigos:
+            municipio = db.session.get(Municipio, codigo)
+            dado = vitais.get(codigo)
+            if dado:
+                municipio.nascidos_vivos = dado["nascidos"]
+                municipio.obitos = dado["obitos"]
+                municipio.vitais_ano = ano
+                municipio.vitais_fonte = "IBGE/Registro Civil"
+                atualizados += 1
+            if codigo in habitantes:
+                municipio.populacao, municipio.populacao_ano = habitantes[codigo]
+        db.session.commit()
+
+        print(f"eventos vitais de {ano}: {atualizados} município(s)")
+        if populacao:
+            print(f"população: {len(habitantes)} município(s)")
+        sem = len(codigos) - atualizados
+        if sem:
+            print(f"sem dado no IBGE para {ano}: {sem} — ficam como '—' na tela, "
+                  "que é diferente de zero")
+
     @app.cli.command("pacientes-deduplicar")
     def pacientes_deduplicar():
         """Procura cadastros duplicados e enfileira para revisão humana.

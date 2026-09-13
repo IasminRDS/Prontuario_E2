@@ -503,6 +503,8 @@ def territorio():
             db.session.query(
                 Municipio.codigo_ibge, Municipio.nome, Municipio.uf,
                 Municipio.populacao, Municipio.populacao_ano,
+                Municipio.nascidos_vivos, Municipio.obitos,
+                Municipio.vitais_ano, Municipio.vitais_fonte,
                 func.count(model.id),
             )
             # A tabela de fatos é a origem, e não `municipios`, que só entra
@@ -516,13 +518,18 @@ def territorio():
                   Municipio.codigo_ibge == UnidadeSaude.municipio_ibge)
             .filter(coluna.between(di, df))
             .group_by(Municipio.codigo_ibge, Municipio.nome, Municipio.uf,
-                      Municipio.populacao, Municipio.populacao_ano)
+                      Municipio.populacao, Municipio.populacao_ano,
+                      Municipio.nascidos_vivos, Municipio.obitos,
+                      Municipio.vitais_ano, Municipio.vitais_fonte)
         )
-        for ibge, nome, sigla, populacao, ano, quantidade in \
-                _territorial(consulta).all():
+        for (ibge, nome, sigla, populacao, ano, nascidos, obitos,
+             vitais_ano, vitais_fonte,
+             quantidade) in _territorial(consulta).all():
             linha = linhas.setdefault(ibge, {
                 "codigo_ibge": ibge, "nome": nome, "uf": sigla, "total": 0,
                 "populacao": populacao, "populacao_ano": ano,
+                "nascidos_vivos": nascidos, "obitos": obitos,
+                "vitais_ano": vitais_ano, "vitais_fonte": vitais_fonte,
             })
             linha[chave] = quantidade
             linha["total"] += quantidade
@@ -610,6 +617,10 @@ def territorio():
         totais=totais,
         ordem=ordem,
         sem_denominador=sem_denominador,
+        fonte_externa=next((l.get("vitais_fonte") for l in municipios
+                            if l.get("vitais_fonte")), None),
+        ano_externo=next((l.get("vitais_ano") for l in municipios
+                          if l.get("vitais_ano")), None),
         data_ini=data_ini,
         data_fim=data_fim,
         escopo=_escopo_do_usuario_legivel(),

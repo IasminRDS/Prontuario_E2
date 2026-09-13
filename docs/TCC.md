@@ -951,12 +951,12 @@ Quadro — Dimensão do artefato construído
 |---|---|
 | Módulos funcionais (*blueprints*) | 45 |
 | Rotas expostas | 214 — 153 aceitam GET; 105, método de mutação |
-| Tabelas no modelo de dados | 42, com 534 colunas e 114 chaves estrangeiras |
+| Tabelas no modelo de dados | 42, com 538 colunas e 114 chaves estrangeiras |
 | Tabelas sob política de RLS | 23 |
-| Migrações de esquema versionadas | 15 |
+| Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 576, em 45 arquivos |
+| Casos de teste automatizados | 582, em 46 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1166,8 +1166,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **576 casos de teste**, provenientes de 366
-funções distribuídas em 45 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **582 casos de teste**, provenientes de 371
+funções distribuídas em 46 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -2260,7 +2260,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 576 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 582 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

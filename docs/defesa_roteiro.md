@@ -232,7 +232,7 @@ de não repúdio, que fecha no slide 8 e no 14.
 - A figura de camadas da monografia (usuário → aplicação → ORM → PostgreSQL),
   com o ponto de aplicação de cada controle marcado
 - Números do quadro de dimensão, em rodapé discreto: **45 módulos · 214 rotas ·
-  42 tabelas · 117 telas · 15 migrações**
+  42 tabelas · 117 telas · 16 migrações**
 
 **Fala (1 min 15)**
 
@@ -243,7 +243,7 @@ de não repúdio, que fecha no slide 8 e no 14.
 > cidadão e conformidade; e gestão e plataforma.
 >
 > A dimensão está registrada porque condiciona a leitura dos resultados: 45
-> módulos, 214 rotas, 42 tabelas, 117 telas, 15 migrações versionadas. **A
+> módulos, 214 rotas, 42 tabelas, 117 telas, 16 migrações versionadas. **A
 > cobertura de um controle sobre 42 tabelas e 214 rotas é afirmação de natureza
 > diferente da mesma cobertura sobre meia dúzia de telas de demonstração.**
 >
@@ -355,7 +355,7 @@ mais impressiona banca de gestão.
   verificar controles de segurança."**
 - Abaixo, quatro ícones/linhas: instrumentar · exercitar · confrontar nos dois
   sentidos · medir cobertura como mapa
-- Números: **576 casos · 366 funções · 45 arquivos · dois bancos**
+- Números: **582 casos · 371 funções · 46 arquivos · dois bancos**
 
 **Fala (1 min 15)**
 
@@ -371,7 +371,7 @@ mais impressiona banca de gestão.
 > conciliam telas e rotas **nos dois sentidos**; e que consultam o catálogo do
 > PostgreSQL para ver se as políticas estão de fato ativas.
 >
-> São 576 casos de teste, provenientes de 366 funções em 45 arquivos, executados
+> São 582 casos de teste, provenientes de 371 funções em 46 arquivos, executados
 > integralmente sobre os dois bancos usados no projeto.
 >
 > E acrescentei a medição de cobertura de execução — **não como meta percentual,
@@ -888,7 +888,7 @@ achados já registrados. As classes se sobrepõem em três casos, e mantive as
 sobreposições registradas em vez de forçar exclusividade, porque elas marcam
 exatamente os achados em que dois mecanismos se somaram — que são os mais graves.
 
-### 13. Como você sabe que os 576 casos são suficientes?
+### 13. Como você sabe que os 582 casos são suficientes?
 
 **Curta.** Não sei, e o trabalho não afirma isso. Suficiência não é demonstrável.
 O que os casos garantem é outra coisa: que um defeito de qualquer das cinco
@@ -1065,7 +1065,7 @@ externa, que registra total, último identificador e resumo final. Guardado um
 > escopo territorial. A auditoria registra leituras e escritas, encadeadas por
 > hash. E o backup tem validação automatizada de restauração.
 >
-> A verificação — 576 casos de teste — revelou dezenove defeitos, e todos
+> A verificação — 582 casos de teste — revelou dezenove defeitos, e todos
 > compartilham uma propriedade: **nenhum gera mensagem de erro**. Entre eles, o
 > Row-Level Security estava corretamente implementado e cinco tabelas clínicas
 > centrais estavam integralmente fora dele, enquanto a documentação afirmava
@@ -1111,7 +1111,7 @@ uma delas entrega à banca uma contradição contra o próprio documento.
   ISO/IEC 27000; falta prova oponível ao operador.
 
 **Sobre os testes**
-- ❌ "576 testes provam que não há mais defeitos." → provam que um defeito das
+- ❌ "582 testes provam que não há mais defeitos." → provam que um defeito das
   classes conhecidas reprova a execução. Suficiência não é demonstrável.
 - ❌ "A cobertura de testes é alta." → cobertura foi usada como **mapa**, não
   como meta; percentual não mede qualidade.
