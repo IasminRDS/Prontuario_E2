@@ -25,7 +25,7 @@
 
 <form method="get" class="filters card" style="padding:1rem">
   <div class="form-grid">
-    <div class="field col-3">
+    <div class="field col-4">
       <label class="field__label" for="abrangencia">Abrangência</label>
       <select class="input" id="abrangencia" name="abrangencia">
         {% for valor, rotulo in abrangencias %}
@@ -34,7 +34,7 @@
       </select>
     </div>
 
-    <div class="field col-3">
+    <div class="field col-4">
       <label class="field__label" for="uf">Estado</label>
       <select class="input" id="uf" name="uf">
         <option value="">Todos</option>
@@ -45,7 +45,7 @@
       <span class="field__hint">Usado quando a abrangência é Estado.</span>
     </div>
 
-    <div class="field col-3">
+    <div class="field col-4">
       <label class="field__label" for="municipio">Município</label>
       <select class="input" id="municipio" name="municipio">
         <option value="">Todos</option>
@@ -58,7 +58,7 @@
       <span class="field__hint">Só municípios com unidade cadastrada.</span>
     </div>
 
-    <div class="field col-3">
+    <div class="field col-6">
       <label class="field__label" for="data_ini">Período</label>
       <div style="display:flex;gap:.4rem">
         <input class="input" type="date" id="data_ini" name="data_ini" value="{{ data_ini }}">
@@ -66,7 +66,7 @@
       </div>
     </div>
 
-    <div class="field col-3">
+    <div class="field col-6">
       <label class="field__label" for="ordem">Ordenar por</label>
       <select class="input" id="ordem" name="ordem">
         <option value="total" {% if ordem != 'taxa' %}selected{% endif %}>Contagem total</option>

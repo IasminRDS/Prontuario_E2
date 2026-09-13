@@ -58,8 +58,11 @@
             <td><strong>{{ u.nome }}</strong></td>
             <td>{{ u.email }}</td>
             <td><span class="pill">{{ u.perfil or '-' }}</span></td>
-            <td>{{ u.unidade or '-' }}</td>
-            <td>{{ u.ultimo_acesso or '—' }}</td>
+            {# `u.unidade` é a RELAÇÃO, não o nome: impresso direto, o Jinja
+               chama o __repr__ e a tela mostrava "<UnidadeSaude UBS Central>".
+               Não dá erro, não fica em branco — mostra lixo com cara de dado. #}
+            <td>{{ u.unidade.nome if u.unidade else '—' }}</td>
+            <td>{{ u.ultimo_acesso.strftime('%d/%m/%Y %H:%M') if u.ultimo_acesso else '—' }}</td>
             <td>
               {% if u.ativo %}
                 <span class="pill ok">Ativo</span>

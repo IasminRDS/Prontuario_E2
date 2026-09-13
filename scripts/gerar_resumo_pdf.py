@@ -238,7 +238,7 @@ def historia():
     h.append(tabela(
         None,
         [["Módulos (blueprints)", "<b>45</b>", "Testes",
-          "<b>574</b> casos, em 364 funções e 44 arquivos"],
+          "<b>576</b> casos, em 366 funções e 45 arquivos"],
          ["Rotas", "<b>214</b> (153 GET, 105 mutação)", "Tabelas sob RLS", "<b>23</b>"],
          ["Telas (templates)", "<b>117</b>", "Permissões RBAC", "<b>27</b>, em 7 perfis"],
          ["Modelos de dados", "<b>42</b> tabelas, 534 colunas, 114 FKs", "Migrações", "<b>15</b>"],
