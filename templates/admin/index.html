@@ -36,8 +36,12 @@
   </div>
 </div>
 
-<div class="grid-2">
-  <section class="card">
+{# As duas seções eram lado a lado num `grid-2`. Com a coluna de alcance a
+   tabela de usuários passou a oito colunas e a metade da largura já não a
+   comportava: `Ações` saía do quadro e só se alcançava rolando na horizontal —
+   o botão de editar ficava escondido numa tela cuja função é editar. #}
+<div>
+  <section class="card mb-20">
     <h3>Usuários do Sistema</h3>
     <div class="table-wrap">
       <table>
@@ -46,7 +50,8 @@
             <th>Nome</th>
             <th>E-mail</th>
             <th>Perfil</th>
-            <th>Unidade</th>
+            <th>Lotação</th>
+            <th>Alcance</th>
             <th>Último acesso</th>
             <th>Status</th>
             <th style="width:170px;">Ações</th>
@@ -62,6 +67,11 @@
                chama o __repr__ e a tela mostrava "<UnidadeSaude UBS Central>".
                Não dá erro, não fica em branco — mostra lixo com cara de dado. #}
             <td>{{ u.unidade.nome if u.unidade else '—' }}</td>
+            {# Lotação é onde a pessoa ESCREVE; alcance é o que ela ENXERGA. As
+               duas eram a mesma coluna, e um gestor estadual ficava
+               indistinguível do recepcionista da mesma unidade — a diferença
+               que mais importa na tela de contas era a única invisível nela. #}
+            <td><span class="pill">{{ escopos[u.id] }}</span></td>
             <td>{{ u.ultimo_acesso.strftime('%d/%m/%Y %H:%M') if u.ultimo_acesso else '—' }}</td>
             <td>
               {% if u.ativo %}
@@ -82,7 +92,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="muted">Nenhum usuário cadastrado.</td></tr>
+          <tr><td colspan="8" class="muted">Nenhum usuário cadastrado.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import (Blueprint, abort, flash, redirect, render_template, request,
+                   url_for)
 from flask_login import login_required, current_user
 from models.user import User
 from models.audit_log import AuditLog
@@ -6,8 +7,10 @@ from models.unidade_saude import UnidadeSaude
 from database.db import db
 from utils.rbac import requer_permissao
 from utils.security import admin_requerido
-from utils.rbac import SUPER_ADMIN, _normalizar, perfis_atribuiveis
+from utils.rbac import (RECEPCAO, SUPER_ADMIN, _normalizar,
+                        perfis_atribuiveis)
 from utils.audit import auditar_aqui
+from utils import territorio
 from datetime import datetime
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -19,15 +22,78 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @requer_permissao("user:manage")
 def index():
     usuarios = User.query.order_by(User.nome).all()
+    # O alcance territorial de cada conta, na listagem. A tela mostrava a
+    # unidade de lotação e mais nada — e lotação não é alcance: um gestor
+    # estadual lotado na UBS Central aparecia igualzinho ao recepcionista da
+    # mesma UBS, que é justamente a diferença que interessa ver de relance.
+    escopos = {u.id: territorio.descrever(u) for u in usuarios}
     total_ativos = sum(1 for u in usuarios if u.ativo)
     total_inativos = sum(1 for u in usuarios if not u.ativo)
     logs_recentes = AuditLog.query.order_by(AuditLog.criado_em.desc()).limit(20).all()
     return render_template(
         "admin/index.html",
         usuarios=usuarios,
+        escopos=escopos,
         total_ativos=total_ativos,
         total_inativos=total_inativos,
         logs_recentes=logs_recentes,
+    )
+
+
+# --------------------------------------------------------------------------
+# Gestão de contas é a porta pela qual se sai do próprio território.
+#
+# Duas metades da autorização moram nesta tela: o PERFIL, que diz o que a
+# pessoa pode fazer, e o ESCOPO TERRITORIAL, que diz sobre quais registros. Até
+# aqui só a primeira aparecia, e a segunda se editava com `UPDATE` no banco —
+# o controle que a monografia apresenta como central não tinha tela.
+#
+# Abrir o escopo numa tela abre uma porta de escalação: um administrador de
+# unidade criaria um usuário com alcance estadual e entraria com ele. As três
+# verificações abaixo são a fechadura, e valem tanto na criação quanto na
+# edição:
+#
+#   1. o perfil concedido tem de estar em `perfis_atribuiveis` — a regra já
+#      existia e só era aplicada à LISTA da tela, nunca ao que chegava no POST;
+#   2. o território concedido tem de caber no de quem concede
+#      (`utils.territorio`);
+#   3. não se edita quem não se poderia criar — sem isto, um administrador
+#      trocaria a senha de um SuperAdmin e entraria como ele, sem nunca
+#      precisar conceder perfil nenhum.
+# --------------------------------------------------------------------------
+def _escopo_de_quem_concede():
+    """O escopo de quem está concedendo, pela MESMA função que o RLS usa.
+
+    Ler o escopo de outro jeito aqui faria a tela autorizar concessões que o
+    banco depois trataria de outra forma — divergência que não gera erro, só
+    comportamento inexplicável meses depois.
+    """
+    from utils.rls import escopo_do_usuario
+
+    return escopo_do_usuario(current_user)
+
+
+def _concediveis():
+    return {p for p, _ in perfis_atribuiveis(current_user.perfil)}
+
+
+def _perfil_valido(enviado, atual=None):
+    """O perfil que chegou no POST, se quem está logado pode concedê-lo."""
+    enviado = _normalizar(enviado) or atual
+    return enviado if enviado in _concediveis() else None
+
+
+def _formulario(usuario, escopo):
+    return render_template(
+        "admin/usuario_form.html",
+        usuario=usuario,
+        perfis=perfis_atribuiveis(current_user.perfil),
+        perfil_atual=_normalizar(usuario.perfil) if usuario else None,
+        perfil_padrao=RECEPCAO,
+        super_admin=SUPER_ADMIN,
+        escopo_proprio=escopo,
+        rotulo_do_escopo=territorio.descrever(current_user),
+        **territorio.opcoes(escopo),
     )
 
 
@@ -36,49 +102,57 @@ def index():
 @admin_requerido
 @requer_permissao("user:manage")
 def novo_usuario():
-    unidades = (
-        UnidadeSaude.query.filter_by(ativo=True).order_by(UnidadeSaude.nome).all()
-    )
+    escopo = _escopo_de_quem_concede()
     if request.method == "POST":
+        # Os campos territoriais são lidos um a um, e não com `request.form`
+        # inteiro, de propósito: `test_contrato_formularios` compara
+        # estaticamente o que a tela envia com o que a rota lê, e desiste da
+        # comparação quando vê o dicionário usado em atacado. Passar
+        # `request.form` adiante desligaria o detector nesta tela — que é
+        # justamente a que ganhou quatro campos novos.
+        pretendido = {
+            "unidade_id": request.form.get("unidade_id"),
+            "municipio_ibge": request.form.get("municipio_ibge"),
+            "regional_id": request.form.get("regional_id"),
+            "uf": request.form.get("uf"),
+        }
+        nivel = request.form.get("nivel_acesso")
+
         email = request.form.get("email", "").strip().lower()
         if User.query.filter_by(email=email).first():
             flash("E-mail já cadastrado.", "danger")
-            return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades,
-                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
-            )
+            return _formulario(None, escopo)
+
         senha = (request.form.get("senha") or "").strip()
         if len(senha) < 8:
             # Sem senha padrão fixa: 'Mudar@123' em todo cadastro é uma
             # credencial conhecida por qualquer um que leia o repositório.
             flash("Defina uma senha inicial de ao menos 8 caracteres.", "warning")
-            return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades,
-                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
-            )
+            return _formulario(None, escopo)
 
-        perfil = request.form.get("perfil", "recepcionista")
-        unidade_id = request.form.get("unidade_id") or None
+        perfil = _perfil_valido(request.form.get("perfil"))
+        if perfil is None:
+            # A restrição vivia só no `{% for %}` da tela. Um POST montado à
+            # mão com `perfil=SuperAdmin` passava direto — e SuperAdmin
+            # atravessa todo o isolamento territorial pelo perfil, o que
+            # tornaria decorativo qualquer cuidado com o escopo logo abaixo.
+            flash("Perfil de acesso inválido ou fora do que você pode conceder.",
+                  "danger")
+            return _formulario(None, escopo)
 
-        # Usuário com nível de acesso UNIDADE (o padrão) e sem unidade vinculada
-        # não enxerga registro clínico nenhum: o Row-Level Security compara
-        # `unidade_id` com NULL, que nunca é verdadeiro. Antes do RLS isso
-        # passava despercebido; agora é um cadastro nascido inutilizável.
-        if not unidade_id and _normalizar(perfil) != SUPER_ADMIN:
-            flash("Selecione a unidade do usuário: sem ela, ele não terá acesso "
-                  "a nenhum registro clínico.", "warning")
-            return render_template(
-                "admin/usuario_form.html", usuario=None, unidades=unidades,
-                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None
-            )
+        if perfil == SUPER_ADMIN:
+            # Operador da plataforma atravessa o isolamento pelo PERFIL —
+            # `escopo_do_usuario` decide por ele antes de olhar `nivel_acesso`.
+            # Pedir escopo territorial aqui seria pedir um dado que nada lê.
+            campos = dict(territorio.SEM_TERRITORIO)
+        else:
+            campos, erro = territorio.resolver(nivel, pretendido, escopo)
+            if erro:
+                flash(erro, "warning")
+                return _formulario(None, escopo)
 
-        user = User(
-            nome=request.form.get("nome", "").strip(),
-            email=email,
-            perfil=perfil,
-            unidade_id=unidade_id,
-            ativo=True,
-        )
+        user = User(nome=request.form.get("nome", "").strip(), email=email,
+                    perfil=perfil, ativo=True, **campos)
         user.set_password(senha)
         db.session.add(user)
         db.session.flush()
@@ -86,8 +160,7 @@ def novo_usuario():
         db.session.commit()
         flash(f"Usuário {user.nome} criado com sucesso!", "success")
         return redirect(url_for("admin.index"))
-    return render_template("admin/usuario_form.html", usuario=None, unidades=unidades,
-                perfis=perfis_atribuiveis(current_user.perfil), perfil_atual=None)
+    return _formulario(None, escopo)
 
 
 @admin_bp.route("/usuarios/<int:id>/editar", methods=["GET", "POST"])
@@ -96,11 +169,48 @@ def novo_usuario():
 @requer_permissao("user:manage")
 def editar_usuario(id):
     user = User.query.get_or_404(id)
-    unidades = UnidadeSaude.query.filter_by(ativo=True).order_by(UnidadeSaude.nome).all()
+    escopo = _escopo_de_quem_concede()
+
+    # Quem não pode CRIAR um SuperAdmin também não pode editar um. Sem esta
+    # linha a defesa do perfil seria contornável pelo caminho mais curto: abrir
+    # o SuperAdmin existente, definir uma senha nova e entrar como ele — sem
+    # precisar conceder perfil nenhum.
+    if _normalizar(user.perfil) not in _concediveis():
+        abort(403)
+    # E o mesmo pelo território: administrador de unidade que editasse usuário
+    # de outra unidade poderia trazê-lo para a sua, ou ler o que ele alcança
+    # pela via de trocar-lhe a senha.
+    if user.unidade_id and not territorio.contido(
+            territorio.territorio_da_unidade(user.unidade), escopo):
+        abort(403)
+
     if request.method == "POST":
+        pretendido = {
+            "unidade_id": request.form.get("unidade_id"),
+            "municipio_ibge": request.form.get("municipio_ibge"),
+            "regional_id": request.form.get("regional_id"),
+            "uf": request.form.get("uf"),
+        }
+        nivel = request.form.get("nivel_acesso")
+
+        perfil = _perfil_valido(request.form.get("perfil"), _normalizar(user.perfil))
+        if perfil is None:
+            flash("Perfil de acesso inválido ou fora do que você pode conceder.",
+                  "danger")
+            return _formulario(user, escopo)
+
+        if perfil == SUPER_ADMIN:
+            campos = dict(territorio.SEM_TERRITORIO)
+        else:
+            campos, erro = territorio.resolver(nivel, pretendido, escopo)
+            if erro:
+                flash(erro, "warning")
+                return _formulario(user, escopo)
+
         user.nome = request.form.get("nome", "").strip()
-        user.perfil = request.form.get("perfil", user.perfil)
-        user.unidade_id = request.form.get("unidade_id") or None
+        user.perfil = perfil
+        for campo, valor in campos.items():
+            setattr(user, campo, valor)
         user.ativo = "ativo" in request.form
         nova_senha = request.form.get("senha", "").strip()
         if nova_senha:
@@ -109,10 +219,7 @@ def editar_usuario(id):
         db.session.commit()
         flash("Usuário atualizado!", "success")
         return redirect(url_for("admin.index"))
-    return render_template("admin/usuario_form.html", usuario=user,
-                           unidades=unidades,
-                           perfis=perfis_atribuiveis(current_user.perfil),
-                           perfil_atual=_normalizar(user.perfil))
+    return _formulario(user, escopo)
 
 
 # `toggle_usuario` vivia aqui e foi removido: `ativar_usuario` e

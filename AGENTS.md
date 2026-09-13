@@ -346,6 +346,58 @@ isso o `pg_dump` se recusa a rodar, e com razão — ele não quer produzir dump
 silenciosamente parcial. Em produção, o certo é um papel dedicado com `BYPASSRLS`
 fazendo o dump, para que a completude não dependa de uma variável de ambiente.
 
+### Concessão do escopo, e a porta que ela abre
+
+O escopo territorial se edita em `/admin/usuarios/<id>/editar`, num cartão
+separado do perfil. A separação é conceitual e não estética: o perfil diz **o
+que** a pessoa pode fazer, o escopo diz **sobre quais registros**, e a
+autorização é o par. A mesma tela distingue **lotação** (a unidade onde a pessoa
+escreve) de **alcance** (o que ela enxerga) — eram a mesma coluna na listagem,
+e gestor estadual ficava indistinguível do recepcionista da mesma unidade.
+
+Abrir esse campo numa tela abre uma porta de escalação, e `utils/territorio.py`
+é a fechadura: **o território concedido tem de caber dentro do território de
+quem concede**. Sem isso, o administrador de uma unidade criaria um usuário com
+`nivel_acesso = 'ESTADO'`, entraria com ele e leria o estado inteiro — saindo do
+próprio isolamento pela porta de gestão de contas.
+
+A regra é uma só, e **não há tabela de precedência entre os níveis**: um escopo
+estadual não cabe numa regional porque um estado não tem regional a comparar, e
+a comparação falha sozinha. Escrever a ordem à mão seria uma segunda fonte de
+verdade, que envelheceria em silêncio ao surgir um nível novo. O escopo de quem
+concede vem de `utils.rls.escopo_do_usuario` — a **mesma** função que o RLS usa,
+para que a tela não autorize o que o banco depois trataria de outro jeito.
+
+Três coisas que a mesma porta expunha e que ficaram fechadas junto:
+
+- **o perfil que chegava no POST nunca era conferido.** `perfis_atribuiveis` não
+  oferece `SuperAdmin` a quem não é SuperAdmin, e a docstring diz por quê — mas
+  a restrição vivia só no `{% for %}` da tela, e um POST montado à mão criava o
+  operador da plataforma, que atravessa todo o isolamento pelo perfil;
+- **não se edita quem não se poderia criar.** Sem isso a defesa acima era
+  contornável sem conceder perfil nenhum: abrir o SuperAdmin existente, definir
+  uma senha nova, entrar como ele;
+- **`minlength="6"` no campo de senha** contradizia a rota, que exige 8.
+
+`SISTEMA` não é oferecido: `escopo_do_usuario` o rebaixa para `UNIDADE` quando
+vem do cadastro, porque é escopo de processo (CLI, migration, backup) e não de
+gente. Oferecê-lo seria prometer na tela um valor que o banco ignora.
+
+A tela **declara o próprio recorte** em vez de só mostrar uma lista curta:
+política que nega em silêncio é indistinguível de defeito na interface, e quem
+vê uma lista vazia pede mais privilégio em vez de entender o limite. Pela mesma
+razão, só aparecem municípios, regionais e UFs **com unidade cadastrada** —
+escopo sobre território onde a rede não tem unidade não alcança registro nenhum,
+e concedê-lo faria quem concedeu acreditar que abriu um acesso que não abre
+nada. A lista fica limitada pela pegada da rede, não pelos 5.570 municípios.
+
+**Há uma divergência conhecida e ainda aberta:** `utils/security.py`
+(`pode_acessar_paciente`) honra `nivel_acesso == "SISTEMA"` vindo do cadastro, e
+`utils/rls.py` o recusa. Em PostgreSQL o RLS decide e o efeito é nulo; em SQLite,
+que não tem RLS, o valor liberaria acesso nacional. A tela não concede `SISTEMA`,
+então nada novo entra por aqui — mas quem for reconciliar os dois módulos comece
+por `tests/conftest.py`, que semeia o admin da suíte com `SISTEMA` de propósito.
+
 ## Índice mestre de pacientes
 
 Em escala nacional, a mesma pessoa é cadastrada em municípios diferentes — às

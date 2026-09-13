@@ -12,17 +12,17 @@
 {% endblock %}
 
 {% block content %}
+{% set nivel_atual = (usuario.nivel_acesso if usuario else 'UNIDADE') or 'UNIDADE' %}
+{% set e_super = perfil_atual == super_admin %}
 <div style="max-width:640px">
   <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="card">
-      <div class="card-header">
-        <svg width="17" height="17" fill="none" stroke="var(--sus-azul)" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-        </svg>
-        <h3>Dados do Usuário</h3>
-      </div>
+    <div class="card mb-20">
+      {# Só o título no cabeçalho, como no resto dos formulários do sistema:
+         `.card-header` é `justify-content: space-between`, então ícone e título
+         como filhos irmãos eram empurrados para lados opostos do cartão — o
+         título aparecia encostado à direita. #}
+      <div class="card-header"><h3>Dados do Usuário</h3></div>
       <div class="card-body">
         <div class="form-grid form-grid-2">
           <div class="form-group" style="grid-column:1/-1">
@@ -38,23 +38,20 @@
           </div>
           <div class="form-group">
             <label class="form-label">Perfil de acesso <span class="obrigatorio">*</span></label>
-            <select name="perfil" class="form-control" required>
+            <select name="perfil" id="perfil" class="form-control" required>
               {# A lista vem de utils/rbac.perfis_atribuiveis — escrita à mão
                  aqui, oferecia quatro dos sete perfis, e Farmacêutico e Gestor
-                 ficavam impossíveis de criar. #}
+                 ficavam impossíveis de criar. A rota confere o que chega no
+                 POST contra a mesma lista: esconder a opção não é a defesa. #}
+              {# Cadastro novo nasce no perfil de MENOR privilégio. A lista
+                 vem ordenada com o operador da plataforma primeiro, e um
+                 `<select>` sem `selected` marca a primeira opção: o formulário
+                 abria proposto a criar um operador de plataforma, que atravessa
+                 todo o isolamento territorial. Errar por descuido aqui custa
+                 caro; errar para menos só custa um segundo clique. #}
               {% for p, label in perfis %}
-              <option value="{{ p }}" {% if perfil_atual == p %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Unidade de saúde</label>
-            <select name="unidade_id" class="form-control">
-              <option value="">— Selecione —</option>
-              {% for un in unidades %}
-              <option value="{{ un.id }}" {% if usuario and usuario.unidade_id == un.id %}selected{% endif %}>
-                {{ un.nome }}
-              </option>
+              <option value="{{ p }}"
+                      {% if perfil_atual == p or (not perfil_atual and p == perfil_padrao) %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
           </div>
@@ -62,9 +59,12 @@
             <label class="form-label">
               {% if usuario %}Nova senha <span style="font-weight:400;color:var(--cinza-400)">(deixe em branco para manter)</span>{% else %}Senha <span class="obrigatorio">*</span>{% endif %}
             </label>
+            {# `minlength="6"` contradizia a rota, que exige 8 e recusa o
+               cadastro: o navegador aprovava, o servidor reprovava, e quem
+               cadastrava só descobria depois de submeter. #}
             <input type="password" name="senha" class="form-control"
-                   placeholder="{% if usuario %}••••••••{% else %}Mínimo 6 caracteres{% endif %}"
-                   {% if not usuario %}required{% endif %} minlength="6">
+                   placeholder="{% if usuario %}••••••••{% else %}Mínimo 8 caracteres{% endif %}"
+                   {% if not usuario %}required{% endif %} minlength="8">
           </div>
           {% if usuario %}
           <div class="form-group">
@@ -77,16 +77,169 @@
           {% endif %}
         </div>
       </div>
-      <div class="card-footer" style="display:flex;justify-content:flex-end;gap:12px">
-        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary">
-          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-          {% if usuario %}Salvar Alterações{% else %}Criar Usuário{% endif %}
-        </button>
+    </div>
+
+    {# ------------------------------------------------------------------
+       Alcance territorial.
+
+       Fica num cartão separado porque responde a uma pergunta diferente do
+       cartão acima: aquele diz o que a pessoa PODE FAZER, este diz SOBRE QUAIS
+       REGISTROS. As duas metades juntas é que formam a autorização, e é este o
+       campo que o Row-Level Security lê no banco.
+       ------------------------------------------------------------------ #}
+    <div class="card mb-20" id="alcance"
+         {% if e_super %}hidden{% endif %}>
+      <div class="card-header"><h3>Alcance territorial</h3></div>
+      <div class="card-body">
+        {# O recorte de quem concede é declarado, e não deduzido de uma lista
+           curta. Política que nega em silêncio é indistinguível de defeito na
+           tela — e quem vê uma lista vazia pede mais privilégio em vez de
+           entender o limite. #}
+        <p class="muted" style="margin-top:0">
+          {% if escopo_proprio.nivel == 'SISTEMA' %}
+          Você opera a plataforma: pode conceder qualquer alcance.
+          {% else %}
+          Seu próprio acesso é de <strong>{{ rotulo_do_escopo }}</strong>, e você
+          só concede alcance dentro dele.
+          {% endif %}
+          As opções abaixo já vêm recortadas, e o servidor recusa o que passar
+          por fora da tela.
+        </p>
+
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Unidade de lotação <span class="obrigatorio">*</span></label>
+            {# A lotação é onde o usuário ESCREVE; o nível abaixo é o que ele
+               ENXERGA. Confundir as duas era o que fazia gestor municipal ser
+               cadastrado sem unidade e registrar atendimento com `unidade_id`
+               nulo — registro que some de toda tela sob RLS. #}
+            <select name="unidade_id" class="form-control">
+              <option value="">— Selecione —</option>
+              {% for un in unidades %}
+              <option value="{{ un.id }}" {% if usuario and usuario.unidade_id == un.id %}selected{% endif %}>
+                {{ un.nome }}
+              </option>
+              {% endfor %}
+            </select>
+            <small class="muted">Onde ele registra atendimento.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Até onde enxerga <span class="obrigatorio">*</span></label>
+            <select name="nivel_acesso" id="nivel_acesso" class="form-control">
+              {% for n, rotulo in niveis %}
+              <option value="{{ n }}" {% if nivel_atual == n %}selected{% endif %}>{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group escopo-de" data-nivel="MUNICIPIO">
+            <label class="form-label">Município do escopo</label>
+            <select name="municipio_ibge" class="form-control">
+              <option value="">— Selecione —</option>
+              {% for m in municipios %}
+              <option value="{{ m.codigo_ibge }}"
+                      {% if usuario and usuario.municipio_ibge == m.codigo_ibge %}selected{% endif %}>
+                {{ m.nome }}/{{ m.uf }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group escopo-de" data-nivel="REGIONAL">
+            <label class="form-label">Regional de saúde</label>
+            <select name="regional_id" class="form-control">
+              <option value="">— Selecione —</option>
+              {% for r in regionais %}
+              <option value="{{ r.id }}"
+                      {% if usuario and usuario.regional_id == r.id %}selected{% endif %}>
+                {{ r.nome }}{% if r.uf %} ({{ r.uf }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group escopo-de" data-nivel="ESTADO">
+            <label class="form-label">UF do escopo</label>
+            <select name="uf" class="form-control">
+              <option value="">— Selecione —</option>
+              {% for u in ufs %}
+              <option value="{{ u }}" {% if usuario and usuario.uf == u %}selected{% endif %}>{{ u }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# A lista não é dos 5.570 municípios do país: é da pegada da rede.
+           Escopo sobre município sem unidade cadastrada não alcança registro
+           nenhum, e concedê-lo faria quem concedeu acreditar que abriu um
+           acesso que não abre nada. #}
+        <p class="muted" style="margin-bottom:0">
+          Só aparecem municípios, regionais e UFs com unidade de saúde
+          cadastrada — escopo sobre território sem unidade não alcança registro
+          nenhum.
+        </p>
       </div>
+    </div>
+
+    <div class="card mb-20" id="aviso-plataforma"
+         {% if not e_super %}hidden{% endif %}>
+      <div class="card-body">
+        <p class="muted" style="margin:0">
+          <strong>Operador da plataforma</strong> atravessa o isolamento
+          territorial pelo próprio perfil: não há alcance a definir, e os campos
+          territoriais deste cadastro ficam em branco.
+        </p>
+      </div>
+    </div>
+
+    <div class="form-actions" style="justify-content:flex-end">
+      <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        {% if usuario %}Salvar Alterações{% else %}Criar Usuário{% endif %}
+      </button>
     </div>
   </form>
 </div>
+
+<script>
+// Mostra apenas o campo que o nível escolhido pede. Os outros continuam no
+// formulário e são enviados vazios de propósito: a rota zera o que não pertence
+// ao nível, e um campo escondido que guardasse valor antigo faria uma simples
+// troca de nível reativar um escopo que ninguém reviu.
+(function () {
+  var nivel = document.getElementById('nivel_acesso');
+  var perfil = document.getElementById('perfil');
+  var alcance = document.getElementById('alcance');
+  var aviso = document.getElementById('aviso-plataforma');
+  var superAdmin = {{ super_admin|tojson }};
+
+  // Atributo E classe: o atributo é o certo, a classe `hidden` do design
+  // system é o que garante o resultado se alguma regra futura der `display`
+  // ao cartão — um bloco escondido que reaparece aqui mostra campo de escopo
+  // que não vale, e quem cadastra preenche achando que vale.
+  function mostrar(el, sim) {
+    if (!el) { return; }
+    el.hidden = !sim;
+    el.classList.toggle('hidden', !sim);
+  }
+
+  function pintar() {
+    var plataforma = perfil && perfil.value === superAdmin;
+    mostrar(alcance, !plataforma);
+    mostrar(aviso, plataforma);
+    var escolhido = nivel ? nivel.value : 'UNIDADE';
+    document.querySelectorAll('.escopo-de').forEach(function (bloco) {
+      mostrar(bloco, bloco.dataset.nivel === escolhido);
+    });
+  }
+
+  if (nivel) { nivel.addEventListener('change', pintar); }
+  if (perfil) { perfil.addEventListener('change', pintar); }
+  pintar();
+})();
+</script>
 {% endblock %}

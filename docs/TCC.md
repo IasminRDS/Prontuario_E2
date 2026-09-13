@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 583, em 46 arquivos |
+| Casos de teste automatizados | 597, em 47 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1116,6 +1116,21 @@ dimensões produz precisamente a falha analisada em 9.4.4.
 **Perfis implementados:** operação da plataforma (único autorizado a atravessar o
 isolamento entre hospitais), administração de hospital, medicina, enfermagem,
 farmácia, recepção e gestão.
+
+**Concessão do escopo.** As duas dimensões são editáveis na tela de contas, em
+blocos distintos: o perfil responde *o que* a pessoa pode fazer; o escopo, *sobre
+quais registros*. A tela distingue ainda **lotação** — a unidade onde o
+profissional registra atendimento — de **alcance** — o conjunto de unidades que
+ele enxerga; são campos diferentes, e confundi-los produz o cadastro de um gestor
+municipal sem unidade, cujos registros nascem invisíveis sob a política do banco.
+
+A concessão é limitada por uma regra única: **o território concedido deve estar
+contido no território de quem concede**. Sem ela, o formulário que concede
+autorização seria ele próprio uma via de elevação de privilégio — um
+administrador de unidade cadastraria um usuário com alcance estadual e
+autenticar-se-ia com ele. O escopo de quem concede é obtido da mesma função que
+a política do banco consome, de modo que a tela não possa autorizar o que o
+banco trataria de outra forma. O detalhamento está em 9.4.20.
 
 ### 7.4 Auditoria
 
@@ -1337,8 +1352,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **583 casos de teste**, provenientes de 372
-funções distribuídas em 46 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **597 casos de teste**, provenientes de 386
+funções distribuídas em 47 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1399,7 +1414,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os dezenove achados relatados a seguir não constituem uma lista de defeitos
+Os vinte achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1505,7 +1520,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido dezenove defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -1604,6 +1619,12 @@ de qualquer unidade.
 entre hospitais. O alcance ampliado, quando necessário, passa a ser concedido
 pelo escopo territorial — atributo do cadastro do usuário, sujeito a decisão
 administrativa explícita e auditável.
+
+A última afirmação só se tornou verdadeira depois: à época desta correção o
+atributo não era editável por tela alguma, e concedê-lo exigia comando direto no
+banco de dados — intervenção técnica que não passa pela trilha de auditoria da
+aplicação. O achado 9.4.20 trata dessa lacuna e da via de elevação de privilégio
+que fechá-la exigiu.
 
 #### 9.4.6 Achados adicionais relevantes para a gestão
 
@@ -2284,6 +2305,89 @@ tem dois sentidos: nome exigido que não existe na matriz nega todo mundo em
 silêncio; nome na matriz que rota alguma exige promete um controle que não
 existe. As duas ocorreram neste trabalho.
 
+#### 9.4.20 O controle central que nenhuma tela editava
+
+**Achado.** O escopo territorial é apresentado em 7.3 como uma das três
+dimensões do controle de acesso, e é ele que a política do banco de dados lê
+para decidir quais registros cada usuário alcança. A correção descrita em 9.4.5
+afirma que o alcance ampliado passa a ser concedido por esse atributo, "sujeito
+a decisão administrativa explícita e auditável". **A afirmação era metade
+verdadeira:** o atributo existia, a política o consumia, e nenhuma tela do
+sistema o editava. Conceder alcance municipal ou estadual exigia comando direto
+no banco de dados — o que não é decisão administrativa, é intervenção técnica, e
+não deixa registro na trilha de auditoria da aplicação.
+
+O formulário de cadastro de usuário oferecia perfil e unidade de lotação. As duas
+coisas que ele não oferecia eram justamente o nível de acesso territorial e o
+território correspondente.
+
+**Análise.** O achado é de natureza diferente dos anteriores: não há defeito de
+código, e nenhum teste poderia falhar. O mecanismo funciona exatamente como
+descrito. O que faltava era a **operabilidade** do controle — e um controle que
+só se opera por fora do sistema tende, na prática, a não ser operado, ou a ser
+operado sem critério por quem tem acesso ao banco.
+
+A construção da tela, porém, revelou que abri-la sem regra criaria uma via de
+elevação de privilégio nova. Um administrador cujo próprio alcance é de uma
+unidade poderia cadastrar um usuário com alcance estadual, autenticar-se com
+ele e ler o estado inteiro — sem violar nenhuma das regras então existentes,
+porque nenhuma tratava do território concedido. É a mesma estrutura da exceção
+já codificada em 9.4.19 para o perfil de operação da plataforma, aplicada à
+outra metade da autorização.
+
+A revisão da rota expôs ainda que aquela exceção **nunca fora verificada no
+servidor**. A lista de perfis derivada da matriz restringia o que a tela
+*oferecia*; o valor que chegava na submissão não era conferido contra ela. Uma
+requisição construída manualmente com o perfil de operação da plataforma criava
+o usuário — e esse perfil atravessa todo o isolamento territorial, o que tornaria
+decorativa qualquer regra sobre escopo. Pelo mesmo caminho, um administrador podia
+abrir o cadastro de um operador de plataforma existente e definir-lhe nova senha,
+obtendo a conta sem precisar conceder perfil algum.
+
+**Correção.** O escopo territorial passou a ser editável em tela, num cartão
+distinto do perfil, com a distinção explícita entre **lotação** — a unidade onde
+o profissional registra atendimento — e **alcance** — o conjunto de unidades que
+ele enxerga. As duas apareciam como uma única coluna na listagem de contas, de
+modo que um gestor estadual era indistinguível do recepcionista lotado na mesma
+unidade.
+
+A concessão obedece a uma regra única: **o território concedido deve estar
+contido no território de quem concede**. Não há tabela de precedência entre os
+níveis, e a ausência é deliberada — um escopo estadual não cabe em uma regional
+porque um estado não possui regional com que se comparar, e a comparação falha
+por si. Uma ordem escrita à mão constituiria segunda fonte de verdade, sujeita à
+mesma divergência silenciosa analisada em 9.4.14. O escopo de quem concede é
+obtido da mesma função que a política do banco consome, e não de leitura
+paralela do cadastro.
+
+Fecharam-se junto as duas vias expostas pela revisão: o perfil submetido passou a
+ser conferido contra a lista de perfis concedíveis, e passou a valer a regra de
+que **não se edita conta cujo perfil não se poderia conceder**.
+
+A tela **declara o próprio recorte** em vez de apenas apresentar uma lista curta.
+A razão é a registrada em 11.3: política que nega em silêncio é indistinguível de
+defeito de interface, e quem se depara com uma lista vazia solicita ampliação de
+privilégio em vez de compreender o limite. Pelo mesmo motivo, apenas territórios
+com unidade de saúde cadastrada são oferecidos — escopo sobre território onde a
+rede não possui unidade não alcança registro algum, e concedê-lo faria o
+administrador acreditar ter aberto um acesso que nada abre.
+
+**Verificação.** Os casos de teste medem a fechadura pelos dois lados, conforme a
+prática estabelecida em 9.4.19: que a concessão legítima funciona e produz o
+escopo que a política do banco efetivamente lerá, e que a ilegítima é recusada —
+alcance estadual concedido por administrador de unidade, lotação em unidade de
+outro município, perfil de plataforma submetido diretamente, e edição de conta de
+operador de plataforma. Verifica-se também que a troca de nível **apaga** o
+território do nível abandonado: valor remanescente voltaria a vigorar no dia em
+que alguém restaurasse o nível anterior, sem que o alcance tivesse sido revisto.
+
+**Lição transferível.** Controle sem interface de operação é controle pela
+metade, e a documentação tende a descrevê-lo como se estivesse completo, porque o
+mecanismo de fato existe. A pergunta que revela essa categoria não é "o controle
+funciona?", mas "quem o opera, por onde, e fica registrado?". E abrir a interface
+que faltava é, previsivelmente, abrir uma via de elevação de privilégio: o
+formulário que concede autorização é ele próprio objeto de autorização.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2431,7 +2535,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 583 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 597 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
