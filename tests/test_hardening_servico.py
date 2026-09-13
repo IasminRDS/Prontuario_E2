@@ -44,9 +44,21 @@ def test_verificar_devolve_achados_completos(app, postgres):
     assert achados, "o verificador não produziu achado nenhum"
     for a in achados:
         assert a.nome, "achado sem nome"
-        if not a.ok:
+        # `a.ok is False`, e não `not a.ok`: o achado tem TRÊS estados, e
+        # `None` é "não pude verificar", que não é reprovação. Com `not`, o
+        # indeterminado caía neste ramo e o teste exigia instrução de correção
+        # para algo que não quebrou.
+        #
+        # Só aparecia quando a sonda do journal não encontrava o arquivo — isto
+        # é, em checkout limpo, isto é, no CI. Na máquina de quem desenvolve o
+        # journal existe, o achado vinha `True` e o teste passava: o defeito
+        # ficava invisível exatamente onde o desenvolvedor olha.
+        if a.ok is False:
             assert a.correcao, f"{a.nome}: falha sem instrução de correção"
             assert a.detalhe, f"{a.nome}: falha sem explicação do porquê"
+        elif a.ok is None:
+            assert a.detalhe, (
+                f"{a.nome}: indeterminado sem dizer o que faltou para verificar")
 
 
 def test_verifica_que_a_aplicacao_ainda_audita(app, postgres):
@@ -173,3 +185,37 @@ def test_falha_de_verdade_ainda_reprova(app, monkeypatch):
     assert "1 verificação(ões) falharam" in resultado.output, (
         "a contagem de falhas passou a incluir o indefinido, ou deixou de "
         "contar a falha real")
+
+
+def test_completude_aceita_indeterminado_com_journal_ausente(app, postgres,
+                                                             tmp_path,
+                                                             monkeypatch):
+    """A condição EXATA do CI, que nenhum caso reproduzia.
+
+    Os três estados já tinham teste, e o comando já os distinguia. O que não
+    tinha teste era a asserção de completude deste arquivo: ela usava
+    `not a.ok`, e `not None` é verdadeiro, então cobrava instrução de correção
+    de um achado que não reprovou.
+
+    Só aparecia sem o journal no disco — isto é, em checkout limpo, isto é, no
+    CI. Na máquina de quem desenvolve o arquivo existe, a sonda devolve `True`
+    e tudo passava: o defeito era invisível exatamente onde se olha.
+
+    Por isso a fixture aponta `ANCORA_JOURNAL` para um caminho que não existe:
+    sem isso, este caso mede a máquina de quem o roda, e não a regra.
+    """
+    monkeypatch.setenv("ANCORA_JOURNAL", str(tmp_path / "ausente.jsonl"))
+
+    with app.app_context():
+        achados = hardening.verificar()
+
+    indeterminados = [a for a in achados if a.ok is None]
+    assert indeterminados, (
+        "sem journal, a sonda de acréscimo deveria ficar INDETERMINADA — se "
+        "isto falhar, ela passou a reprovar e o CI volta a ficar vermelho")
+
+    for a in indeterminados:
+        assert a.detalhe, f"{a.nome}: indeterminado sem dizer o que faltou"
+        assert not a.correcao, (
+            f"{a.nome}: indeterminado com instrução de correção — não há o "
+            "que corrigir quando nada quebrou")

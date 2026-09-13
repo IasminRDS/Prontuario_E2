@@ -578,7 +578,7 @@ declarada como limitação em vez de dissolvida na redação.
 
 O termo *multi-tenancy* carece de definição uniforme, e a divergência não é
 apenas terminológica: Kabbedijk *et al.* (2015), em estudo de mapeamento
-sistemático que analisou 761 artigos acadêmicos e 371 publicações do meio
+sistemático que analisou 761 artigos acadêmicos e 372 publicações do meio
 profissional, identificaram 43 definições distintas, a maioria delas aplicável a
 apenas uma camada da arquitetura. Da consolidação dessas definições os autores
 propõem a seguinte, adotada neste trabalho:
@@ -956,7 +956,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 582, em 46 arquivos |
+| Casos de teste automatizados | 583, em 46 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1067,6 +1067,82 @@ não deve possuir, enquanto criar *schema* exige apenas privilégio sobre o pró
 banco. O procedimento respeita o princípio do menor privilégio em vez de
 requerer sua flexibilização.
 
+
+### 7.6 Comparativo territorial e a referência externa
+
+As telas de relatório do sistema respondem "quanto esta unidade produziu". O
+comparativo territorial responde outra pergunta: "quanto cada município
+produziu, comparado aos demais". A diferença não é de filtro, e sim de eixo — a
+linha da tabela deixa de ser o registro e passa a ser o município.
+
+A chave da agregação é o **código IBGE**, e não o nome da cidade em texto livre.
+A decisão já estava tomada no modelo de dados (seção 7.2); é aqui que ela deixa
+de ser precaução e passa a ter consequência observável: agrupar por texto faria
+"Feira de Santana" escrita de três formas render três linhas, cada uma com um
+terço do movimento, e o relatório que existe para ordenar municípios passaria a
+mentir na ordem.
+
+**A razão de esta tela integrar o escopo deste trabalho não é gerencial, e sim
+de verificação.** É o único ponto da interface que tenta enxergar além da
+própria unidade, e portanto o único em que a política de segurança em nível de
+linha se manifesta para o usuário. Um operador de escopo municipal que selecione
+abrangência nacional não recebe erro: recebe uma linha. Do ponto de vista da
+interface, isso é indistinguível de defeito — e é precisamente o
+comportamento correto descrito na seção 6.2, a falha fechada. A tela declara o
+recorte em vigor e informa que a ausência das demais linhas não é filtro de
+apresentação: o banco não as entrega. Sem essa declaração, o controle
+funcionando corretamente seria lido como sistema quebrado, e a reação natural do
+operador seria solicitar ampliação de privilégio — isto é, o controle produziria
+o incentivo contrário ao que existe para promover.
+
+**Denominador.** Contagem absoluta compara mal: um município populoso apresenta
+sempre mais registros, e disso não decorre nada sobre desempenho. O modelo
+territorial passou a armazenar a população residente estimada e o **ano de
+referência** da estimativa, e a tela calcula taxa por cem mil habitantes. O ano
+acompanha o número por necessidade metodológica: taxas calculadas sobre
+denominadores de anos distintos não são comparáveis entre si, e nada no
+resultado denuncia a mistura.
+
+Município sem população carregada exibe traço, nunca zero. A distinção é
+deliberada e atravessa o modelo, a tela e a exportação: zero é um valor, e valor
+incorreto nessa posição é lido como resultado — o município sem denominador
+apareceria como o de menor produção do conjunto, invertendo a conclusão.
+
+**Referência externa.** A produção da própria rede não situa a rede no
+município. Para isso incorporou-se o total de eventos vitais do município — de
+todas as redes —, obtido da interface de agregados do **IBGE**, nas tabelas 2609
+(nascidos vivos), 2654 (óbitos) e 6579 (população estimada).
+
+Registre-se com precisão a procedência, porque a confusão é fácil e teria
+consequência: **estes números provêm do Registro Civil, e não do SIM ou do
+SINASC**. São os mesmos eventos apurados por vias distintas — o cartório e a
+notificação em saúde —, e seus totais não coincidem. O modelo armazena a fonte
+junto do valor, e a tela a exibe: dado externo sem procedência declarada não é
+comparável a coisa alguma.
+
+A referência ocupa tabela **separada** da produção da rede, e não colunas
+adicionais na mesma tabela. São grandezas de naturezas distintas: a primeira é
+isolada por unidade, restrita ao período selecionado e apurada por esta
+aplicação; a segunda é do município inteiro, de um ano fechado, apurada por
+outra instituição. Dispostas na mesma linha e com a mesma aparência, seriam
+lidas como comparáveis — e somadas ao total, que deixaria de significar algo. A
+distância entre as duas é justamente a informação que a tela existe para
+oferecer.
+
+**A consulta externa não ocorre durante requisição alguma.** A carga é
+executada por comando de linha (`flask municipios-ibge`) e o resultado
+permanece no banco. Relatório cuja renderização dependa de serviço externo
+torna-se indisponível quando a conectividade da unidade falha — que é a
+condição de rede de uma unidade pública de saúde, e não uma hipótese remota.
+
+Cabe declarar o limite do que foi incorporado. **Não há consumo de microdados do
+DATASUS**: os arquivos do Sistema de Informações Hospitalares e congêneres são
+publicados em formato `.DBC` — arquivo dBase comprimido pelo algoritmo *implode*
+da PKWare —, cuja leitura exige descompressor específico. O levantamento dessas
+fontes, com a relação das dezoito bases e dos cento e sessenta e sete tipos de
+arquivo do portal de transferência, consta de `docs/datasus_levantamento.md`, e
+sua incorporação permanece entre os trabalhos futuros (seção 13).
+
 ---
 
 ## 8. SEGURANÇA DA INFORMAÇÃO — ANÁLISE
@@ -1166,7 +1242,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **582 casos de teste**, provenientes de 371
+A suíte automatizada compreende **583 casos de teste**, provenientes de 372
 funções distribuídas em 46 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -2260,7 +2336,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 582 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 583 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -2346,6 +2422,26 @@ a obrigação de usá-la.
 
 **Continuidade verificada.** A validação automatizada da restauração converte a
 suposição de continuidade em verificação periódica com alarme automático.
+
+**O controle territorial observável pelo usuário.** O comparativo territorial
+(seção 7.6) produziu um resultado que os testes automatizados não alcançavam: o
+escopo do operador, e não o conteúdo do banco, determina o que a tela apresenta.
+Operador de escopo de unidade que solicite abrangência nacional recebe uma
+linha; operador de escopo estadual recebe os municípios de sua unidade
+federativa. A observação tem valor além da constatação: **política de segurança
+que nega em silêncio é indistinguível de defeito na interface**, e o usuário
+diante de tela aparentemente vazia solicita ampliação de privilégio — de modo
+que o controle, se não for declarado, produz incentivo contrário ao próprio
+propósito. A declaração do recorte em vigor na tela é, por isso, parte do
+controle, e não ornamento.
+
+**Comparação com referência externa.** A incorporação dos eventos vitais
+municipais permite situar a produção da rede no território. Registre-se o
+achado de método que a incorporação tornou visível: na base de demonstração, um
+município apresentou aproximadamente três vezes o volume de outro em contagem
+absoluta e cerca de uma vez e meia quando dividido pela população residente. A
+razão entre os dois números é a distância entre contar e medir, e é ela que
+justifica o armazenamento do denominador.
 
 **Explicitação do risco residual.** A separação entre garantias da aplicação e
 dependências de infraestrutura (seção 8.2) fornece à organização a lista dos
@@ -2726,7 +2822,14 @@ privilégio `CREATEDB` ao papel da aplicação.
 
 **Funcionalidade e integração**
 - Ampliação da conformidade com o padrão FHIR para interoperabilidade.
-- Painéis gerenciais de indicadores assistenciais.
+- **Consumo de microdados do DATASUS.** O comparativo territorial descrito na
+  seção 7.6 já incorpora referência externa de eventos vitais, obtida do IBGE
+  por interface programável. O que permanece futuro é o consumo das bases do
+  próprio DATASUS — Sistema de Informações Hospitalares e congêneres —, cujo
+  formato `.DBC` exige descompressor específico e cujo levantamento, com as
+  dezoito fontes do portal de transferência, já está realizado.
+- Extensão do comparativo a séries históricas, hoje limitado a um período
+  selecionado e a um ano fechado de referência externa.
 - Avaliação de usabilidade com usuários dos perfis reais.
 
 ---
