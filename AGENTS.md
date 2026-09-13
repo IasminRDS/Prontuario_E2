@@ -398,6 +398,57 @@ que não tem RLS, o valor liberaria acesso nacional. A tela não concede `SISTEM
 então nada novo entra por aqui — mas quem for reconciliar os dois módulos comece
 por `tests/conftest.py`, que semeia o admin da suíte com `SISTEMA` de propósito.
 
+## Sinais vitais: número válido e medida impossível
+
+`utils/numeros.py` responde se o que foi digitado **é um número**.
+`utils/sinais_vitais.py` responde se o número **pode ser aquela medida**. São
+perguntas diferentes, e por muito tempo só a primeira tinha resposta: uma altura
+de 172 — metros, que é o que o rótulo do campo pede — convertia sem erro,
+gravava, aparecia na tela, entrava no cálculo de IMC e saía num recurso FHIR
+`8302-2` bem formado. Documento válido e impossível, aceito pelo transporte e
+guardado pelo registro nacional.
+
+**Recusa apenas o impossível, nunca o improvável.** A distinção é clínica: 41,8
+°C é raro e verdadeiro, e um sistema que o recusasse obrigaria quem tria a
+contornar o prontuário no momento em que ele mais importa. Os limites são
+deliberadamente generosos, ancorados em extremos registrados na literatura e não
+em faixas de normalidade — e **cada um carrega a justificativa na própria
+tabela**, porque limite sem origem é limite que alguém aperta "por segurança" no
+ano seguinte, e o aperto só aparece quando recusa a medida de um paciente real.
+
+**O que ele não pega, e não tem como pegar:** peso 7,0 no lugar de 70,0. Sete
+quilos é o peso de um lactente, e nenhuma faixa distingue isso sem saber a idade.
+`tests/test_plausibilidade_vitais.py` fixa essa limitação por medição, para que a
+documentação não passe a prometer uma conferência que não existe.
+
+A tabela é **fonte única**: `min`/`max` do formulário saem dela pelo global Jinja
+`limites_vitais`, e o servidor decide por ela. Escrita duas vezes, a metade que
+envelheceria seria a do HTML, que nenhum teste lê. A validação do navegador é
+conveniência, nunca controle — ela não existe para quem posta sem passar pela
+tela. No formulário de prontuário não há `min`/`max` de propósito: os campos são
+`text` com `inputmode`, porque `type="number"` devolve vazio quando o valor traz
+vírgula decimal, e `min`/`max` em campo de texto é atributo morto que passa a
+impressão de validar.
+
+Campo sem faixa precisa de **razão escrita** em `SEM_LIMITE`, e o teste reprova
+nos dois sentidos — como `FORA_POR_DECISAO` no RLS. Hoje só `balanco_hidrico`:
+é diferença com sinal, legitimamente negativa, e o campo não guarda o período a
+que se refere.
+
+A conferência vale nas **quatro portas** que escrevem sinal vital: triagem,
+prontuário (formulário), evolução de internação e a interface JSON de
+prontuários. A última é a que mais importa e foi a última a ser lembrada — é a
+estrutura de 9.4.18 com outro assunto: regra que mora perto de UMA rota é regra
+que a próxima rota esquece. E na emissão FHIR (`routes/rnds.py`) a guarda é para
+o que **já está gravado**: registro anterior a esta conferência não vira
+`Observation`, pelo mesmo motivo que uma pressão ilegível nunca virou.
+
+A expressão que lê "120/80" mora em `utils/sinais_vitais.PRESSAO` e é importada
+pelo mapeador FHIR. Escrita nos dois lugares, as duas divergiam no número de
+dígitos aceito — um par recusado na entrada seria lido na emissão, ou o
+contrário. A **inversão** (80/120) é o único erro que nenhum intervalo isolado
+pega: as duas metades estão na faixa e mesmo assim não existe.
+
 ## Índice mestre de pacientes
 
 Em escala nacional, a mesma pessoa é cadastrada em municípios diferentes — às

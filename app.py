@@ -135,6 +135,7 @@ def _registrar_context(app):
     from models.configuracao import PADROES, Configuracao
     from utils.nav import grupos_visiveis
     from utils.rbac import pode
+    from utils.sinais_vitais import atributos as limites_vitais
 
     @app.context_processor
     def injetar():
@@ -146,6 +147,11 @@ def _registrar_context(app):
             "available_endpoints": endpoints,
             # Espelho do RBAC no template: {% if pode('patient:create') %}
             "pode": pode,
+            # Os limites dos sinais vitais vindos da MESMA tabela que o
+            # servidor consulta. Escritos à mão no HTML, os dois valores
+            # divergiriam na primeira revisão de limite — e a metade
+            # desatualizada seria a do formulário, que nenhum teste lê.
+            "limites_vitais": limites_vitais,
             "app_versao": APP_VERSAO,
             # Navegação já filtrada por RBAC + endpoints existentes.
             "nav_grupos": (

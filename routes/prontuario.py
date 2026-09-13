@@ -13,6 +13,7 @@ from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_
 from utils.audit import auditar_aqui, log_auditoria, registrar
 from utils.rbac import requer_permissao
 from utils.numeros import decimal_de, inteiro_de
+from utils import sinais_vitais
 from utils.terminologias import descricao_cid
 
 prontuario_bp = Blueprint("prontuario", __name__, url_prefix="/prontuarios")
@@ -60,6 +61,20 @@ def _preencher(p, form):
             except ValueError:
                 erros.append(f"{campo.replace('_', ' ')} deve ser inteiro")
 
+    # Converter não é conferir:  diz que "172" é um número, não
+    # que 172 pode ser uma altura em metros. A recusa acontece DEPOIS de aplicar
+    # os campos porque o formulário é parcial — só o que veio é tocado — e é o
+    # valor já convertido que se julga.
+    for campo in CAMPOS_NUM + CAMPOS_INT:
+        if campo in form:
+            recusa = sinais_vitais.conferir(campo, getattr(p, campo, None))
+            if recusa:
+                erros.append(recusa)
+    if "pressao_arterial" in form:
+        recusa = sinais_vitais.conferir_pressao(p.pressao_arterial)
+        if recusa:
+            erros.append(recusa)
+
     for campo in ("cid_principal", "cid_secundario"):
         if campo not in form:
             continue
@@ -70,6 +85,27 @@ def _preencher(p, form):
             setattr(p, campo, cid)
 
     return erros
+
+def _implausiveis_no_json(data, atual=None):
+    """Plausibilidade dos sinais vitais que chegam pela porta JSON.
+
+    A mesma entidade tem DUAS portas de escrita — o formulário e esta interface
+    programável —, e a conferência vivia só na primeira. É a estrutura de 9.4.18,
+    trocado o assunto: regra que mora perto de UMA rota é regra que a próxima
+    rota esquece, e o esquecimento não gera erro, grava dado impossível.
+
+    `atual` existe porque a atualização é parcial: campo ausente do JSON mantém
+    o valor guardado, e julgar `None` no lugar dele reprovaria uma atualização
+    que nem tocou naquele campo.
+    """
+    medidos = {}
+    for campo in CAMPOS_NUM + CAMPOS_INT + ("pressao_arterial",):
+        if campo in data:
+            medidos[campo] = data.get(campo)
+        elif atual is not None:
+            medidos[campo] = getattr(atual, campo, None)
+    return sinais_vitais.conferir_muitos(medidos)
+
 
 def to_dict(p):
     return {
@@ -391,6 +427,10 @@ def criar_prontuario():
     if cid_secundario and not validar_cid10(cid_secundario):
         return jsonify({"erro": "CID secundário inválido"}), 400
 
+    implausiveis = _implausiveis_no_json(data)
+    if implausiveis:
+        return jsonify({"erro": " ".join(implausiveis)}), 400
+
     medico_id = data.get("medico_id")
     if current_user.perfil == "medico":
         # tenta vincular automaticamente ao medico do usuário logado
@@ -456,6 +496,10 @@ def atualizar_prontuario(prontuario_id):
         return jsonify({"erro": "CID principal inválido"}), 400
     if cid_secundario and not validar_cid10(cid_secundario):
         return jsonify({"erro": "CID secundário inválido"}), 400
+
+    implausiveis = _implausiveis_no_json(data, atual=p)
+    if implausiveis:
+        return jsonify({"erro": " ".join(implausiveis)}), 400
 
     p.subjetivo = data.get("subjetivo", p.subjetivo)
     p.objetivo = data.get("objetivo", p.objetivo)

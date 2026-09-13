@@ -20,7 +20,6 @@ cliente simulado, que devolve protocolo prefixado com `SIM-`. O ambiente de
 demonstração continua funcionando sem fingir que houve envio de verdade.
 """
 import json
-import re
 from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -33,6 +32,7 @@ from models.paciente import Paciente
 from models.prontuario import Prontuario
 from services import rnds_cliente, rnds_fila
 from utils.audit import registrar
+from utils import sinais_vitais
 from utils.rbac import requer_permissao
 from utils.terminologias import descricao_cid
 
@@ -82,9 +82,10 @@ SINAIS_VITAIS = (
     ("2339-0", "Glicemia", "glicemia", "mg/dL", "laboratory"),
 )
 
-# "120/80", "120 x 80". Duas grandezas escritas num campo de texto, que é como o
-# prontuário de papel registra e como a tela captura.
-PRESSAO = re.compile(r"^\s*(\d{2,3})\s*[/xX]\s*(\d{2,3})\s*$")
+# A mesma expressão que a tela usa para conferir a pressão, e não uma cópia:
+# escrita duas vezes, as duas divergiam no número de dígitos aceito — um par
+# recusado na entrada seria lido aqui, ou o contrário.
+PRESSAO = sinais_vitais.PRESSAO
 
 
 # --------------------------------------------------------------------------
@@ -267,6 +268,12 @@ def _map_pressao(prontuario, sujeito, momento):
     casado = PRESSAO.match(prontuario.pressao_arterial or "")
     if not casado:
         return None
+    # E o mesmo argumento vale para o par que DÁ para ler mas não existe:
+    # 80/120 é bem formado, e publicá-lo no registro nacional é publicar uma
+    # pressão que nenhum paciente teve. A tela passou a recusar isso na
+    # entrada; aqui a guarda é para o que já está gravado.
+    if sinais_vitais.conferir_pressao(prontuario.pressao_arterial):
+        return None
 
     recurso = _observacao("85354-9", "Pressão arterial", "vital-signs",
                           sujeito, momento, perfil=PERFIL_PRESSAO)
@@ -294,6 +301,12 @@ def _map_observations(prontuario):
     for codigo, rotulo, atributo, unidade, categoria in SINAIS_VITAIS:
         valor = getattr(prontuario, atributo, None)
         if valor in (None, ""):
+            continue
+        # Registro anterior à conferência de plausibilidade pode carregar uma
+        # altura de 172 metros. Emiti-la produziria um `8302-2` que passa na
+        # validação do FHIR e é falso — o mesmo tipo de documento "aceito pelo
+        # transporte e errado no significado" que a pressão ilegível já evitava.
+        if not sinais_vitais.plausivel(atributo, valor):
             continue
         # Glicemia é exame de laboratório: declarar o perfil de sinal vital
         # nela seria afirmar uma conformidade que ela não tem.

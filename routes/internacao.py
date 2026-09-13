@@ -13,6 +13,7 @@ from models.paciente import Paciente
 from models.prescricao_hospitalar import PrescricaoHospitalar
 from models.unidade import Unidade
 from utils.numeros import decimal_de, inteiro_de
+from utils import sinais_vitais
 from utils.audit import registrar
 from utils.rbac import requer_permissao
 
@@ -33,6 +34,23 @@ STATUS_LEITO = (
     "bloqueado",
 )
 TIPOS_LEITO = ("comum", "isolamento", "uti")
+
+# Os sinais vitais da evolução e como converter cada um. Sai do corpo da rota
+# para que a conversão e a conferência de plausibilidade percorram a MESMA
+# lista: escritas duas vezes, um campo acrescentado numa delas passaria a ser
+# gravado sem nunca ser conferido — e a falta não daria erro nenhum.
+CAMPOS_DA_EVOLUCAO = (
+    "pressao_arterial", "temperatura", "frequencia_cardiaca",
+    "frequencia_respiratoria", "saturacao_o2", "diurese_ml", "balanco_hidrico",
+    "tipo", "subjetivo", "objetivo", "avaliacao", "plano",
+)
+
+VITAIS_DA_EVOLUCAO = (
+    ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
+    ("frequencia_cardiaca", inteiro_de),
+    ("frequencia_respiratoria", inteiro_de),
+    ("diurese_ml", inteiro_de), ("balanco_hidrico", inteiro_de),
+)
 
 
 @internacao_bp.route("/leitos", methods=["GET"])
@@ -217,6 +235,12 @@ def nova_evolucao(id):
         return redirect(url_for("internacao.visualizar", id=intern.id))
 
     if request.method == "POST":
+        # O que foi digitado, cru, para a tela voltar preenchida em caso de
+        # recusa. Quatro blocos SOAP escritos e perdidos por causa de uma
+        # temperatura digitada em Fahrenheit é o tipo de atrito que ensina a
+        # deixar o campo em branco — o oposto do que a conferência quer.
+        enviado = {c: request.form.get(c) for c in CAMPOS_DA_EVOLUCAO}
+
         ev = EvolucaoInternacao(
             internacao_id=intern.id,
             profissional_id=current_user.id,
@@ -235,12 +259,7 @@ def nova_evolucao(id):
         # projeto — as outras duas estavam no prontuário e na triagem, com
         # comportamentos diferentes entre si.
         erros = []
-        for campo, converter in (
-            ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
-            ("frequencia_cardiaca", inteiro_de),
-            ("frequencia_respiratoria", inteiro_de),
-            ("diurese_ml", inteiro_de), ("balanco_hidrico", inteiro_de),
-        ):
+        for campo, converter in VITAIS_DA_EVOLUCAO:
             try:
                 valor = converter(request.form.get(campo))
             except ValueError:
@@ -251,7 +270,22 @@ def nova_evolucao(id):
 
         if erros:
             flash(f"Valor inválido em: {', '.join(erros)}.", "warning")
-            return render_template("internacao/evolucao_form.html", intern=intern)
+            return render_template("internacao/evolucao_form.html",
+                                   intern=intern, enviado=enviado)
+
+        # Conferência separada da conversão, e com mensagem própria: "valor
+        # inválido em temperatura" não distingue "não é número" de "não pode
+        # ser temperatura", e a segunda precisa dizer qual é a faixa e sugerir
+        # a unidade, senão quem digitou 98,6 tenta de novo igual.
+        medidos = {campo: getattr(ev, campo, None)
+                   for campo, _conv in VITAIS_DA_EVOLUCAO}
+        medidos["pressao_arterial"] = ev.pressao_arterial
+        implausiveis = sinais_vitais.conferir_muitos(medidos)
+        if implausiveis:
+            for mensagem in implausiveis:
+                flash(mensagem, "warning")
+            return render_template("internacao/evolucao_form.html",
+                                   intern=intern, enviado=enviado)
 
         db.session.add(ev)
         registrar("internacoes", intern.id, "create",
@@ -261,7 +295,8 @@ def nova_evolucao(id):
         flash("Evolução registrada.", "success")
         return redirect(url_for("internacao.visualizar", id=intern.id))
 
-    return render_template("internacao/evolucao_form.html", intern=intern)
+    return render_template("internacao/evolucao_form.html", intern=intern,
+                           enviado={})
 
 
 @internacao_bp.route("/<int:id>/alta", methods=["GET", "POST"])

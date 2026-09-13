@@ -56,8 +56,12 @@
         </div>
         <div class="form-group">
           <label class="form-label">Queixa principal <span class="obrigatorio">*</span></label>
+          {# `value` e não campo em branco: o formulário volta preenchido quando
+             algum sinal vital é recusado. Reescrever tudo por causa de um campo
+             é o que ensina a contornar a conferência. #}
           <input type="text" name="queixa_principal" class="form-control" required
-                 placeholder="Ex: dor torácica, febre, dispneia...">
+                 placeholder="Ex: dor torácica, febre, dispneia..."
+                 value="{{ enviado.get('queixa_principal') or '' }}">
         </div>
       </div>
     </div>
@@ -85,8 +89,15 @@
           ] %}
           <div class="form-group">
             <label class="form-label">{{ label }}</label>
+            {# min/max vêm de utils/sinais_vitais, a mesma tabela que o
+               servidor consulta ao recusar. O navegador avisa cedo; quem
+               decide é a rota — validação de HTML não existe para quem posta
+               sem passar pela tela. #}
+            {% set faixa = limites_vitais(name) %}
             <input type="{{ tipo }}" name="{{ name }}" class="form-control font-mono"
                    placeholder="{{ placeholder }}"
+                   value="{{ enviado.get(name) or '' }}"
+                   {% if faixa %}min="{{ faixa.min }}" max="{{ faixa.max }}"{% endif %}
                    {% if tipo == 'number' %}step="any"{% endif %}>
           </div>
           {% endfor %}
@@ -97,10 +108,10 @@
           <label class="form-label">Escala de dor (0 = sem dor, 10 = pior dor)</label>
           <div style="display:flex;align-items:center;gap:12px">
             <input type="range" name="dor_escala" id="dor-range"
-                   min="0" max="10" value="0" style="flex:1"
+                   min="0" max="10" value="{{ enviado.get('dor_escala') or 0 }}" style="flex:1"
                    oninput="document.getElementById('dor-val').textContent=this.value">
             <span id="dor-val" class="font-mono fw-600"
-                  style="min-width:32px;text-align:center;font-size:1.1rem">0</span>
+                  style="min-width:32px;text-align:center;font-size:1.1rem">{{ enviado.get('dor_escala') or 0 }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;
                       font-size:.7rem;color:var(--cinza-400);margin-top:4px">
@@ -111,7 +122,7 @@
         <div class="form-group mt-16">
           <label class="form-label">Observações</label>
           <textarea name="observacoes" class="form-control" rows="2"
-                    placeholder="Informações complementares..."></textarea>
+                    placeholder="Informações complementares...">{{ enviado.get('observacoes') or '' }}</textarea>
         </div>
       </div>
     </div>
@@ -138,6 +149,7 @@
           <label style="display:flex;align-items:center;gap:8px;
                          font-size:.83rem;cursor:pointer;padding:4px">
             <input type="checkbox" name="discriminadores" value="{{ disc }}"
+                   {% if disc in (enviado.get('discriminadores') or []) %}checked{% endif %}
                    style="width:15px;height:15px">
             {{ disc }}
           </label>
@@ -171,7 +183,7 @@
                onmouseover="this.style.borderColor='{{ hex_cor }}'"
                onmouseout="checkBorder('{{ cor }}')">
           <input type="radio" name="classificacao" value="{{ cor }}"
-                 {% if cor == 'verde' %}checked{% endif %}
+                 {% if cor == (enviado.get('classificacao') or 'verde') %}checked{% endif %}
                  onchange="selecionarCor('{{ cor }}','{{ hex_cor }}')"
                  style="display:none">
           <span style="width:24px;height:24px;background:{{ hex_cor }};

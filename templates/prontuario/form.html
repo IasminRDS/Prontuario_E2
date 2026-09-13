@@ -72,6 +72,13 @@
     <div class="card__header"><div class="card__title">Sinais vitais e medidas</div></div>
     <div class="card__body">
       <div class="form-grid">
+        {# Sem `min`/`max` aqui, e de propósito: estes campos são `text` com
+           `inputmode`, e não `number`, porque `type="number"` devolve vazio
+           quando o valor traz vírgula decimal — e vírgula é o separador daqui.
+           `min`/`max` em campo de texto é atributo morto: não valida nada e
+           passa a impressão de que valida. A plausibilidade destes valores é
+           conferida no servidor, por `utils/sinais_vitais.py`, que é onde ela
+           vale para qualquer cliente. #}
         <div class="field col-3">
           <label class="field__label" for="pressao_arterial">Pressão arterial</label>
           <input class="input" id="pressao_arterial" name="pressao_arterial"

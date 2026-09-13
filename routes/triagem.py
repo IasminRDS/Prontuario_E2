@@ -7,6 +7,7 @@ from models.paciente import Paciente
 from database.db import db
 from utils.audit import auditar_aqui
 from utils.numeros import decimal_de, inteiro_de
+from utils import sinais_vitais
 from datetime import datetime, date
 from utils.rbac import requer_permissao
 
@@ -47,6 +48,51 @@ def index():
     )
 
 
+# Os sinais vitais da triagem e como converter cada um. Fora do corpo da rota
+# para que a conversão, a conferência de plausibilidade e a reexibição do
+# formulário percorram a MESMA lista: escritas três vezes, um campo novo entraria
+# numa e faltaria nas outras duas sem que nada acusasse.
+CAMPOS_VITAIS = (
+    ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
+    ("glicemia", decimal_de), ("peso", decimal_de),
+    ("altura", decimal_de), ("frequencia_cardiaca", inteiro_de),
+    ("frequencia_respiratoria", inteiro_de),
+    ("dor_escala", inteiro_de),
+)
+
+CAMPOS_REEXIBIDOS = tuple(c for c, _conv in CAMPOS_VITAIS) + (
+    "pressao_arterial", "paciente_id", "classificacao", "queixa_principal",
+    "observacoes",
+)
+
+
+def _reexibir(pacientes, paciente_id, enviado):
+    """O formulário de volta com o que a pessoa digitou.
+
+    `paciente_sel` vinha só da URL, então quem entrava por `/triagem/nova` e
+    escolhia o paciente na lista perdia a escolha junto com o resto.
+
+    **A vírgula é trocada por ponto na devolução, e isso não é capricho.** Os
+    campos de sinal vital são `type="number"`, e um `value="70,5"` é recusado
+    pelo próprio navegador: o atributo está no HTML e o campo aparece VAZIO.
+    Devolver o texto exatamente como veio faria a reexibição passar no teste que
+    lê o HTML e falhar na tela — que é a forma de defeito que este projeto mais
+    persegue. Só isso se normaliza: texto que não é número volta como veio, e o
+    campo numérico o descarta de qualquer forma.
+    """
+    devolvido = dict(enviado)
+    for campo, _conv in CAMPOS_VITAIS:
+        valor = devolvido.get(campo)
+        if valor:
+            devolvido[campo] = valor.replace(",", ".")
+    enviado = devolvido
+
+    escolhido = enviado.get("paciente_id") or paciente_id
+    return render_template(
+        "triagem/form.html", pacientes=pacientes, enviado=enviado,
+        paciente_sel=Paciente.query.get(escolhido) if escolhido else None)
+
+
 @triagem_bp.route("/nova", methods=["GET", "POST"])
 @triagem_bp.route("/nova/<int:paciente_id>", methods=["GET", "POST"])
 @login_required
@@ -65,24 +111,34 @@ def nova(paciente_id=None):
             # derrubava a triagem inteira e a tela mostrava a exceção crua do
             # Python, sem dizer qual campo. E era `float()` direto, sem trocar
             # a vírgula — "38,4" era aceito pelo prontuário e recusado aqui.
+            # O que foi digitado, cru, para devolver à tela quando algum
+            # campo for recusado. Sem isto a enfermagem reescrevia os oito
+            # sinais vitais por causa de um — e formulário que pune quem erra é
+            # formulário que se aprende a contornar, que é exatamente o oposto
+            # do que a conferência de plausibilidade existe para conseguir.
+            enviado = {c: request.form.get(c) for c in CAMPOS_REEXIBIDOS}
+            enviado["discriminadores"] = disc_raw
+
             vitais = {}
-            for campo, converter in (
-                ("temperatura", decimal_de), ("saturacao_o2", decimal_de),
-                ("glicemia", decimal_de), ("peso", decimal_de),
-                ("altura", decimal_de), ("frequencia_cardiaca", inteiro_de),
-                ("frequencia_respiratoria", inteiro_de),
-                ("dor_escala", inteiro_de),
-            ):
+            for campo, converter in CAMPOS_VITAIS:
                 try:
                     vitais[campo] = converter(request.form.get(campo))
                 except ValueError:
                     flash(f"{campo.replace('_', ' ').capitalize()}: valor "
                           f"inválido. Use número, com vírgula ou ponto.",
                           "warning")
-                    return render_template(
-                        "triagem/form.html", pacientes=pacientes,
-                        paciente_sel=(Paciente.query.get(paciente_id)
-                                      if paciente_id else None))
+                    return _reexibir(pacientes, paciente_id, enviado)
+
+            # A conversão só diz se o texto É um número; esta pergunta é se o
+            # número PODE ser aquela medida. Sem ela, uma altura de 172 —
+            # metros, que é o que o rótulo do campo pede — era gravada, entrava
+            # no IMC e saía num recurso FHIR bem formado e impossível.
+            implausiveis = sinais_vitais.conferir_muitos(
+                dict(vitais, pressao_arterial=request.form.get("pressao_arterial")))
+            if implausiveis:
+                for mensagem in implausiveis:
+                    flash(mensagem, "warning")
+                return _reexibir(pacientes, paciente_id, enviado)
 
             t = Triagem(
                 paciente_id=int(request.form["paciente_id"]),
@@ -122,7 +178,8 @@ def nova(paciente_id=None):
 
     paciente_sel = Paciente.query.get(paciente_id) if paciente_id else None
     return render_template(
-        "triagem/form.html", pacientes=pacientes, paciente_sel=paciente_sel
+        "triagem/form.html", pacientes=pacientes, paciente_sel=paciente_sel,
+        enviado={}
     )
 
 

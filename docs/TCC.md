@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 597, em 47 arquivos |
+| Casos de teste automatizados | 645, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,8 +1352,8 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **597 casos de teste**, provenientes de 386
-funções distribuídas em 47 arquivos — a diferença corresponde às funções
+A suíte automatizada compreende **645 casos de teste**, provenientes de 406
+funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
 utilizados no projeto: sobre PostgreSQL, com um caso não aplicável; sobre
@@ -1414,7 +1414,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e um achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1520,7 +1520,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e um defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2388,6 +2388,87 @@ funciona?", mas "quem o opera, por onde, e fica registrado?". E abrir a interfac
 que faltava é, previsivelmente, abrir uma via de elevação de privilégio: o
 formulário que concede autorização é ele próprio objeto de autorização.
 
+#### 9.4.21 O número válido que não podia ser aquela medida
+
+**Achado.** A conversão dos sinais vitais, unificada em 9.4.17, responde se o
+texto informado **é um número**. Nenhuma camada respondia se o número **pode ser
+aquela medida**. Uma altura de 172 — informada em metros, que é a unidade que o
+rótulo do campo pede e a que o cálculo de índice de massa corporal pressupõe —
+era convertida sem erro, persistida, exibida na tela de visualização, computada
+no índice e emitida como recurso FHIR `8302-2` sintaticamente válido.
+
+O defeito pertence à mesma família de 9.4.13 e 9.4.17: **não gera erro**. Nada
+falha, nada é registrado em log, e o dado impossível tem a aparência de dado.
+Distingue-se deles, porém, em um aspecto que agrava a consequência: o valor não
+permanece no sistema que o originou. A emissão para o registro nacional o
+publica, com validação sintática aprovada, no repositório de outra instituição.
+
+**Análise.** O desenho da correção enfrentou uma tensão que o restante do
+trabalho não apresentava. Em controle de acesso, restringir demais produz
+indisponibilidade perceptível — o profissional é barrado, reclama, e o excesso é
+corrigido. Em validação de sinal vital, restringir demais produz **contorno**: o
+profissional que não consegue registrar 41,8 °C, valor raro e verdadeiro,
+registra outro valor ou deixa o campo vazio, e o prontuário perde a informação
+justamente no caso em que ela é crítica. O erro para mais é silencioso e pior
+que o erro para menos.
+
+Adotou-se, por isso, o critério de **recusar apenas o impossível, nunca o
+improvável**. Os limites derivam de extremos registrados na literatura clínica —
+hipotermia acidental com sobrevida abaixo de 14 °C, taquiarritmia neonatal
+próxima de 300 batimentos por minuto, maior estatura humana documentada de 2,72
+metros — e não de faixas de normalidade. Cada limite armazena, na própria
+estrutura, a justificativa do extremo que o sustenta: limite sem origem
+registrada é limite que uma revisão futura aperta por precaução, e o aperto só se
+manifesta quando recusa a medida de um paciente real.
+
+A investigação das portas de escrita reproduziu o padrão de 9.4.18. A mesma
+entidade é gravada pelo formulário e por uma interface programável em JSON, e uma
+conferência acrescentada apenas à primeira deixaria descoberta exatamente a via
+que grava em volume e sem operador observando a tela.
+
+**Correção.** A regra vive em módulo único (`utils/sinais_vitais.py`), aplicado
+nas quatro portas que gravam sinal vital — triagem, prontuário por formulário,
+evolução de internação e a interface programável — e também na emissão FHIR, onde
+a finalidade é distinta: registros anteriores à conferência permanecem no banco, e
+publicá-los produziria documento aprovado na validação e falso no conteúdo. O
+recurso correspondente deixa de ser emitido, pela mesma razão que uma pressão
+arterial ilegível nunca foi emitida.
+
+Os atributos `min` e `max` do formulário passam a derivar da mesma estrutura que
+o servidor consulta. Escritos separadamente, divergiriam na primeira revisão de
+limite, e a metade desatualizada seria a do HTML — que nenhuma verificação lê. É
+a replicação de regra de 9.4.14, aplicada a um atributo de marcação.
+
+A pressão arterial recebeu tratamento próprio por ser duas grandezas em um campo
+de texto. Além das faixas de cada componente, verifica-se a **inversão**:
+"80/120" tem ambas as metades dentro do intervalo e ainda assim não corresponde a
+medida alguma. É o erro de digitação mais frequente nesse campo e o único que
+nenhum intervalo isolado identifica — só a comparação entre os dois números o
+revela. A expressão que interpreta o campo, antes duplicada entre a validação e o
+mapeamento FHIR com números de dígitos distintos, passou a ser única.
+
+**Verificação.** Os casos exercitam os dois sentidos, conforme 9.4.19: que o
+impossível é recusado, e que o **raro e verdadeiro é aceito** — temperatura de
+41,8 °C, frequência cardíaca igual a zero em parada cardiorrespiratória, peso de
+400 gramas em prematuro extremo. A suficiência da guarda foi confirmada por
+remoção: desativada a verificação na triagem, dois casos falham e o registro
+impossível é persistido.
+
+Um caso documenta deliberadamente **o que o controle não alcança**: peso de 7,0
+quilogramas no lugar de 70,0 é aceito, porque sete quilogramas é o peso de um
+lactente. Nenhuma faixa distingue as duas situações sem conhecer a idade do
+paciente. Registrar a limitação como caso de teste, e não como observação em
+texto, impede que a documentação passe a prometer uma conferência inexistente —
+e, caso alguém venha a implementar faixas por faixa etária, o caso falha e indica
+o momento de revisar o que se promete.
+
+**Lição transferível.** Validação de formato e validação de significado são
+camadas distintas, e a primeira produz a impressão de que a segunda existe. O
+sintoma é reconhecível: o sistema aceita, exibe, calcula e transmite sem nenhuma
+indicação de anomalia. Em sistemas que **publicam** dados para terceiros, a
+ausência da segunda camada deixa de ser problema local — o valor impossível passa
+a residir em base sobre a qual a instituição de origem não tem governo.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2535,7 +2616,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 597 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 645 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
@@ -3029,6 +3110,11 @@ privilégio `CREATEDB` ao papel da aplicação.
   dezoito fontes do portal de transferência, já está realizado.
 - Extensão do comparativo a séries históricas, hoje limitado a um período
   selecionado e a um ano fechado de referência externa.
+- **Plausibilidade de sinais vitais por faixa etária.** A verificação descrita
+  em 9.4.21 recusa o impossível para qualquer ser humano, e por isso aceita um
+  peso de sete quilogramas em paciente adulto — valor que é o de um lactente. A
+  distinção exige relacionar a medida à idade do paciente, e o caso de teste que
+  hoje registra a limitação passará a indicar o momento de revisá-la.
 - Avaliação de usabilidade com usuários dos perfis reais.
 
 ---

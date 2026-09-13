@@ -35,8 +35,15 @@
         ] %}
         <div class="form-group">
           <label class="form-label">{{ label }}</label>
+          {# min/max saem de utils/sinais_vitais, a mesma tabela que a rota
+             consulta ao recusar. Balanço hídrico não tem faixa e por isso não
+             ganha atributo nenhum: é diferença com sinal, legitimamente
+             negativa. #}
+          {% set faixa = limites_vitais(name) %}
           <input type="{{ 'text' if name=='pressao_arterial' else 'number' }}"
                  name="{{ name }}" class="form-control font-mono"
+                 value="{{ enviado.get(name) or '' }}"
+                 {% if faixa %}min="{{ faixa.min }}" max="{{ faixa.max }}"{% endif %}
                  placeholder="{{ placeholder }}" step="any">
         </div>
         {% endfor %}
@@ -52,7 +59,8 @@
           {% for val, lbl in [('medica','Médica'),('enfermagem','Enfermagem'),
             ('fisioterapia','Fisioterapia'),('nutricao','Nutrição'),
             ('psicologia','Psicologia'),('servico_social','Serviço Social')] %}
-          <option value="{{ val }}">{{ lbl }}</option>
+          <option value="{{ val }}"
+                  {% if val == (enviado.get('tipo') or 'medica') %}selected{% endif %}>{{ lbl }}</option>
           {% endfor %}
         </select>
       </div>
@@ -68,9 +76,12 @@
         <div class="soap-card {{ cls }}">
           <div class="soap-label">{{ label }}</div>
           <div style="padding:4px">
+            {# Os quatro blocos SOAP voltam preenchidos quando um sinal vital
+               é recusado: perder texto escrito por causa de um número digitado
+               noutro cartão é o atrito que ensina a não preencher. #}
             <textarea name="{{ id }}" class="form-control"
                       style="border:none;box-shadow:none;resize:vertical;min-height:100px"
-                      placeholder="{{ ph }}"></textarea>
+                      placeholder="{{ ph }}">{{ enviado.get(id) or '' }}</textarea>
           </div>
         </div>
         {% endfor %}
