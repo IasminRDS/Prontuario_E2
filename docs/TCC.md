@@ -574,6 +574,23 @@ autoridade credenciada ou réplica em sistema independente. A distância entre
 detectar e provar é a distância entre este trabalho e o critério normativo, e é
 declarada como limitação em vez de dissolvida na redação.
 
+**Recorrência das escolhas na literatura.** As duas decisões centrais deste
+trabalho — controle de acesso por papéis e trilha de auditoria — não constituem
+preferência de projeto. Fernández-Alemán *et al.* (2013), em revisão sistemática
+que partiu de 775 artigos e analisou 49 sobre segurança e privacidade em
+prontuários eletrônicos, identificam o controle de acesso baseado em papéis
+entre os mecanismos recorrentes e registram a presença de trilhas de auditoria
+em 25 dos 49 estudos examinados. O dado sustenta que as escolhas arquiteturais
+aqui adotadas têm respaldo na literatura da área, e não foram tomadas por
+parecerem adequadas.
+
+Registre-se a data da revisão — 2013 — e o que dela decorre: o levantamento é
+citado pelo que é, o trabalho que estabelece a recorrência dos mecanismos, e não
+como retrato do estado da arte atual. Os mesmos autores observam que apenas
+quatro dos 49 trabalhos dão ênfase ao treinamento dos usuários em segurança, o
+que situa como lacuna reconhecida da área a dimensão humana que esta monografia
+igualmente não cobre.
+
 ### 4.3 Multi-Tenancy
 
 O termo *multi-tenancy* carece de definição uniforme, e a divergência não é
@@ -745,6 +762,84 @@ distinto do utilizado pela aplicação, revogação dos privilégios de alteraç
 exclusão, encadeamento por resumo criptográfico e ancoragem externa — são
 analisadas em 8.2 e verificadas por comando executável, e o que delas permanece
 fora do alcance da aplicação está declarado na seção 12.
+
+
+### 4.6 Trabalhos correlatos
+
+A comparação com sistemas existentes é feita aqui por **decisão arquitetural**,
+e não por catálogo de funcionalidades: o que interessa não é quem tem mais
+módulos, e sim onde as escolhas deste trabalho coincidem com as de outros e onde
+divergem — e a que custo.
+
+Quadro — Sistemas comparáveis e a decisão que cada um ilumina
+
+| Sistema | Licença e tecnologia | Decisão que ilumina |
+|---|---|---|
+| **e-SUS APS / PEC** | Ministério da Saúde, Java | Referência de adoção nacional; contexto de motivação (seção 2.2) |
+| **OpenEMR** | GPL-3.0, PHP | Validação de conformidade FHIR executada na integração contínua |
+| **OpenMRS / módulo FHIR2** | MPL-2.0, Java | Separação entre domínio clínico e representação FHIR em camada própria |
+| **Bahmni** | Código aberto, *Digital Public Good* | Integrar sistemas independentes *versus* sistema único |
+| **Medplum** | Apache-2.0, TypeScript | Armazenar em FHIR *versus* traduzir para FHIR na borda |
+| **OpenEMPI** | **Software comercial** | Índice mestre de pacientes: padronizar, bloquear, pontuar, decidir |
+
+Fonte: elaborada pela autora (2026), a partir dos repositórios e sítios oficiais.
+
+Três comparações merecem desenvolvimento, por incidirem sobre decisões que esta
+monografia precisou justificar.
+
+**Representação FHIR: traduzir na borda ou armazenar.** O Medplum adota o
+modelo em que o dado nasce armazenado em FHIR e a aplicação é construída sobre
+ele. Este trabalho faz a escolha oposta: modelos relacionais próprios,
+convertidos para FHIR no momento do envio. A escolha tem custo — a tradução
+precisa ser mantida em correspondência com o modelo — e tem razão: a Rede
+Nacional de Dados em Saúde não publica perfil para todos os recursos que o
+sistema emite, de modo que armazenar em FHIR significaria armazenar numa forma
+que ainda assim exigiria adaptação no envio. O OpenMRS, por sua vez, mostra o
+que essa tradução ganharia se extraída para camada própria, em vez de residir
+junto às rotas de envio, como ocorre neste sistema — observação que a seção 13
+recolhe como trabalho futuro.
+
+**Integração de sistemas ou sistema único.** O Bahmni compõe quatro projetos
+independentes — registro clínico, gestão administrativa, laboratório e imagem —
+enquanto este trabalho mantém um único sistema. A convergência de motivação é
+notável: o Bahmni nasceu para ambientes de poucos recursos, que é também a
+condição declarada na justificativa desta monografia. A divergência de
+estratégia é o que a comparação ilumina: a integração de sistemas distribui o
+risco de falha e multiplica as fronteiras de confiança — cada interface entre
+projetos é um ponto onde o isolamento territorial precisaria ser reafirmado,
+problema que o sistema único não tem, ao custo de concentrar em um só artefato
+o que aqueles distribuem.
+
+**Identidade do paciente.** É o ponto em que a literatura oferece mais
+sustentação, e a que este trabalho recorre por convergência e não por
+antecedência. Guerra Junior *et al.* (2018) integraram quatro sistemas nacionais
+— SIH, SIA, SIM e SINAN —, totalizando cerca de 1,3 bilhão de registros sem
+identificador universal, por pareamento determinístico e probabilístico apoiado
+em nove chaves de bloqueio, codificação fonética adaptada a nomes brasileiros e
+distância de Jaro-Winkler. O procedimento resultou em aproximadamente 159,7
+milhões de indivíduos únicos, com taxas estimadas de 3,3% de falsos positivos e
+12,3% de falsos negativos.
+
+O módulo de reconciliação de cadastros deste trabalho adota a mesma sequência —
+padronizar, bloquear por chave, pontuar por similaridade e submeter à decisão
+humana —, e o mesmo desenho aparece no OpenEMPI. A coincidência entre uma
+implementação de escala nacional, um produto comercial de índice mestre e este
+sistema indica que a sequência não é escolha arbitrária, e sim a forma
+estabelecida do problema. Duas observações delimitam o que a comparação
+autoriza afirmar: as taxas de erro citadas pertencem ao trabalho de Guerra
+Junior *et al.*, **não foram medidas neste sistema**, e servem como ordem de
+grandeza do que se deve esperar, não como resultado próprio; e o OpenEMPI, a
+despeito do nome e da origem, é atualmente distribuído como produto comercial,
+de modo que citá-lo como software livre seria incorreto.
+
+Fernandez *et al.* (2025) relatam experiência próxima em propósito: a
+integração da rede municipal do Recife com hospitais universitários federais,
+alcançando 202 serviços de atenção primária e 45 hospitais, com arquitetura
+apoiada em índice mestre de pacientes e conformidade com HL7-FHIR e openEHR. Os
+autores concluem que a interoperabilidade efetiva depende de compromisso
+político alinhado a capacidade técnica e institucional — observação que situa o
+limite deste trabalho com precisão: o que aqui se constrói é a capacidade
+técnica, e ela é condição necessária e não suficiente.
 
 ---
 
@@ -2951,6 +3046,44 @@ WAZLAWICK, Raul Sidnei; DALMARCO, Eduardo Monguilhott. Dez anos do Prontuário
 Eletrônico do Cidadão e-SUS APS: em busca de um Sistema Único de Saúde
 eletrônico. **Revista de Saúde Pública**, São Paulo, v. 58, p. 23, 2024. DOI:
 10.11606/s1518-8787.2024058005770.
+
+FERNANDEZ, Michelle; PINTO, Hêider Aurélio; FERNANDES, Lucas Manoel da Mata;
+OLIVEIRA, José Adalberto Silva; LIMA, Ana Maria Ferreira Silva; SANTANA, Jorge
+Souza Sobrinho; CHIORO, Arthur. Interoperability in universal health systems:
+the Brazilian experience integrating primary and hospital care. **Frontiers in
+Digital Health**, v. 7, p. 1622302, 2025. DOI: 10.3389/fdgth.2025.1622302.
+
+GUERRA JUNIOR, Augusto Afonso; PEREIRA, Ramon Gonçalves; GURGEL, Eli Iola;
+CHERCHIGLIA, Mariangela; DIAS, Luís Valadares; ÁVILA, Juliana D'Ávila; SANTOS,
+Nayara; REIS, André; ACURCIO, Francisco de Assis; MEIRA JUNIOR, Wagner.
+Building the national database of health centred on the individual:
+administrative and epidemiological record linkage, Brazil, 2000-2015.
+**International Journal of Population Data Science**, v. 3, n. 1, p. 446, 2018.
+DOI: 10.23889/ijpds.v3i1.446.
+
+### Segurança em prontuário eletrônico
+
+FERNÁNDEZ-ALEMÁN, José Luis; SEÑOR, Inmaculada Carrión; LOZOYA, Pedro Ángel
+Oliver; TOVAL, Ambrosio. Security and privacy in electronic health records: a
+systematic literature review. **Journal of Biomedical Informatics**, v. 46, n. 3,
+p. 541-562, 2013. DOI: 10.1016/j.jbi.2012.12.003.
+
+### Sistemas comparáveis
+
+BAHMNI COALITION. **Bahmni: open source hospital system**. Disponível em:
+https://bahmni.org/. Acesso em: ....
+
+MEDPLUM. **Medplum: healthcare developer platform**. Licença Apache-2.0.
+Disponível em: https://github.com/medplum/medplum. Acesso em: ....
+
+OPENEMR COMMUNITY. **OpenEMR**. Licença GPL-3.0. Disponível em:
+https://github.com/openemr/openemr. Acesso em: ....
+
+OPENMRS COMMUNITY. **OpenMRS module FHIR2**. Licença MPL-2.0. Disponível em:
+https://github.com/openmrs/openmrs-module-fhir2. Acesso em: ....
+
+SYSNET INTERNATIONAL. **OpenEMPI: enterprise master patient index**. Produto
+comercial. Disponível em: https://www.openempi.org/. Acesso em: ....
 
 ### Legislação e normas oficiais
 
