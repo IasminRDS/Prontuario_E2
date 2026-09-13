@@ -24,8 +24,10 @@ lê de `request.args`, e comparar filtro de busca com a rota POST da mesma URL s
 gera falso positivo.
 """
 import inspect
+import io
 import pathlib
 import re
+import tokenize
 
 import pytest
 from flask import template_rendered
@@ -100,6 +102,43 @@ PENDENCIAS = {
 }
 
 
+def _sem_comentarios(fonte):
+    """O código da view sem os comentários — e o motivo é constrangedor.
+
+    O detector desiste da comparação quando vê o dicionário do formulário usado
+    em atacado, porque aí não há como saber quais chaves a view lê. Só que ele
+    procurava isso no texto bruto do arquivo, comentários inclusive: **um
+    comentário que EXPLICASSE por que a view não usa o dicionário inteiro
+    desligava o detector para aquela view**. Nada acusava; a tela simplesmente
+    saía da vigilância.
+
+    É o defeito que este arquivo existe para caçar, aplicado a ele próprio.
+    Comentário é prosa, não código, e a análise estática não pode confundir os
+    dois. Só os comentários caem: a docstring fica, e continua sendo texto que
+    não lê formulário nenhum.
+    """
+    # Os comentários são APAGADOS NO LUGAR, preenchidos com espaços, em vez de
+    # o código ser remontado a partir dos tokens: as expressões procuradas aqui
+    # (`request.form.get("x")`) são várias tokens seguidas, e qualquer
+    # remontagem que mudasse o espaçamento faria as expressões regulares
+    # pararem de casar — desligando o detector pelo outro lado.
+    try:
+        linhas = fonte.splitlines(keepends=True)
+        for tok in tokenize.generate_tokens(io.StringIO(fonte).readline):
+            if tok.type != tokenize.COMMENT:
+                continue
+            linha, inicio = tok.start
+            fim = tok.end[1]
+            texto = linhas[linha - 1]
+            linhas[linha - 1] = texto[:inicio] + " " * (fim - inicio) + texto[fim:]
+        return "".join(linhas)
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        # Fonte que não tokeniza (recorte de `inspect.getsource` com indentação
+        # própria, por exemplo): volta ao texto bruto. Perder o recorte dos
+        # comentários é aceitável; perder a análise inteira não.
+        return fonte
+
+
 @pytest.fixture(scope="module")
 def campos_descartados(app, ids_reais):
     """{"template -> endpoint": {campos enviados e nunca lidos}}."""
@@ -136,6 +175,7 @@ def campos_descartados(app, ids_reais):
             fonte = inspect.getsource(inspect.unwrap(vf))
         except Exception:
             return set(), True
+        fonte = _sem_comentarios(fonte)
         return ({a or b for a, b in LEITURA.findall(fonte)},
                 bool(ATACADO.search(fonte)))
 
