@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 657, em 48 arquivos |
+| Casos de teste automatizados | 658, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,7 +1352,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **657 casos de teste**, provenientes de 418
+A suíte automatizada compreende **658 casos de teste**, provenientes de 419
 funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -2834,8 +2834,8 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 657 casos de teste executa sem falhas em ambos os sistemas de banco de
-dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
+A suíte de 658 casos de teste executa sem falhas em ambos os sistemas de banco de
+dados. A sequência de dezesseis migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.
 

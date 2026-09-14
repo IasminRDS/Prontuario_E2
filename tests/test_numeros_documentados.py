@@ -203,3 +203,37 @@ def test_o_documento_existe_e_foi_lido(nome):
     """Sem isto, renomear um arquivo transformaria os testes acima em silêncio."""
     assert DOCUMENTOS[nome].exists(), f"{nome} não existe mais"
     assert _texto(nome).strip(), f"{nome} está vazio"
+
+
+def test_numero_de_migracoes_citado_confere():
+    """A contagem que envelheceu sem que nada acusasse.
+
+    A monografia dizia "a sequência de treze migrações foi exercitada a partir
+    de banco vazio" quando já eram dezesseis. Nenhuma verificação a guardava —
+    e o número aparece justamente na frase que sustenta a afirmação de que a
+    cadeia de migrações é exercitada por inteiro.
+
+    É barato e inequívoco, que é o critério declarado na docstring deste
+    arquivo para o que entra aqui: basta contar os arquivos de revisão.
+    """
+    medido = len([a for a in (RAIZ / "migrations" / "versions").glob("*.py")
+                  if re.search(r"^revision = ", a.read_text(encoding="utf-8",
+                                                            errors="replace"),
+                               re.M)])
+
+    escrito = {
+        "uma": 1, "duas": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6,
+        "sete": 7, "oito": 8, "nove": 9, "dez": 10, "onze": 11, "doze": 12,
+        "treze": 13, "quatorze": 14, "catorze": 14, "quinze": 15,
+        "dezesseis": 16, "dezessete": 17, "dezoito": 18, "dezenove": 19,
+        "vinte": 20,
+    }
+    achado = re.search(r"sequência de ([\wá-ú]+) migrações", _texto("docs/TCC.md"))
+    assert achado, "não encontrei a frase que cita o número de migrações"
+
+    bruto = achado.group(1)
+    citado = int(bruto) if bruto.isdigit() else escrito.get(bruto.lower())
+    assert citado is not None, (
+        f"número de migrações escrito por extenso e não reconhecido: {bruto!r}")
+    assert citado == medido, (
+        f"a monografia diz {bruto} migrações; medido {medido}")
