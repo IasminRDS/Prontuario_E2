@@ -93,6 +93,14 @@ O primeiro só apareceu quando o CI — que fala inglês — enfim chegou a exec
 a suíte: na máquina de quem desenvolve, que fala português, o caso passava. Vale como aviso geral: **detector que lê
 texto traduzido não é detector.**
 
+**Leito nasce em HOSPITAL.** `_seed_hospital` punha os 46 leitos em
+`Unidade.query.first()` — a UBS Central. Uma unidade básica de saúde com UTI e
+maternidade, e os três hospitais da rede com zero leitos: o inverso do que
+existe, em toda tela de ocupação. `TIPOS_COM_LEITO` decide quem interna, e o
+número do leito carrega o hospital (`H2-UTI-03`), porque `Setor` é catálogo da
+rede e não tem `unidade_id` — `CM-01` repetido em três hospitais seria
+indistinguível na tela.
+
 `hardening-check` verifica o que a aplicação **não** garante sozinha: `FORCE`
 ativo, papel sem `BYPASSRLS`, ausência de escopo pré-definido no ambiente e
 propriedade da tabela de auditoria. É a fronteira entre garantia da aplicação e
@@ -175,6 +183,29 @@ planejador nem considera índice.
 `seed-volume` gera carga sintética marcada como `SINTETICO`. **Não use em
 produção.** Existe porque com dezenas de linhas nenhuma decisão de índice é
 informada — o planejador nem considera índice em tabela pequena.
+
+**Pode ser repetido**, e isso teve de ser consertado: o CPF e o CNS vinham do
+ÍNDICE DO LAÇO, que recomeça em zero, então a segunda execução produzia os
+mesmos documentos e estourava o `UNIQUE` com uma `IntegrityError` crua. Agora a
+numeração continua de onde parou — pôr mais volume é a operação natural de
+repetir um comando que existe para pôr volume.
+
+**Cobre também triagem, prontuário, agenda e exames** (`gerar_ambulatorial`).
+`gerar_clinicas` nasceu para exercitar o backfill e cobre só as cinco tabelas
+que o motivaram; o resultado era um ambiente com vinte mil pacientes e quatro
+telas inteiras abrindo vazias — prontuário inclusive, que é o artefato que dá
+nome ao sistema. Lista vazia responde 200 e é indistinguível de "ainda não houve
+atendimento", então nenhum teste de rota acusava.
+
+Quem acrescentar gerador **acrescenta a tabela a `limpar()` junto**:
+`tests/test_ambiente_demonstracao.py` lê os dois lados da fonte e reprova quando
+os geradores escrevem onde a limpeza não apaga. `--limpar` promete devolver o
+banco ao estado anterior, e limpeza que deixa resto faz a execução seguinte
+medir um banco de tamanho desconhecido.
+
+Os valores clínicos gerados são **plausíveis de propósito**: `utils/sinais_vitais`
+recusaria o impossível na tela, e semente que produzisse o que a tela recusa
+criaria um banco que a própria aplicação não aceitaria montar.
 
 ## Documentação
 

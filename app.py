@@ -655,6 +655,10 @@ def _registrar_cli(app):
         para tornar possível medir plano de consulta e efeito de índice, o que
         não se faz com dezenas de linhas — o planejador nem considera índice em
         tabela pequena.
+
+        **Pode ser repetido.** A numeração dos documentos continua de onde
+        parou, em vez de recomeçar do zero e estourar o `UNIQUE` com uma
+        `IntegrityError` crua. `--limpar` devolve o banco ao estado anterior.
         """
         from services import seed_volume as sv
 
@@ -669,6 +673,8 @@ def _registrar_cli(app):
         print("gerando registros clínicos (cirurgia, encaminhamento, PS, "
               "evolução, itens de prescrição)...")
         print(f"  {sv.gerar_clinicas()}")
+        print("gerando o ambulatorial (triagem, prontuário, agenda, exames)...")
+        print(f"  {sv.gerar_ambulatorial()}")
         print("pronto.")
 
     @app.cli.command("backup-validar")

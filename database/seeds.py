@@ -136,33 +136,56 @@ def _seed_exames():
         db.session.add(e)
     db.session.commit()
 
+# Setores de internação e quantos leitos cada um recebe POR HOSPITAL.
+#
+# A versão anterior punha os 46 leitos em `Unidade.query.first()` — que é a UBS
+# Central. O resultado era uma unidade básica de saúde com UTI e maternidade,
+# enquanto os três hospitais da rede apareciam com zero leitos: o inverso do que
+# existe. Toda tela de internação mostrava isso, e é a primeira coisa que quem
+# conhece o SUS repara.
+SETORES_DO_HOSPITAL = (
+    ('Clínica Médica', 'CM', 'enfermaria', '2º andar', 10),
+    ('Pronto-Socorro', 'PS', 'ps', 'Térreo', 8),
+    ('UTI Adulto', 'UTI', 'uti', '3º andar', 6),
+    ('Pediatria', 'PED', 'enfermaria', '2º andar', 8),
+    ('Maternidade', 'MAT', 'obstetricia', '1º andar', 6),
+    ('Cirurgia Geral', 'CG', 'enfermaria', '2º andar', 8),
+)
+
+# Unidade de atenção básica não interna. A clínica pública fica de fora pela
+# mesma razão: leito de observação é outra coisa, e inventá-lo aqui faria a
+# demonstração afirmar uma capacidade instalada que o cadastro não tem.
+TIPOS_COM_LEITO = ("Hospital",)
+
+
 def _seed_hospital():
     from models.internacao import Setor, Leito
     from models.cirurgia import SalaCirurgica
     from models.unidade import Unidade
-    
+
     if Setor.query.first():
         return
-        
-    unidade = Unidade.query.first()
-    unidade_id = unidade.id if unidade else 1
 
-    setores_data = [
-        ('Clínica Médica', 'CM', 'enfermaria', '2º andar', 10),
-        ('Pronto-Socorro', 'PS', 'ps', 'Térreo', 8),
-        ('UTI Adulto', 'UTI', 'uti', '3º andar', 6),
-        ('Pediatria', 'PED', 'enfermaria', '2º andar', 8),
-        ('Maternidade', 'MAT', 'obstetricia', '1º andar', 6),
-        ('Cirurgia Geral', 'CG', 'enfermaria', '2º andar', 8),
-    ]
-    for nome, sigla, tipo, andar, qtd in setores_data:
+    hospitais = (Unidade.query.filter(Unidade.tipo.in_(TIPOS_COM_LEITO))
+                 .order_by(Unidade.id.asc()).all())
+    if not hospitais:
+        # Sem hospital cadastrado não há onde internar, e criar leito solto numa
+        # unidade qualquer é justamente o defeito que isto corrige.
+        return
+
+    # O setor é catálogo da rede (o model não tem `unidade_id`); o LEITO é que
+    # pertence à unidade. Por isso o número do leito carrega o hospital: `CM-01`
+    # repetido em três hospitais é indistinguível na tela de ocupação.
+    for nome, sigla, tipo, andar, qtd in SETORES_DO_HOSPITAL:
         s = Setor(nome=nome, sigla=sigla, tipo=tipo, andar=andar)
         db.session.add(s)
         db.session.flush()
-        for i in range(1, qtd + 1):
-            l = Leito(setor_id=s.id, unidade_id=unidade_id, numero=f'{sigla}-{i:02d}',
-                      tipo='uti' if tipo=='uti' else 'comum')
-            db.session.add(l)
+        for ordem, hospital in enumerate(hospitais, start=1):
+            for i in range(1, qtd + 1):
+                db.session.add(Leito(
+                    setor_id=s.id, unidade_id=hospital.id,
+                    numero=f'H{ordem}-{sigla}-{i:02d}',
+                    tipo='uti' if tipo == 'uti' else 'comum'))
 
     for nome, tipo in [('CC-01','geral'),('CC-02','geral'),
                        ('CC-Ortopedia','ortopedia'),('CC-Urgência','urgencia')]:
