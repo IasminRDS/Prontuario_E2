@@ -15,6 +15,25 @@ def seed_data():
     # deles virava 500 numa requisição de leitura.
     _seed_municipios()
     _seed_catalogos()
+    # Cada etapa daqui para baixo tem a PRÓPRIA guarda de idempotência, e o
+    # retorno antecipado que existia aqui as atropelava todas.
+    #
+    # Era `if User.query.first(): return`, no meio da função: num banco que já
+    # tivesse QUALQUER usuário — isto é, em todo banco em uso —, o `seed` parava
+    # antes de chegar a vacinas, exames e, sobretudo, aos leitos. Reexecutar o
+    # comando nunca corrigia a internação, e não havia sinal de que ele tinha
+    # desistido: a mensagem final continuava sendo "Seed concluído".
+    _seed_usuarios_e_medico()
+    _seed_vacinas()
+    _seed_exames()
+    _seed_hospital()
+
+
+def _seed_usuarios_e_medico():
+    from models.user import User
+    from models.unidade import Unidade
+    from models.medico import Medico
+    from models.regional import Regional
 
     if User.query.first():
         return
@@ -57,10 +76,6 @@ def seed_data():
         )
         db.session.add(medico)
         db.session.commit()
-    
-    _seed_vacinas()
-    _seed_exames()
-    _seed_hospital()
 
 
 def _seed_municipios():
@@ -155,6 +170,13 @@ SETORES_DO_HOSPITAL = (
 # Unidade de atenção básica não interna. A clínica pública fica de fora pela
 # mesma razão: leito de observação é outra coisa, e inventá-lo aqui faria a
 # demonstração afirmar uma capacidade instalada que o cadastro não tem.
+#
+# Com a rede importada do CNES (`flask cnes-importar`), o tipo aqui é o que o
+# próprio CNES declara — não uma suposição desta semente. A QUANTIDADE de
+# leitos por setor, essa sim, é parâmetro de demonstração: a base pública que
+# publica leito por hospital não traz o código CNES, e juntar por nome de
+# hospital seria construir sobre o texto livre que a seção de território
+# condena. Ver a docstring de `services/cnes.py`.
 TIPOS_COM_LEITO = ("Hospital",)
 
 
@@ -166,7 +188,9 @@ def _seed_hospital():
     if Setor.query.first():
         return
 
-    hospitais = (Unidade.query.filter(Unidade.tipo.in_(TIPOS_COM_LEITO))
+    hospitais = (Unidade.query
+                 .filter(Unidade.tipo.in_(TIPOS_COM_LEITO),
+                         Unidade.ativo.is_(True))
                  .order_by(Unidade.id.asc()).all())
     if not hospitais:
         # Sem hospital cadastrado não há onde internar, e criar leito solto numa

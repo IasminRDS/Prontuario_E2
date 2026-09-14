@@ -164,3 +164,75 @@ def test_seed_volume_pode_ser_repetido(app, sem_sinteticos):
                     Paciente.__table__.delete().where(
                         Paciente.__table__.c.id.in_(criados)))
                 db.session.commit()
+
+
+# ------------------------------------ o seed que desistia no meio, calado
+def test_seed_chega_ate_o_fim_num_banco_ja_povoado():
+    """`if User.query.first(): return` no MEIO de `seed_data` atropelava o resto.
+
+    Num banco que já tivesse qualquer usuário — isto é, em todo banco em uso —
+    o comando parava antes de vacinas, exames e leitos. Reexecutar nunca
+    corrigia a internação, e a mensagem final continuava sendo "Seed concluído":
+    a desistência não deixava sinal.
+
+    Verificação estrutural, e não de execução: cada etapa tem a própria guarda de
+    idempotência, e o que não pode voltar é uma delas ficar atrás de um `return`
+    condicional no corpo de `seed_data`.
+    """
+    import ast
+    import pathlib
+
+    fonte = (pathlib.Path(__file__).resolve().parent.parent / "database"
+             / "seeds.py").read_text(encoding="utf-8")
+    arvore = ast.parse(fonte)
+    corpo = next(n for n in arvore.body
+                 if isinstance(n, ast.FunctionDef) and n.name == "seed_data")
+
+    retornos = [n for n in ast.walk(corpo) if isinstance(n, ast.Return)]
+    assert not retornos, (
+        "`seed_data` voltou a ter retorno antecipado: tudo que vier depois dele "
+        "deixa de rodar em banco já povoado, sem avisar")
+
+
+def test_toda_etapa_do_seed_e_chamada():
+    """A guarda acima só vale se as etapas continuarem sendo chamadas."""
+    import ast
+    import pathlib
+
+    fonte = (pathlib.Path(__file__).resolve().parent.parent / "database"
+             / "seeds.py").read_text(encoding="utf-8")
+    arvore = ast.parse(fonte)
+    corpo = next(n for n in arvore.body
+                 if isinstance(n, ast.FunctionDef) and n.name == "seed_data")
+    chamadas = {n.func.id for n in ast.walk(corpo)
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+
+    for etapa in ("_seed_municipios", "_seed_catalogos", "_seed_usuarios_e_medico",
+                  "_seed_vacinas", "_seed_exames", "_seed_hospital"):
+        assert etapa in chamadas, f"`seed_data` deixou de chamar {etapa}"
+
+
+# ---------------------------------------- limpar diante do que não criou
+def test_limpar_relata_o_que_nao_conseguiu_remover(app):
+    """Paciente sintético USADO na aplicação prende a limpeza — e isso se diz.
+
+    Documento assinado e envio à RNDS são criados pela aplicação, não por estes
+    geradores. Apagar o paciente em bloco estourava a chave estrangeira, e o
+    comando morria com uma parede de SQL que não dizia o que segurou.
+
+    O caso não gera esse estado: verifica o CONTRATO — que a função sabe
+    distinguir quem está preso e nomear a tabela que prende.
+    """
+    from services import seed_volume as sv
+
+    with app.app_context():
+        assert sv._presos_por_dependencia([]) == set()
+        assert sv.presos_por_tabela([]) == set()
+
+        tabelas = {t.name for t, _c in sv._tabelas_que_apontam_para_paciente()}
+
+    # Descobertas pelo metadata, nunca listadas à mão: a tabela esquecida seria
+    # exatamente a que voltaria a estourar.
+    assert "documentos_assinados" in tabelas and "envios_rnds" in tabelas, (
+        "a descoberta por metadata deixou de enxergar as tabelas que a "
+        "aplicação escreve sobre paciente")

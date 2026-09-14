@@ -197,6 +197,18 @@ telas inteiras abrindo vazias — prontuário inclusive, que é o artefato que d
 nome ao sistema. Lista vazia responde 200 e é indistinguível de "ainda não houve
 atendimento", então nenhum teste de rota acusava.
 
+**`limpar()` relata o que não conseguiu remover.** Paciente sintético que foi
+USADO na aplicação acumula registro que os geradores não criaram — documento
+assinado, envio à RNDS. Apagá-lo em bloco estourava a chave estrangeira e o
+comando morria com uma parede de SQL que não dizia o que segurou. Agora remove o
+que dá e nomeia as tabelas que prendem, descobertas pelo metadata.
+
+**`seed_data` não tem retorno antecipado, e a ausência é verificada.** Havia um
+`if User.query.first(): return` no meio da função: em todo banco com usuário —
+isto é, em todo banco em uso — o comando parava antes de vacinas, exames e
+leitos, e ainda assim imprimia "Seed concluído". Cada etapa tem a própria guarda
+de idempotência; `test_ambiente_demonstracao` reprova se um `return` voltar.
+
 Quem acrescentar gerador **acrescenta a tabela a `limpar()` junto**:
 `tests/test_ambiente_demonstracao.py` lê os dois lados da fonte e reprova quando
 os geradores escrevem onde a limpeza não apaga. `--limpar` promete devolver o
@@ -355,7 +367,35 @@ divergente é recusada em vez de contaminar a tabela territorial.
 
 ```bash
 flask municipios-importar municipios.csv   # colunas: codigo_ibge, nome, uf
+flask cnes-importar 2903904 2927408        # a rede REAL, pelo CNES do MS
 ```
+
+`cnes-importar` traz os estabelecimentos de verdade da API de dados abertos do
+Ministério da Saúde (`apidadosabertos.saude.gov.br`), chaveados por
+`codigo_cnes` — rodar de novo atualiza, não duplica. A rede de demonstração
+deixa de ser inventada: nome, código, tipo e município são fatos públicos.
+
+**O paciente continua sintético, e isso é decisão, não limitação.** Os
+microdados de internação do DATASUS (SIH) são registros individuais de
+internações reais de pessoas reais; semeá-los como pacientes desta rede faria o
+sistema apresentar a internação de alguém como registro seu, e poria dado de
+saúde passível de religação num banco de demonstração que se apaga e se refaz.
+
+**A contagem de leitos não vem do CNES**, e a razão está medida: a base pública
+`assistencia-a-saude/hospitais-e-leitos` publica leitos por hospital mas **não
+traz o código CNES**, e o `codigo_ibge_do_municipio` veio preenchido em 3 de
+1.000 registros. Os elos seriam nome do hospital e nome do município, em texto
+livre — o que esta seção abre dizendo que não agrega, e a amostra traz
+literalmente "FEIRA DE SANTANA". O que o CNES decide é **quem interna**
+(`estabelecimento_possui_atendimento_hospitalar`); a quantidade por setor é
+parâmetro declarado em `database/seeds.SETORES_DO_HOSPITAL`.
+
+Quatro defeitos da API do MS estão contornados em `services/cnes.py`, todos
+medidos antes de programar em volta: o redirecionamento de `/v1` aponta para
+`http://localhost:5001` (o endereço interno deles), o filtro `uf` responde 500,
+o `limit` é ignorado (a página vem com 20 registros) e páginas consecutivas se
+sobrepõem — 80 registros trouxeram 23 códigos distintos. Daí a deduplicação por
+CNES e a parada por páginas sem novidade.
 
 As 27 capitais são semeadas por padrão; a relação completa (5.570) vem do IBGE.
 

@@ -645,6 +645,74 @@ def _registrar_cli(app):
         print(f"base: {total:,} pacientes\n")
         print(relatorio(medidas))
 
+    @app.cli.command("cnes-importar")
+    @click.argument("municipios", nargs=-1, required=True)
+    @click.option("--desativar-ausentes", is_flag=True,
+                  help="Desativa as unidades do município que o CNES não trouxe.")
+    def cnes_importar(municipios, desativar_ausentes):
+        """Importa a rede REAL de um município, pelo CNES do Ministério da Saúde.
+
+        Recebe códigos IBGE de sete dígitos. A chave é o `codigo_cnes`: rodar de
+        novo ATUALIZA a unidade em vez de duplicá-la.
+
+        O que vem daqui é a REDE — estabelecimento, código, tipo e município, que
+        são fatos públicos. Paciente continua sintético: microdado de internação
+        é registro individual de gente real, e semeá-lo aqui faria o sistema
+        apresentar a internação de alguém como registro seu.
+        """
+        from models.municipio import Municipio
+        from models.unidade_saude import UnidadeSaude
+        from services import cnes as api_cnes
+
+        total = {"criadas": 0, "atualizadas": 0, "desativadas": 0}
+        for codigo in municipios:
+            municipio = Municipio.query.get(str(codigo).strip())
+            if municipio is None:
+                print(f"  {codigo}: município não está na tabela — rode "
+                      "`flask municipios-importar` ou confira o código.")
+                continue
+
+            try:
+                achadas = api_cnes.estabelecimentos(codigo)
+            except api_cnes.ErroCNES as erro:
+                print(f"  {municipio.nome}: {erro}")
+                continue
+
+            vistas = set()
+            for dados in achadas:
+                vistas.add(dados["codigo_cnes"])
+                unidade = UnidadeSaude.query.filter_by(
+                    cnes=dados["codigo_cnes"]).first()
+                novo = unidade is None
+                if novo:
+                    unidade = UnidadeSaude(cnes=dados["codigo_cnes"])
+                    db.session.add(unidade)
+                unidade.nome = dados["nome"]
+                unidade.tipo = dados["tipo"]
+                unidade.municipio_ibge = municipio.codigo_ibge
+                unidade.cidade = municipio.nome
+                unidade.uf = municipio.uf
+                unidade.ativo = True
+                total["criadas" if novo else "atualizadas"] += 1
+
+            if desativar_ausentes:
+                # Só dentro do município importado, e só desativa: unidade tem
+                # registro clínico pendurado, e apagá-la levaria o histórico
+                # junto. O mesmo argumento de `desativar_usuario`.
+                for orfa in UnidadeSaude.query.filter_by(
+                        municipio_ibge=municipio.codigo_ibge).all():
+                    if orfa.cnes not in vistas and orfa.ativo:
+                        orfa.ativo = False
+                        total["desativadas"] += 1
+
+            db.session.commit()
+            print(f"  {municipio.nome}/{municipio.uf}: {len(achadas)} unidades "
+                  "do CNES")
+
+        print(f"{total}")
+        print("Leitos: rode `flask seed` — os setores nascem nos hospitais que "
+              "o CNES marca como tendo atendimento hospitalar.")
+
     @app.cli.command("seed-volume")
     @click.option("--pacientes", default=50_000, show_default=True)
     @click.option("--limpar", is_flag=True, help="Remove os dados sintéticos.")

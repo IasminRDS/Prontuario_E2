@@ -492,7 +492,61 @@ def limpar():
         removidos[nome] = db.session.execute(
             sa.delete(modelo).where(modelo.paciente_id.in_(ids))).rowcount
 
-    removidos["pacientes"] = db.session.execute(
-        sa.delete(Paciente).where(Paciente.id.in_(ids))).rowcount
     db.session.commit()
+
+    # Paciente sintético que foi USADO na aplicação acumula registro que estes
+    # geradores não criaram — documento assinado, envio à RNDS, consentimento.
+    # Apagá-lo em bloco estourava a chave estrangeira e o comando morria com uma
+    # parede de SQL: quem rodou não ficava sabendo o que segurou nem o que fazer.
+    #
+    # Remove-se o que dá, e RELATA-SE o que ficou. É a mesma decisão que o
+    # projeto já tomou para usuário e para paciente absorvido: registro com
+    # dependência clínica não se apaga em silêncio.
+    presos = _presos_por_dependencia(ids)
+    livres = [i for i in ids if i not in presos]
+    removidos["pacientes"] = db.session.execute(
+        sa.delete(Paciente).where(Paciente.id.in_(livres))).rowcount if livres else 0
+    db.session.commit()
+    if presos:
+        removidos["pacientes_mantidos"] = len(presos)
+        removidos["motivo"] = (
+            "têm registro criado pela aplicação, não por este gerador: "
+            + ", ".join(sorted(presos_por_tabela(presos)))) 
     return removidos
+
+
+def _tabelas_que_apontam_para_paciente():
+    """Descobertas pelo metadata, nunca listadas à mão.
+
+    Mesma razão da unificação de pacientes: a tabela que alguém esquecesse
+    deixaria o comando explodindo de novo, e o esquecimento não daria erro até
+    acontecer.
+    """
+    from models.paciente import Paciente  # noqa: F401  (popula o metadata)
+
+    return [(t, c) for t in db.metadata.sorted_tables for c in t.columns
+            for fk in c.foreign_keys if fk.column.table.name == "pacientes"]
+
+
+def _presos_por_dependencia(ids):
+    """Ids que alguma tabela FORA destes geradores ainda referencia."""
+    import sqlalchemy as sa
+
+    presos = set()
+    for tabela, coluna in _tabelas_que_apontam_para_paciente():
+        achados = db.session.execute(
+            sa.select(coluna).where(coluna.in_(ids)).distinct()).scalars().all()
+        presos.update(a for a in achados if a is not None)
+    return presos
+
+
+def presos_por_tabela(ids):
+    """Quais tabelas seguram, para a mensagem dizer onde olhar."""
+    import sqlalchemy as sa
+
+    nomes = set()
+    for tabela, coluna in _tabelas_que_apontam_para_paciente():
+        if db.session.execute(
+                sa.select(coluna).where(coluna.in_(ids)).limit(1)).first():
+            nomes.add(tabela.name)
+    return nomes
