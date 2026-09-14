@@ -8,6 +8,7 @@ from database.db import db
 from utils.audit import auditar_aqui
 from datetime import datetime, date, timedelta
 from utils.rbac import requer_permissao
+from utils.rls import alcanca_todas_as_unidades
 from utils.seguranca_http import limitar
 
 agendamento_bp = Blueprint('agendamento', __name__, url_prefix='/agendamento')
@@ -28,7 +29,8 @@ def index():
 
     q = Agendamento.query.filter(
         db.func.date(Agendamento.data_hora) == data_filtro,
-        Agendamento.unidade_id == current_user.unidade_id
+        db.true() if alcanca_todas_as_unidades()
+        else Agendamento.unidade_id == current_user.unidade_id
     )
     if status:
         q = q.filter(Agendamento.status == status)
@@ -167,7 +169,8 @@ def api_horarios():
         return jsonify([])
     ags = Agendamento.query.filter(
         db.func.date(Agendamento.data_hora) == d,
-        Agendamento.unidade_id == current_user.unidade_id
+        db.true() if alcanca_todas_as_unidades()
+        else Agendamento.unidade_id == current_user.unidade_id
     ).order_by(Agendamento.data_hora).all()
     return jsonify([{
         'id':       a.id,

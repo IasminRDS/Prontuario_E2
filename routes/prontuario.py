@@ -12,6 +12,7 @@ from models.medico import Medico
 from utils.security import validar_cid10, pode_acessar_prontuario, pode_acessar_paciente
 from utils.audit import auditar_aqui, log_auditoria, registrar
 from utils.rbac import requer_permissao
+from utils.rls import alcanca_todas_as_unidades
 from utils.numeros import decimal_de, inteiro_de
 from utils import sinais_vitais
 from utils.terminologias import descricao_cid
@@ -155,7 +156,11 @@ def to_dict(p):
 def _query_prontuario_escopo():
     q = Prontuario.query
 
-    if current_user.perfil == "admin":
+    # Era `current_user.perfil == "admin"`: comparação de string crua, o defeito
+    # de 9.4.19 — o mesmo usuário tomava caminhos diferentes conforme estivesse
+    # gravado na forma canônica ou no apelido. E deixava de fora o operador da
+    # plataforma, que não tem lotação e via a tela vazia com o banco cheio.
+    if alcanca_todas_as_unidades():
         return q
 
     if current_user.unidade_id:

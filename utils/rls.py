@@ -160,6 +160,32 @@ def escopo_do_usuario(usuario):
     return escopo
 
 
+def alcanca_todas_as_unidades(usuario=None):
+    """O usuário atravessa o isolamento por unidade?
+
+    Existe porque as telas filtravam por `current_user.unidade_id` cru, e o
+    **operador da plataforma não tem lotação** — por decisão deste projeto:
+    quem atravessa o isolamento pelo perfil não é lotado em lugar nenhum.
+    Resultado: triagem, leitos, prontuário e agenda abriam dizendo "nenhum" para
+    a única conta que deveria ver tudo, com o banco cheio.
+
+    Responde pela MESMA função que o RLS usa, e não por comparação de string com
+    "admin" — que é o defeito de 9.4.19: `perfil == "admin"` dava caminhos
+    diferentes para o mesmo usuário conforme ele estivesse gravado na forma
+    canônica ou no apelido.
+
+    **O que isto NÃO resolve:** usuário de escopo MUNICIPIO, REGIONAL ou ESTADO
+    continua filtrado em Python pela unidade de lotação, mais estreito do que o
+    banco lhe permite. É inconsistência anterior a esta função e está anotada
+    como tal; aqui só se corrige o caso em que o filtro em Python nega o que o
+    banco libera por inteiro.
+    """
+    from flask_login import current_user
+
+    alvo = usuario if usuario is not None else current_user
+    return escopo_do_usuario(alvo).get("nivel") == "SISTEMA"
+
+
 def escopo_atual():
     """Escopo da transação que está começando.
 

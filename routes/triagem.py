@@ -10,6 +10,7 @@ from utils.numeros import decimal_de, inteiro_de
 from utils import sinais_vitais
 from datetime import datetime, date
 from utils.rbac import requer_permissao
+from utils.rls import alcanca_todas_as_unidades
 
 triagem_bp = Blueprint("triagem", __name__, url_prefix="/triagem")
 
@@ -20,11 +21,15 @@ triagem_bp = Blueprint("triagem", __name__, url_prefix="/triagem")
 def index():
     """Painel de triagem do dia — fila por classificação."""
     hoje = date.today()
+    # O operador da plataforma não tem lotação, e filtrar por ela o deixava com
+    # a fila vazia. Quem atravessa o isolamento não leva filtro de unidade em
+    # Python: o RLS já governa o que ele alcança.
+    condicoes = [db.func.date(Triagem.criado_em) == hoje]
+    if not alcanca_todas_as_unidades():
+        condicoes.append(Triagem.unidade_id == current_user.unidade_id)
+
     triagens = (
-        Triagem.query.filter(
-            db.func.date(Triagem.criado_em) == hoje,
-            Triagem.unidade_id == current_user.unidade_id,
-        )
+        Triagem.query.filter(*condicoes)
         .order_by(
             db.case(
                 (Triagem.classificacao == "vermelho", 1),
@@ -111,19 +116,19 @@ def nova(paciente_id=None):
 
             disc_raw = request.form.getlist("discriminadores")
 
+            # O que foi digitado, cru, para devolver à tela quando algum campo
+            # for recusado. Sem isto a enfermagem reescrevia os oito sinais
+            # vitais por causa de um — e formulário que pune quem erra é
+            # formulário que se aprende a contornar, que é o oposto do que a
+            # conferência de plausibilidade existe para conseguir.
+            enviado = {c: request.form.get(c) for c in CAMPOS_REEXIBIDOS}
+            enviado["discriminadores"] = disc_raw
+
             # Converte ANTES de montar o objeto e NOMEANDO o campo. Antes, a
             # conversão acontecia dentro da construção: um valor ilegível
             # derrubava a triagem inteira e a tela mostrava a exceção crua do
             # Python, sem dizer qual campo. E era `float()` direto, sem trocar
             # a vírgula — "38,4" era aceito pelo prontuário e recusado aqui.
-            # O que foi digitado, cru, para devolver à tela quando algum
-            # campo for recusado. Sem isto a enfermagem reescrevia os oito
-            # sinais vitais por causa de um — e formulário que pune quem erra é
-            # formulário que se aprende a contornar, que é exatamente o oposto
-            # do que a conferência de plausibilidade existe para conseguir.
-            enviado = {c: request.form.get(c) for c in CAMPOS_REEXIBIDOS}
-            enviado["discriminadores"] = disc_raw
-
             vitais = {}
             for campo, converter in CAMPOS_VITAIS:
                 try:

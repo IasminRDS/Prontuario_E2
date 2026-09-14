@@ -1437,15 +1437,14 @@ achados em que dois mecanismos se somaram, e são precisamente os mais graves.
 **Classe I — A declaração que deixou de ser verdadeira.** O sistema evoluiu; a
 afirmação escrita sobre ele permaneceu. Não é documentação desatualizada no
 sentido trivial: a afirmação continua *literalmente* correta sobre o subconjunto
-que descreve, e por isso resiste à leitura crítica. *Instâncias: 9.4.1, 9.4.5,
-9.4.19.* **Verificação correspondente:** confrontar a declaração com o estado
+que descreve, e por isso resiste à leitura crítica. *Instâncias: 9.4.1, 9.4.5, 9.4.19, 9.4.20.* **Verificação correspondente:** confrontar a declaração com o estado
 real, e não com outra declaração — a lista de tabelas protegidas derivada do
 *metadata*, o comando que interroga o servidor de banco de dados.
 
 **Classe II — A regra escrita mais de uma vez.** A mesma decisão registrada em
 dois ou mais lugares, que divergem sem que nada acuse, porque cada cópia é
 internamente consistente. É a causa isolada mais frequente deste trabalho.
-*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19.* **Verificação
+*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22.* **Verificação
 correspondente:** comparar as cópias entre si, e no nível de abstração certo —
 não os nomes das permissões, mas o conjunto de perfis que cada caminho admite.
 
@@ -1457,8 +1456,7 @@ e rota sem tela —, porque cada direção encontra um conjunto distinto.
 
 **Classe IV — O efeito que não ocorre.** A chamada acontece, e o efeito não: o
 registro de auditoria é criado e não persistido, o campo é lido e não gravado. A
-leitura do código confirma a intenção e não o resultado. *Instâncias: 9.4.4,
-9.4.8, 9.4.13.* **Verificação correspondente:** medir o efeito, nunca a chamada —
+leitura do código confirma a intenção e não o resultado. *Instâncias: 9.4.4, 9.4.8, 9.4.13, 9.4.21.* **Verificação correspondente:** medir o efeito, nunca a chamada —
 contar linhas na tabela depois da requisição, não conferir que a função foi
 invocada.
 
@@ -1466,7 +1464,7 @@ invocada.
 garantia produzindo aquilo que deveria impedir: o teste que verifica o objeto
 errado, o detector cego para o próprio defeito, a correção de conformidade que
 degrada o desempenho, o endurecimento que interrompe o controle que protegia.
-*Instâncias: 9.4.2, 9.4.7, 9.4.9, 9.4.15.* **Verificação correspondente:** a
+*Instâncias: 9.4.2, 9.4.7, 9.4.9, 9.4.15, 9.4.23, 9.4.24, 9.4.25.* **Verificação correspondente:** a
 única de segunda ordem — verificar o verificador, introduzindo deliberadamente o
 defeito que ele deve encontrar e confirmando que ele reprova.
 
@@ -1474,12 +1472,26 @@ Quadro — Mecanismos recorrentes e achados correspondentes
 
 | Classe | Mecanismo | Achados | Verificação que a torna detectável |
 |---|---|---|---|
-| I | Declaração que deixou de valer | 9.4.1, 9.4.5, 9.4.19 | confronto com o estado real, não com outra declaração |
-| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19 | comparação entre as cópias, no nível de abstração do efeito |
+| I | Declaração que deixou de valer | 9.4.1, 9.4.5, 9.4.19, 9.4.20 | confronto com o estado real, não com outra declaração |
+| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22 | comparação entre as cópias, no nível de abstração do efeito |
 | III | Caminho inexistente | 9.4.10, 9.4.11, 9.4.12, 9.4.16 | alcançabilidade nos dois sentidos |
-| IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13 | medição do efeito, não da chamada |
-| V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15 | verificação de segunda ordem sobre o próprio controle |
+| IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13, 9.4.21 | medição do efeito, não da chamada |
+| V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15, 9.4.23, 9.4.24, 9.4.25 | verificação de segunda ordem sobre o próprio controle |
 
+
+**A taxonomia foi obtida a partir dos dezenove primeiros achados e absorveu os
+seis seguintes sem exigir classe nova.** O registro importa porque uma
+classificação construída *a posteriori* corre sempre o risco de descrever apenas
+o conjunto de onde saiu. Os achados 9.4.20 a 9.4.25 surgiram depois, de
+investigação independente, e cada um encontrou classe existente: a declaração
+que deixou de valer, a regra com duas fontes de verdade, o efeito esperado que
+não ocorre e — em três casos — o próprio controle como origem do defeito. É
+evidência de que os mecanismos são do objeto, e não do olhar.
+
+Vale notar a distribuição: **três dos seis caíram na classe V**, a do controle
+que produz o que deveria impedir. Não é acaso, e sim consequência do próprio
+método: quanto mais instrumentos de verificação um sistema acumula, maior a
+superfície em que essa classe pode se manifestar.
 
 Fonte: elaborado pela autora (2026), por classificação a posteriori dos achados relatados em 9.4.
 O achado 9.4.6 reúne observações pontuais

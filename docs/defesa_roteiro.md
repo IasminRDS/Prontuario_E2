@@ -15,7 +15,7 @@ Antes dos slides, o alvo. A banca precisa sair da sala capaz de repetir isto:
 
 > O trabalho não avaliou um sistema pronto: **construiu um**, e foi essa
 > condição que permitiu abrir, instrumentar e exercitar cada controle por
-> dentro. A verificação empírica desses controles revelou dezenove defeitos que
+> dentro. A verificação empírica desses controles revelou vinte e cinco defeitos que
 > compartilham uma propriedade — **nenhum produz mensagem de erro**. Eles se
 > agrupam em cinco mecanismos recorrentes, e cada mecanismo admite uma
 > verificação que o torna detectável por medição, e não por atenção. As cinco
@@ -355,7 +355,7 @@ mais impressiona banca de gestão.
   verificar controles de segurança."**
 - Abaixo, quatro ícones/linhas: instrumentar · exercitar · confrontar nos dois
   sentidos · medir cobertura como mapa
-- Números: **583 casos · 372 funções · 46 arquivos · dois bancos**
+- Números: **666 casos · 427 funções · 49 arquivos · dois bancos**
 
 **Fala (1 min 15)**
 
@@ -371,7 +371,7 @@ mais impressiona banca de gestão.
 > conciliam telas e rotas **nos dois sentidos**; e que consultam o catálogo do
 > PostgreSQL para ver se as políticas estão de fato ativas.
 >
-> São 583 casos de teste, provenientes de 372 funções em 46 arquivos, executados
+> São 666 casos de teste, provenientes de 427 funções em 49 arquivos, executados
 > integralmente sobre os dois bancos usados no projeto.
 >
 > E acrescentei a medição de cobertura de execução — **não como meta percentual,
@@ -394,7 +394,7 @@ lidos como produto do método.
 
 **Fala (2 min)** — *slide central, não corra*
 
-> São dezenove achados. E eles compartilham uma propriedade que define o objeto
+> São vinte e cinco achados. E eles compartilham uma propriedade que define o objeto
 > deste capítulo: **nenhum produz mensagem de erro.** O sistema não interrompe,
 > não registra exceção, não se comporta de modo anômalo para o operador. Uma
 > consulta retorna menos linhas do que deveria; um campo preenchido é
@@ -404,7 +404,7 @@ lidos como produto do método.
 > convencionais não alcançam** — porque teste convencional verifica que o
 > esperado aconteceu, e aqui o que falta é justamente a expectativa.
 >
-> Enumerados um a um, dezenove defeitos diriam apenas que o sistema tinha erros,
+> Enumerados um a um, vinte e cinco defeitos diriam apenas que o sistema tinha erros,
 > o que é verdadeiro e pouco informativo. Examinados em conjunto, agrupam-se em
 > cinco mecanismos:
 >
@@ -465,7 +465,7 @@ apresentação inteira.
 >
 > As cinco existem como casos permanentes da suíte. **Um defeito de qualquer
 > dessas classes que reapareça reprova a execução.** É a diferença entre haver
-> corrigido dezenove defeitos e haver instalado cinco instrumentos que encontram
+> corrigido vinte e cinco defeitos e haver instalado cinco instrumentos que encontram
 > a próxima ocorrência de cada um.
 
 **Objetivo.** Este slide é a contribuição em forma operacional. Diga a última
@@ -585,6 +585,7 @@ verificável"*:
 - Desempenho: **protocolo implementado; ambiente ainda sintético**
 - Usabilidade: **inspeção pela equipe, sem usuários finais**
 - RBAC: **não configurável por organização**
+- Dados da demonstração: **rede real do CNES; pacientes sintéticos**
 
 **Fala (1 min)** — *tom firme, não defensivo*
 
@@ -601,6 +602,18 @@ verificável"*:
 > Sobre a âncora: o mecanismo existe e um caso de teste exercita **o que ele não
 > fecha** — truncar o fim do próprio registro de âncoras. O que resta de
 > limitação é a custódia, que é decisão organizacional, não de software.
+>
+> Sobre os dados que a banca vê: a **rede** é real. As unidades vêm do CNES pela
+> API de dados abertos do Ministério da Saúde, com código, tipo e município
+> verdadeiros. Os **pacientes** são sintéticos, e isso é decisão, não limitação
+> técnica: os microdados de internação do DATASUS são registros individuais de
+> internações reais de pessoas reais, e semeá-los aqui faria o sistema
+> apresentar a internação de alguém como registro seu.
+>
+> A contagem de leitos também não vem do CNES, e o motivo é metodológico: a base
+> pública que publica leitos por hospital não traz o código CNES, e ligá-la pelo
+> nome do hospital seria construir sobre o texto livre que este trabalho critica.
+> O CNES decide quem interna; a quantidade por setor é parâmetro declarado.
 >
 > Em desempenho, a limitação mudou de natureza durante o trabalho. Os tempos
 > vinham de observação, sem repetições nem dispersão. Isso foi fechado: há um
@@ -876,7 +889,7 @@ sentidos** — achado novo falha, e achado já corrigido que continue na lista t
 falha. Sem isso, a lista de exceções envelhece e a verificação deixa de medir sem
 deixar de passar.
 
-### 12. O que significa a taxonomia dos 19 achados?
+### 12. O que significa a taxonomia dos 25 achados?
 
 **Curta.** Significa que os defeitos não são independentes: são um número pequeno
 de causas em pontos diferentes. Isso desloca a recomendação do caso para a classe
@@ -888,7 +901,7 @@ achados já registrados. As classes se sobrepõem em três casos, e mantive as
 sobreposições registradas em vez de forçar exclusividade, porque elas marcam
 exatamente os achados em que dois mecanismos se somaram — que são os mais graves.
 
-### 13. Como você sabe que os 583 casos são suficientes?
+### 13. Como você sabe que os 666 casos são suficientes?
 
 **Curta.** Não sei, e o trabalho não afirma isso. Suficiência não é demonstrável.
 O que os casos garantem é outra coisa: que um defeito de qualquer das cinco
@@ -1065,13 +1078,13 @@ externa, que registra total, último identificador e resumo final. Guardado um
 > escopo territorial. A auditoria registra leituras e escritas, encadeadas por
 > hash. E o backup tem validação automatizada de restauração.
 >
-> A verificação — 583 casos de teste — revelou dezenove defeitos, e todos
+> A verificação — 666 casos de teste — revelou vinte e cinco defeitos, e todos
 > compartilham uma propriedade: **nenhum gera mensagem de erro**. Entre eles, o
 > Row-Level Security estava corretamente implementado e cinco tabelas clínicas
 > centrais estavam integralmente fora dele, enquanto a documentação afirmava
 > cobertura total.
 >
-> Esses dezenove agrupam-se em cinco mecanismos recorrentes, e cada mecanismo
+> Esses vinte e cinco agrupam-se em cinco mecanismos recorrentes, e cada mecanismo
 > admite uma verificação que o torna detectável por medição em vez de por
 > atenção. As cinco viraram casos permanentes da suíte.
 >
@@ -1111,7 +1124,7 @@ uma delas entrega à banca uma contradição contra o próprio documento.
   ISO/IEC 27000; falta prova oponível ao operador.
 
 **Sobre os testes**
-- ❌ "583 testes provam que não há mais defeitos." → provam que um defeito das
+- ❌ "666 testes provam que não há mais defeitos." → provam que um defeito das
   classes conhecidas reprova a execução. Suficiência não é demonstrável.
 - ❌ "A cobertura de testes é alta." → cobertura foi usada como **mapa**, não
   como meta; percentual não mede qualidade.

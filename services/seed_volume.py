@@ -279,6 +279,11 @@ QUEIXAS = (
     "Hipertensão descompensada",
 )
 
+# Fração das triagens que nasce no dia de hoje. Ver `gerar_ambulatorial`: a
+# fila de triagem filtra por hoje, e sem esta fatia o módulo abre vazio numa
+# demonstração com dois anos de dado.
+FATIA_DE_HOJE = 0.03
+
 CONDUTAS = (
     ("Consulta de rotina", "Paciente refere melhora dos sintomas.",
      "Bom estado geral, corado, hidratado.", "Quadro estável.",
@@ -358,6 +363,20 @@ def gerar_ambulatorial(semente=42, lote=2_000):
 
     criados = {}
 
+    # A tela de triagem é a FILA DO DIA: ela filtra por hoje, porque é isso que
+    # uma fila de triagem é. Com as triagens espalhadas por dois anos, quase
+    # nenhuma cai hoje e o módulo abre vazio — a demonstração não mostra o que
+    # ele faz. Uma fatia nasce HOJE, em horário de expediente, para que a fila
+    # exista. O resto continua espalhado, que é o que dá série histórica.
+    hoje_ate = int(2_000 * FATIA_DE_HOJE)
+
+    def _quando_triagem(indice):
+        if indice < hoje_ate:
+            return agora.replace(hour=random.randint(7, 18),
+                                 minute=random.randint(0, 59), second=0,
+                                 microsecond=0)
+        return _quando()
+
     amostra = random.sample(pacientes, min(2_000, len(pacientes)))
     criados["triagens"] = _inserir(Triagem, [
         dict(
@@ -368,10 +387,10 @@ def gerar_ambulatorial(semente=42, lote=2_000):
             queixa_principal=f"{random.choice(QUEIXAS)} [{MARCA}]",
             dor_escala=random.randint(0, 10),
             status="finalizado",
-            criado_em=_quando(),
+            criado_em=_quando_triagem(i),
             **_vitais_plausiveis(lambda faixa: random.choice(list(faixa))),
         )
-        for p in amostra
+        for i, p in enumerate(amostra)
     ])
 
     amostra = random.sample(pacientes, min(2_000, len(pacientes)))
