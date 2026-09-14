@@ -38,9 +38,32 @@ A frase mais afiada do trabalho, e que deve ser dita na defesa quase literalment
 | II — O método e o que ele achou | 9 a 13 | Como foi verificado, e o que apareceu |
 | III — O significado | 14 a 18 | Por que isso é contribuição de governança |
 
-**Sobre o tempo.** Os dezoito slides somam ~20 min. Se a banca sinalizar
-aperto, os cortes seguros, nesta ordem: fundir 2 e 3, reduzir o 5 a trinta
-segundos, cortar o 17. **Nunca corte 10, 11, 13 e 15** — são o trabalho.
+**Sobre o tempo — medido, não estimado.** `python scripts/cronometrar_defesa.py`
+conta as palavras da fala e as divide por um ritmo declarado. Hoje: os tempos
+anotados slide a slide somam **21:15**, e o texto leva **23:04** num ritmo médio
+(145 palavras/min) ou **20:55** num ritmo rápido. Ou seja: **não cabe em 20
+minutos falando com calma**, e a afirmação anterior — "somam ~20 min" — era
+otimista já pelos próprios números.
+
+Dois slides concentram o excesso: o **14** (2:10 para 1:00 anotado) e o **12**
+(2:06 para 1:30). O 14 é o mais fácil de cortar sem perder argumento: as cinco
+limitações estão na tela, e a fala não precisa desenvolver todas — basta
+desenvolver **o não repúdio**, que é a conceitualmente séria, e mencionar as
+outras quatro em uma frase cada.
+
+Cortes na ordem, com o que cada um devolve no ritmo médio:
+
+| Corte | Devolve |
+|---|---|
+| Slide 14: desenvolver só o não repúdio | ~60s |
+| Slide 12: só três resultados, não seis | ~35s |
+| Cortar o 17 (trabalhos futuros) | ~36s |
+| Reduzir o 5 a trinta segundos | ~35s |
+| Fundir 2 e 3 | ~45s |
+
+Os três primeiros já trazem para ~20:50 no médio. **Nunca corte 10, 11, 13 e
+15** — são o trabalho. Rode o cronômetro de novo depois de mexer: a afirmação de
+tempo envelhece a cada parágrafo, como qualquer contagem deste projeto.
 
 ---
 
@@ -603,17 +626,10 @@ verificável"*:
 > fecha** — truncar o fim do próprio registro de âncoras. O que resta de
 > limitação é a custódia, que é decisão organizacional, não de software.
 >
-> Sobre os dados que a banca vê: a **rede** é real. As unidades vêm do CNES pela
-> API de dados abertos do Ministério da Saúde, com código, tipo e município
-> verdadeiros. Os **pacientes** são sintéticos, e isso é decisão, não limitação
-> técnica: os microdados de internação do DATASUS são registros individuais de
-> internações reais de pessoas reais, e semeá-los aqui faria o sistema
-> apresentar a internação de alguém como registro seu.
->
-> A contagem de leitos também não vem do CNES, e o motivo é metodológico: a base
-> pública que publica leitos por hospital não traz o código CNES, e ligá-la pelo
-> nome do hospital seria construir sobre o texto livre que este trabalho critica.
-> O CNES decide quem interna; a quantidade por setor é parâmetro declarado.
+> Sobre os dados da demonstração: a **rede** é real, vinda do CNES. Os
+> **pacientes** são sintéticos por decisão — microdado do DATASUS é registro de
+> internação de gente real, e semeá-lo aqui faria o sistema apresentar a
+> internação de alguém como registro seu.
 >
 > Em desempenho, a limitação mudou de natureza durante o trabalho. Os tempos
 > vinham de observação, sem repetições nem dispersão. Isso foi fechado: há um

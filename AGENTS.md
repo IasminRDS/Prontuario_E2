@@ -249,7 +249,17 @@ barra lateral e o tempo no cabeçalho.
 ```bash
 python scripts/gerar_defesa_docx.py   # o roteiro, para ensaiar
 python scripts/gerar_defesa_pptx.py   # os slides, para projetar
+python scripts/cronometrar_defesa.py  # o texto cabe no tempo que ele anuncia?
 ```
+
+`cronometrar_defesa` conta as palavras de cada fala e as divide por um ritmo
+declarado — **não mede a apresentação, mede se o texto cabe**. Existe porque o
+roteiro afirmava "os dezoito slides somam ~20 min" e ninguém tinha conferido:
+somavam 21:15 pelos próprios tempos anotados, e o texto levava 23:04 num ritmo
+médio. Afirmação de tempo envelhece como contagem de teste — a cada parágrafo
+acrescentado — e só acusa no dia em que a banca olha o relógio. O ritmo é
+suposição declarada, e por isso a saída traz três colunas em vez de um número:
+valor único esconderia que a resposta depende de quem fala.
 
 Os slides saem do mesmo roteiro, e a divisão é a que importa: **o corpo do
 slide é escrito no gerador** — a rubrica "Visual" do roteiro descreve o que
