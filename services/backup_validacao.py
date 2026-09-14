@@ -64,14 +64,59 @@ def _ambiente(url):
     return amb
 
 
-def _reescrever_schema(sql, schema):
-    """Aponta o SQL do dump para o schema de validação em vez de `public`."""
-    sql = re.sub(r"\bpublic\.", f"{schema}.", sql)
-    sql = sql.replace("CREATE SCHEMA public;", f"CREATE SCHEMA {schema};")
+def _reescrever_schema(sql, schema, origem="public"):
+    """Aponta o SQL do dump para o schema de validação em vez do de origem.
+
+    `origem` era a constante `public`, e isso só é verdade quando a aplicação
+    mora ali. Num banco cujo schema seja outro, a reescrita não casava com nada:
+    o SQL continuava nomeando o schema ORIGINAL, e o restore de validação
+    escrevia em cima do banco vivo em vez de num schema à parte. Os `CREATE`
+    falhavam com "already exists" — o que mascarava o problema, porque parecia
+    ruído — e os `COPY` seguintes iam para as tabelas de produção.
+    """
+    sql = re.sub(rf"\b{re.escape(origem)}\.", f"{schema}.", sql)
+    sql = sql.replace(f"CREATE SCHEMA {origem};", f"CREATE SCHEMA {schema};")
     return re.sub(r"SET search_path = [^;]+;", f"SET search_path = {schema};", sql)
 
 
-def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO):
+def _erros_de(resultado):
+    """O que deu errado no restore — decidido pelo CÓDIGO DE SAÍDA.
+
+    Existe separado, e recebe o resultado pronto, para poder ser medido: era
+    `[l for l in stderr if "ERROR" in l]`, e mensagem de erro do PostgreSQL é
+    **traduzida**. Num servidor em português ela diz `ERRO:`, a palavra `ERROR`
+    nunca aparecia, a lista saía vazia — e a validação de backup declarava
+    íntegro um restore que errava em todas as linhas.
+
+    É o defeito de 9.4.2 no instrumento que mais depende de não tê-lo: o comando
+    existe porque "backup que nunca foi restaurado é um arquivo, não um backup",
+    e ele estava aprovando restores que não aconteceram.
+
+    O texto continua sendo devolvido, porque é ele que diz a quem lê O QUE
+    falhou. O que não se faz é DECIDIR por ele. Código de saída não tem idioma.
+    """
+    if resultado.returncode == 0:
+        return []
+    linhas = [l for l in (resultado.stderr or "").splitlines() if l.strip()]
+    return linhas or [f"psql terminou com código {resultado.returncode}"]
+
+
+def _schema_da_aplicacao(db):
+    """Onde as tabelas da aplicação vivem AGORA, perguntado ao banco.
+
+    `public` é o caso comum e não é o único: a suíte se isola num
+    `teste_automatizado_<pid>`, e uma instalação endurecida pode pôr a aplicação
+    em schema próprio. Presumir `public` fazia a validação de backup operar
+    sobre um schema que não é o da aplicação.
+    """
+    import sqlalchemy as sa
+
+    with db.engine.connect() as conn:
+        return conn.execute(sa.text("select current_schema()")).scalar() or "public"
+
+
+def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO,
+            origem=None):
     """Restaura `caminho_dump` num schema e compara contagens com a origem.
 
     Devolve (comparacoes, erros_do_restore), onde `comparacoes` é uma lista de
@@ -94,6 +139,8 @@ def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO):
     pg_restore, psql = _binario("pg_restore.exe" if os.name == "nt" else "pg_restore"), \
         _binario("psql.exe" if os.name == "nt" else "psql")
 
+    origem = origem or _schema_da_aplicacao(db)
+
     url = db.engine.url
     amb = _ambiente(url)
     conexao = ["--host", url.host or "localhost", "--port", str(url.port or 5432),
@@ -104,14 +151,31 @@ def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO):
     sql_schema = temporario / "dump_schema.sql"
 
     def _psql(*args):
-        return subprocess.run([psql] + conexao + ["-v", "ON_ERROR_STOP=0"] + list(args),
+        # `ON_ERROR_STOP=1`, e não 0. Eram duas coisas erradas de uma vez:
+        #
+        # 1. seguir adiante depois do primeiro erro é o que permitia ao restore
+        #    de validação continuar executando instruções que apontavam para
+        #    fora do schema temporário;
+        # 2. com 0, a única forma de saber que algo falhou era LER as mensagens,
+        #    e mensagem de erro do PostgreSQL é TRADUZIDA. Num servidor em
+        #    português ela diz "ERRO:", e o filtro procurava "ERROR:" — de modo
+        #    que a validação aprovava, em silêncio, um restore que errava em
+        #    todas as linhas. Forçar `lc_messages` não resolve: é parâmetro que
+        #    só superusuário altera, e o papel da aplicação não é (nem deve ser).
+        #
+        # O código de saída do processo não tem idioma.
+        return subprocess.run([psql] + conexao + ["-v", "ON_ERROR_STOP=1"] + list(args),
                               env=amb, capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
 
     try:
+        # `--schema` limita a conversão ao schema DA APLICAÇÃO. Sem isso, um
+        # dump do banco inteiro traz junto todo schema que exista ali, e cada
+        # um continua se nomeando no SQL — o restore de validação, que se
+        # anuncia isolado, passava a mexer em schema alheio.
         saida = subprocess.run(
-            [pg_restore, "--no-owner", "--no-privileges", "-f", str(sql_bruto),
-             str(dump)],
+            [pg_restore, "--schema", origem, "--no-owner", "--no-privileges",
+             "-f", str(sql_bruto), str(dump)],
             capture_output=True, text=True, encoding="utf-8", errors="replace")
         if saida.returncode != 0:
             raise BackupInvalido(
@@ -119,14 +183,14 @@ def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO):
 
         sql_schema.write_text(
             _reescrever_schema(sql_bruto.read_text(encoding="utf-8", errors="replace"),
-                               schema),
+                               schema, origem),
             encoding="utf-8")
 
         _psql("-c", f"DROP SCHEMA IF EXISTS {schema} CASCADE")
         _psql("-c", f"CREATE SCHEMA {schema}")
 
         aplicado = _psql("-f", str(sql_schema))
-        erros = [l for l in (aplicado.stderr or "").splitlines() if "ERROR" in l]
+        erros = _erros_de(aplicado)
 
         comparacoes = []
         with db.engine.connect() as conn:
@@ -141,14 +205,17 @@ def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO):
 
             for tabela in tabelas:
                 try:
-                    origem = _contar(tabela, "public")
+                    # Do schema da APLICAÇÃO, e não de `public`: com a aplicação
+                    # noutro schema, esta contagem lia uma tabela vazia — ou
+                    # inexistente — e a comparação perdia o sentido.
+                    contagem_origem = _contar(tabela, origem)
                 except Exception:
                     continue  # tabela não existe nesta versão do schema
                 try:
                     restaurado = _contar(tabela, schema)
                 except Exception:
                     restaurado = None  # não veio no dump
-                comparacoes.append((tabela, origem, restaurado))
+                comparacoes.append((tabela, contagem_origem, restaurado))
 
         return comparacoes, erros
 

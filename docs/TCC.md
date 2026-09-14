@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 646, em 48 arquivos |
+| Casos de teste automatizados | 652, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,7 +1352,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **646 casos de teste**, provenientes de 407
+A suíte automatizada compreende **652 casos de teste**, provenientes de 413
 funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1414,7 +1414,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte e dois achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e quatro achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1520,7 +1520,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte e dois defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e quatro defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2532,6 +2532,96 @@ todo usuário novo percorre. E vale registrar o efeito secundário: um indicador
 integração contínua que permanece vermelho deixa de comunicar — a segunda falha
 se esconde atrás da primeira, e ambas passam a parecer uma só.
 
+#### 9.4.23 O controle central, verificado num ambiente onde ele não existe
+
+**Achado.** O fluxo de integração contínua conectava ao banco de dados com o
+papel `postgres` — o superusuário criado pela imagem oficial. **Superusuário do
+PostgreSQL atravessa toda política de Row-Level Security**, e não existe
+equivalente de `FORCE` que o alcance: a cláusula obrigatória descrita em 7.3
+submete o *proprietário* das tabelas às políticas, não o superusuário.
+
+O conjunto de casos que verifica o isolamento territorial — o controle que este
+trabalho apresenta como central — executava, portanto, num ambiente em que as
+políticas não podiam produzir efeito algum.
+
+**Análise.** O achado pertence à família de 9.4.2 e 9.4.9, e é o terceiro
+exemplar: o instrumento de verificação comprometido pela condição que deveria
+verificar. Distingue-se, porém, num ponto que vale registrar. Naqueles, o
+instrumento **aprovava** sem medir, que é o modo de falha perigoso. Aqui os casos
+**reprovaram** — eles são honestos, e acusaram a ausência de isolamento assim que
+tiveram a chance de executar. O que os impedia de executar era outro defeito, o
+de 9.4.22, que interrompia o fluxo antes da etapa de testes.
+
+Convém nomear esse efeito, porque ele é geral: **um indicador que permanece
+vermelho deixa de comunicar**. Enquanto a primeira falha persistia, a segunda era
+indistinguível dela; o relatório dizia "vermelho" antes e depois, e nada nele
+distinguia uma causa da outra.
+
+A verificação de endurecimento do sistema (`flask hardening-check`) já continha,
+desde antes, a pergunta correta — "o papel da aplicação tem `BYPASSRLS`?" — e ela
+reprovaria nesse ambiente. Mas nenhum caso de teste comparava o **resultado**
+dessa verificação; os casos existentes comprovam apenas que cada achado possui
+nome e instrução de correção. A pergunta estava formulada e não era lida.
+
+**Correção.** O fluxo passou a criar um papel dedicado, sem `SUPERUSER` e sem
+`BYPASSRLS`, e a executar migrations e testes com ele — de modo que a aplicação
+seja proprietária das tabelas, que é a premissa de `FORCE ROW LEVEL SECURITY`.
+Acrescentou-se uma etapa que **confere os atributos do papel antes de qualquer
+teste**: ambiente errado, aqui, não produz erro — produz aprovação sem conteúdo.
+
+**Lição transferível.** Um ambiente de verificação que difere do ambiente real
+justamente no atributo verificado não verifica nada. E a condição é fácil de
+introduzir sem perceber, porque a credencial administrativa é o caminho de menor
+resistência em qualquer configuração automatizada.
+
+#### 9.4.24 O validador de backup que lia a tradução
+
+**Achado.** A rotina que valida cópias de segurança — restaurando-as e comparando
+contagens — decidia se o restore havia falhado **procurando a palavra `ERROR`**
+na saída do cliente `psql`. As mensagens de erro do PostgreSQL são **traduzidas**:
+num servidor configurado em português, a palavra emitida é `ERRO`. A lista de
+erros saía vazia, e a validação declarava íntegro um restore que falhava em
+todas as instruções.
+
+O comando existe precisamente para não se acreditar em backup por suposição —
+"cópia que nunca foi restaurada é um arquivo, não um backup". Ele estava
+aprovando restaurações que não ocorreram.
+
+**Análise.** Duas condições independentes mantinham o defeito invisível, e cada
+uma cobria a outra. Na máquina de desenvolvimento, o servidor responde em
+português e a verificação nunca acusava nada; no fluxo de integração contínua, em
+inglês, a verificação funcionaria — mas a etapa de testes não era alcançada, pelo
+defeito de 9.4.22.
+
+A investigação revelou outras duas fragilidades na mesma rotina, ambas com
+consequência operacional maior que a do relatório incorreto:
+
+- o restore prosseguia após o primeiro erro, executando instruções que apontavam
+  para **fora** do schema temporário;
+- o schema de origem era presumido `public`. Quando a aplicação reside em outro
+  schema — como no ambiente de testes, e como em instalações que isolam a
+  aplicação —, a reescrita de nomes não correspondia a nada, e a rotina que se
+  anuncia isolada passava a operar sobre o **schema em uso**.
+
+**Correção.** A decisão passou a basear-se no **código de saída** do processo, que
+não possui idioma; o texto continua sendo devolvido, porque é ele que informa *o
+que* falhou a quem lê. Forçar o idioma do servidor foi considerado e descartado:
+o parâmetro correspondente só é alterável por superusuário, e o papel da
+aplicação não o é — nem deve ser, conforme 9.4.23. A interrupção no primeiro erro
+foi ativada, e o schema de origem passou a ser consultado ao banco de dados, com
+a conversão do dump restrita a ele.
+
+**Verificação.** A decisão de falha foi extraída para função própria, exercitada
+com saídas em português e em inglês, com falha sem texto algum, e com execução
+bem-sucedida — este último para que a correção não pudesse consistir em reprovar
+sempre. A reescrita de schema é exercitada com origem própria e com `public`,
+para que a generalização não quebre a instalação comum.
+
+**Lição transferível.** **Detector que lê texto traduzido não é detector.**
+Sempre que uma verificação automática interpreta a saída humana de outro
+programa, ela herda o idioma, a versão e o formato daquele programa. O sinal
+estruturado — código de saída, código de erro, campo de status — existe para isso.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2679,7 +2769,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 646 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 652 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

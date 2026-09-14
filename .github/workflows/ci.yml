@@ -30,7 +30,13 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prontuario_ci
+      # NAO e o `postgres`, e essa e a questao. Superusuario do PostgreSQL
+      # ATRAVESSA toda politica de Row-Level Security -- nao ha `FORCE` que o
+      # alcance --, entao a suite de RLS rodava num ambiente onde o RLS nao
+      # podia funcionar. O papel abaixo e criado sem SUPERUSER e sem BYPASSRLS,
+      # que e a condicao em que o controle central deste sistema significa
+      # alguma coisa. Ver o passo "Papel da aplicacao".
+      DATABASE_URL: postgresql://prontuario_app:prontuario_app@localhost:5432/prontuario_ci
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +49,32 @@ jobs:
 
       - name: Instalar dependências
         run: pip install -r requirements-dev.txt
+
+      # O papel que a aplicacao usa em producao nao e superusuario e nao tem
+      # BYPASSRLS -- `flask hardening-check` reprova se tiver. O CI precisa da
+      # mesma condicao, senao a suite de RLS mede um banco onde as politicas
+      # nunca se aplicam. As migrations rodam com ele, de proposito: a aplicacao
+      # E a dona das tabelas, e e por isso que `FORCE ROW LEVEL SECURITY` e
+      # obrigatorio.
+      - name: Papel da aplicação, sem SUPERUSER e sem BYPASSRLS
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d prontuario_ci -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE prontuario_app LOGIN PASSWORD 'prontuario_app'
+              NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          GRANT ALL ON DATABASE prontuario_ci TO prontuario_app;
+          ALTER SCHEMA public OWNER TO prontuario_app;
+          SQL
+
+      - name: Conferir que o papel realmente não atravessa o RLS
+        env:
+          PGPASSWORD: prontuario_app
+        run: |
+          psql -h localhost -U prontuario_app -d prontuario_ci -t -A -v ON_ERROR_STOP=1 \
+            -c "select rolsuper or rolbypassrls from pg_roles where rolname = current_user" \
+            | grep -qx f
+          echo "papel sem superuser e sem bypassrls"
 
       # As migrations não são exercitadas pelo pytest, que monta o schema com
       # create_all. Aplicá-las num banco vazio é o que garante que a migration

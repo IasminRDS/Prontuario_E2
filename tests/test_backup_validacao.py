@@ -144,3 +144,82 @@ def test_dump_corrompido_e_recusado(app, tmp_path):
 
         with pytest.raises(bv.BackupInvalido, match="pg_restore"):
             bv.validar(str(lixo))
+
+
+# --- o detector que não detectava, porque lia a tradução -------------------
+
+class _Resultado:
+    """O que `subprocess.run` devolve, reduzido ao que a decisão usa."""
+
+    def __init__(self, returncode, stderr=""):
+        self.returncode, self.stderr = returncode, stderr
+
+
+PORTUGUES = (
+    'psql:/tmp/dump.sql:25: ERRO:  esquema "validacao_restore" já existe\n'
+    'psql:/tmp/dump.sql:31: ERRO:  relação "pacientes" já existe\n'
+)
+INGLES = (
+    'psql:/tmp/dump.sql:25: ERROR:  schema "validacao_restore" already exists\n'
+)
+
+
+def test_restore_que_falhou_em_portugues_e_acusado():
+    """O defeito: a decisão lia a palavra "ERROR", que é TRADUZIDA.
+
+    Num servidor em português o PostgreSQL escreve "ERRO:", a lista de erros
+    saía vazia e a validação declarava íntegro um restore que errou em todas as
+    linhas. O comando existe porque backup não restaurado é um arquivo, e não um
+    backup — e era exatamente isso que ele estava aprovando.
+
+    Forçar `lc_messages=C` não serve de correção: é parâmetro que só superusuário
+    altera, e o papel da aplicação não é nem deve ser superusuário.
+    """
+    assert bv._erros_de(_Resultado(1, PORTUGUES)), (
+        "restore que falhou em servidor traduzido passou por íntegro")
+
+
+def test_restore_que_falhou_em_ingles_tambem(): 
+    assert bv._erros_de(_Resultado(1, INGLES))
+
+
+def test_restore_limpo_nao_inventa_erro():
+    """O outro sentido: sem isto, bastaria devolver sempre uma lista cheia."""
+    assert bv._erros_de(_Resultado(0, "")) == []
+    assert bv._erros_de(_Resultado(0, "NOTICE:  extensão já existe")) == [], (
+        "aviso de rotina virou erro — e validação que reprova sempre ensina a "
+        "ignorar o resultado")
+
+
+def test_falha_sem_texto_ainda_e_falha():
+    """Código de saída não-zero sem stderr não pode virar lista vazia."""
+    assert bv._erros_de(_Resultado(2, ""))
+
+
+# --- e o schema de origem, que era presumido `public` ---------------------
+
+def test_reescrita_parte_do_schema_da_aplicacao_e_nao_de_public():
+    """`public` é o caso comum e não é o único.
+
+    A suíte vive num `teste_automatizado_<pid>`, e uma instalação endurecida põe
+    a aplicação em schema próprio. Com a origem fixa em `public`, a reescrita não
+    casava com nada: o SQL seguia nomeando o schema ORIGINAL, e o restore que se
+    anuncia isolado passava a escrever no banco vivo.
+    """
+    sql = ('CREATE SCHEMA app_hospital;\n'
+           'SET search_path = app_hospital;\n'
+           'CREATE TABLE app_hospital.pacientes (id integer);\n')
+    saida = bv._reescrever_schema(sql, "validacao_restore", origem="app_hospital")
+
+    assert "app_hospital." not in saida, "sobrou referência ao schema de origem"
+    assert "CREATE SCHEMA validacao_restore;" in saida
+    assert "validacao_restore.pacientes" in saida
+
+
+def test_reescrita_continua_funcionando_para_public():
+    """A instalação comum não pode ter sido quebrada pela generalização."""
+    sql = 'CREATE SCHEMA public;\nCREATE TABLE public.pacientes (id integer);\n'
+    saida = bv._reescrever_schema(sql, "validacao_restore")
+
+    assert "CREATE SCHEMA validacao_restore;" in saida
+    assert "validacao_restore.pacientes" in saida

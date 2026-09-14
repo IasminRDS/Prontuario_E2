@@ -63,6 +63,26 @@ a origem — backup que nunca foi restaurado é um arquivo, não um backup. Rest
 em *schema* e não em banco novo porque `CREATE DATABASE` exige `CREATEDB`, que o
 papel da aplicação não tem e não deve ter.
 
+Três coisas nele estavam erradas ao mesmo tempo, e as três se escondiam:
+
+- **a decisão de "falhou" lia a palavra `ERROR`**, e mensagem do PostgreSQL é
+  TRADUZIDA. Em servidor português ela diz `ERRO:`, a lista saía vazia e a
+  validação aprovava um restore que errava em TODAS as linhas — o instrumento
+  que existe para não acreditar em backup por fé acreditava por fé. Quem decide
+  agora é o código de saída, que não tem idioma; forçar `lc_messages` não serve,
+  porque é parâmetro que só superusuário altera.
+- **`ON_ERROR_STOP=0`** fazia o restore seguir adiante depois do primeiro erro,
+  executando instruções que apontavam para fora do schema temporário.
+- **o schema de origem era presumido `public`.** A suíte vive num
+  `teste_automatizado_<pid>`, e instalação endurecida põe a aplicação em schema
+  próprio: a reescrita não casava com nada, e o restore que se anuncia isolado
+  passava a mexer no banco vivo. A origem agora é perguntada ao banco
+  (`current_schema()`), e o `pg_restore` recebe `--schema`.
+
+O primeiro só apareceu quando o CI — que fala inglês — enfim chegou a executar
+a suíte: na máquina de quem desenvolve, que fala português, o caso passava. Vale como aviso geral: **detector que lê
+texto traduzido não é detector.**
+
 `hardening-check` verifica o que a aplicação **não** garante sozinha: `FORCE`
 ativo, papel sem `BYPASSRLS`, ausência de escopo pré-definido no ambiente e
 propriedade da tabela de auditoria. É a fronteira entre garantia da aplicação e
@@ -263,6 +283,15 @@ Python, porque o que se mede é a defesa que resta quando o filtro falha.
 O CI (`.github/workflows/ci.yml`) roda a suíte nos **dois** bancos e aplica as
 migrations num banco vazio — o `pytest` monta o schema com `create_all`, então
 sem esse passo a migration não seria exercitada.
+
+**O CI conecta como papel SEM superuser e SEM `BYPASSRLS`, e isso não é
+detalhe.** Superusuário do PostgreSQL atravessa toda política de RLS — não há
+`FORCE` que o alcance. O fluxo rodava como `postgres`, de modo que a suíte de
+RLS media um banco onde as políticas não podiam funcionar: o controle central
+deste sistema nunca foi verificado pelo pipeline. O passo "Papel da aplicação"
+cria o papel, e um segundo passo confere `rolsuper or rolbypassrls` antes de
+qualquer teste — ambiente errado aqui não produz erro, produz aprovação sem
+conteúdo.
 
 **Migration nunca decide pelo metadata da aplicação.** `d264aace5cce` escolhia
 as tabelas a proteger com `tabelas_protegidas(db.metadata)`, que reflete os
