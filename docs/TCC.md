@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 645, em 48 arquivos |
+| Casos de teste automatizados | 646, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,7 +1352,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **645 casos de teste**, provenientes de 406
+A suíte automatizada compreende **646 casos de teste**, provenientes de 407
 funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1414,7 +1414,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte e um achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e dois achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1520,7 +1520,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte e um defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e dois defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2469,6 +2469,69 @@ indicação de anomalia. Em sistemas que **publicam** dados para terceiros, a
 ausência da segunda camada deixa de ser problema local — o valor impossível passa
 a residir em base sobre a qual a instituição de origem não tem governo.
 
+#### 9.4.22 A instalação a partir do zero, que não funcionava
+
+**Achado.** A migration que ativa as políticas de Row-Level Security selecionava
+as tabelas a proteger consultando o *metadata* da aplicação — a descrição dos
+modelos em seu estado **atual**. Aplicada a um banco de dados vazio, a migration
+tentava criar política sobre oito tabelas que só recebem a coluna `unidade_id`
+em revisão **posterior**, e a instrução falhava com "column unidade_id does not
+exist", interrompendo `flask db upgrade` por completo.
+
+A consequência é mais grave do que a de um defeito de tela: **o procedimento de
+instalação descrito no próprio repositório não funcionava a partir do zero**.
+Qualquer implantação nova — outra unidade de saúde, outro servidor, o avaliador
+que clonasse o projeto — parava no primeiro comando.
+
+**Análise.** O defeito permaneceu ativo por semanas, e a razão de não ter sido
+percebido é instrutiva. Três observadores distintos deixaram de vê-lo, cada um
+por um motivo diferente:
+
+- **A suíte de testes** monta o schema com `create_all`, a partir dos modelos, e
+  portanto nunca executa a cadeia de migrations — é exatamente por isso que o
+  fluxo de integração contínua contém um passo dedicado a aplicá-las.
+- **A máquina de desenvolvimento** tinha um banco de dados que já havia recebido
+  todas as revisões, uma a uma, na ordem em que foram escritas. As colunas já
+  existiam; a migration antiga nunca foi reexecutada sobre um banco vazio.
+- **A integração contínua** via o defeito, e o reportava a cada execução — mas o
+  relato só chega **depois** do envio ao repositório remoto, e a falha convivia
+  com um segundo defeito, já relatado em 9.4.9, que mantinha o mesmo fluxo
+  vermelho por outra causa. Um indicador que já está vermelho não sinaliza nada
+  quando fica vermelho de novo.
+
+A causa técnica é a mesma de 9.4.14, aplicada a outro artefato: uma regra com
+duas fontes de verdade. Uma migration é, por definição, o **retrato de um
+momento** — precisa reproduzir o mesmo banco de dados hoje e daqui a dois anos.
+Derivá-la dos modelos torna seu comportamento função do código presente, de modo
+que a mesma revisão passa a significar coisas diferentes conforme o sistema
+evolui.
+
+**Correção.** A migration passou a consultar o **banco de dados** naquele
+instante, por introspecção, em vez dos modelos: protege o que existe no ponto da
+revisão e deixa as demais tabelas para a revisão que cria as colunas. Num banco
+já migrado, encontra o conjunto completo. A lista de exceções, antes importada
+do módulo da aplicação, foi congelada no arquivo da migration, pela mesma razão.
+
+**Verificação.** A condição foi reproduzida localmente em schema vazio — o
+comando falha na revisão exata sem a correção e completa as dezesseis com ela —,
+e os dois outros passos do fluxo de integração foram exercitados: a verificação
+de divergência entre modelos e schema, e o ciclo de reversão completa seguida de
+reaplicação.
+
+Acrescentou-se ainda uma verificação **estrutural** à suíte, que reprova qualquer
+migration que consulte o metadata da aplicação. A escolha de verificar a regra, e
+não o caso, é deliberada: um caso que aplicasse a cadeia inteira a um banco vazio
+seria lento e duplicaria o passo já existente na integração contínua, ao passo
+que a verificação estrutural é instantânea, falha **antes** do envio, e alcança
+migrations que ainda não foram escritas.
+
+**Lição transferível.** A pergunta que revela esta categoria não é "o sistema
+funciona?", mas "o sistema **se instala**?". Ambientes de desenvolvimento
+acumulam estado por adição sucessiva e, por isso, jamais exercitam o caminho que
+todo usuário novo percorre. E vale registrar o efeito secundário: um indicador de
+integração contínua que permanece vermelho deixa de comunicar — a segunda falha
+se esconde atrás da primeira, e ambas passam a parecer uma só.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2616,7 +2679,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 645 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 646 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

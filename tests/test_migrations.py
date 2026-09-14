@@ -93,3 +93,38 @@ def test_migration_documenta_o_porque(arquivo):
                                                          "Create Date"))]
     assert len(linhas) > 1, (
         f"{arquivo.name}: a docstring só tem o título — falta o porquê")
+
+
+def test_nenhuma_migration_decide_pelo_metadata_da_aplicacao():
+    """Migration é retrato de um momento; o metadata descreve os models de HOJE.
+
+    Custou uma quebra real e persistente. `d264aace5cce` escolhia as tabelas a
+    proteger com `tabelas_protegidas(db.metadata)`, que reflete os models atuais
+    — e num banco VAZIO, oito dessas tabelas só ganham `unidade_id` em
+    `c6b83f2a41d7`, que roda depois. `CREATE POLICY` sobre coluna inexistente
+    derrubava `flask db upgrade` inteiro.
+
+    O caminho de instalação do README não funcionava a partir do zero, e nada
+    acusava aqui: o `pytest` monta o schema com `create_all`, e na máquina de
+    quem desenvolve o banco já tinha as colunas. Só o passo "Aplicar migrations
+    num banco vazio" do CI via — depois do push, e ficou vermelho por semanas.
+
+    A regra é estrutural, e não sobre esta migration: quem decide o que a
+    migration toca tem de ser a própria migration (lista congelada) ou o BANCO
+    naquele instante (`sa.inspect`). Nunca os models.
+    """
+    proibido = re.compile(
+        r"^(?!\s*#).*\b(db\.metadata|Base\.metadata|tabelas_protegidas\s*\()",
+        re.M)
+    culpadas = []
+    for arquivo in _arquivos():
+        texto = arquivo.read_text(encoding="utf-8")
+        for achado in proibido.finditer(texto):
+            linha = texto[:achado.start()].count("\n") + 1
+            culpadas.append(f"  {arquivo.name}:{linha} — {achado.group(1)}")
+
+    assert not culpadas, (
+        "migration decidindo pelo metadata da aplicação: o que ela faz passa a "
+        "depender dos models de hoje, e aplicar do zero deixa de reproduzir o "
+        "banco que ela produziu quando foi escrita:\n" + "\n".join(culpadas)
+    )

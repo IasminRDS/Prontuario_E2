@@ -264,6 +264,17 @@ O CI (`.github/workflows/ci.yml`) roda a suíte nos **dois** bancos e aplica as
 migrations num banco vazio — o `pytest` monta o schema com `create_all`, então
 sem esse passo a migration não seria exercitada.
 
+**Migration nunca decide pelo metadata da aplicação.** `d264aace5cce` escolhia
+as tabelas a proteger com `tabelas_protegidas(db.metadata)`, que reflete os
+models de HOJE — e num banco vazio oito dessas tabelas só ganham `unidade_id`
+em `c6b83f2a41d7`, que roda depois. `CREATE POLICY` sobre coluna inexistente
+derrubava `flask db upgrade` inteiro: **o caminho de instalação deste README não
+funcionava a partir do zero.** Ficou assim por semanas, porque a suíte monta o
+schema com `create_all` e o banco de quem desenvolve já tinha as colunas — só o
+passo do CI via, e só depois do push. Quem decide o que a migration toca é a
+própria migration (lista congelada no arquivo) ou o BANCO naquele instante
+(`sa.inspect`); `test_migrations.py` passou a reprovar o contrário.
+
 ## Território e isolamento por unidade
 
 `cidade`/`uf` em texto livre não agregam — "Feira de Santana" digitado de três
