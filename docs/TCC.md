@@ -781,11 +781,13 @@ Quadro — Sistemas comparáveis e a decisão que cada um ilumina
 | **Bahmni** | Código aberto, *Digital Public Good* | Integrar sistemas independentes *versus* sistema único |
 | **Medplum** | Apache-2.0, TypeScript | Armazenar em FHIR *versus* traduzir para FHIR na borda |
 | **OpenEMPI** | **Software comercial** | Índice mestre de pacientes: padronizar, bloquear, pontuar, decidir |
+| **IDS Saúde** | **Software comercial** | Certificação externa *versus* verificação própria e aberta |
 
-Fonte: elaborada pela autora (2026), a partir dos repositórios e sítios oficiais.
+Fonte: elaborada pela autora (2026), a partir dos repositórios e sítios oficiais,
+e do certificado SBIS-SRES-079 (SBIS, 2021).
 
-Três comparações merecem desenvolvimento, por incidirem sobre decisões que esta
-monografia precisou justificar.
+Quatro comparações merecem desenvolvimento, por incidirem sobre decisões que
+esta monografia precisou justificar.
 
 **Representação FHIR: traduzir na borda ou armazenar.** O Medplum adota o
 modelo em que o dado nasce armazenado em FHIR e a aplicação é construída sobre
@@ -831,6 +833,47 @@ Junior *et al.*, **não foram medidas neste sistema**, e servem como ordem de
 grandeza do que se deve esperar, não como resultado próprio; e o OpenEMPI, a
 despeito do nome e da origem, é atualmente distribuído como produto comercial,
 de modo que citá-lo como software livre seria incorreto.
+
+**Certificação externa ou verificação própria.** O IDS Saúde é o correlato mais
+próximo do contexto desta monografia: sistema comercial de gestão de saúde
+pública municipal, em operação em municípios baianos — inclusive Bom Jesus da
+Lapa, sede do campus onde este trabalho se desenvolve —, construído, como este,
+sobre PostgreSQL. A comparação que ele ilumina não é de funcionalidade, e sim de
+**como cada um sustenta a afirmação de que é seguro**.
+
+O IDS Saúde obteve a certificação S-RES da Sociedade Brasileira de Informática
+em Saúde — certificado SBIS-SRES-079, categoria Assistencial, nível de garantia
+de segurança NGS2 —, sob o Manual de Certificação de 2019 (versão 4.3). A
+certificação é uma auditoria independente contra uma lista de requisitos
+mandatórios, e o certificado registra a plataforma tecnológica submetida à
+auditoria: arquitetura Web, PostgreSQL 12 e assinatura digital por módulo
+homologado (SBIS, 2021). É uma forma de garantia de peso, e de natureza
+**externa**: um terceiro credenciado atesta a conformidade em um momento
+determinado.
+
+Este trabalho não possui certificação externa, e a comparação torna a diferença
+precisa em vez de a dissolver. No lugar do selo, o sistema traz a verificação
+**própria e aberta**: o documento `sbis_gap_analysis.md` confronta a
+implementação com a mesma lista de requisitos da SBIS, item a item, sob a regra
+de que nenhum requisito é declarado atendido sem o arquivo ou o teste que o
+prova — e requisito não verificado aparece como não verificado, nunca como
+atendido. As duas abordagens respondem a perguntas distintas: o selo NGS2
+responde "um auditor confirmou a conformidade?"; a análise requisito a requisito,
+somada à suíte de testes descrita no capítulo 9, responde "de que forma, e qual
+é o teste que a demonstra?". São complementares, e não substitutas — a auditoria
+externa oferece independência que a autoavaliação não tem; a verificação aberta
+oferece o mecanismo e a evidência que o selo não expõe.
+
+Dois cuidados delimitam o que esta comparação autoriza afirmar. Primeiro, sobre
+a vigência: o certificado do IDS Saúde é de 2021, sob o manual de 2019, e **não
+consta na lista atual de sistemas com certificação vigente**, publicada sob o
+manual em versão 5.2 — de modo que o correto é dizer que o sistema *obteve* a
+certificação NGS2, não que a mantém no presente. Segundo, sobre o alcance da
+comparação: o certificado revela o **resultado** da auditoria e a plataforma
+tecnológica, não a arquitetura interna; ele não permite afirmar como o IDS Saúde
+implementa isolamento entre unidades, e portanto a comparação se detém no plano
+em que há evidência pública — o da forma de garantia —, sem estender juízo ao
+mecanismo, que não é observável a partir do documento.
 
 Fernandez *et al.* (2025) relatam experiência próxima em propósito: a
 integração da rede municipal do Recife com hospitais universitários federais,
@@ -3504,6 +3547,21 @@ https://github.com/openmrs/openmrs-module-fhir2. Acesso em: ....
 
 SYSNET INTERNATIONAL. **OpenEMPI: enterprise master patient index**. Produto
 comercial. Disponível em: https://www.openempi.org/. Acesso em: ....
+
+IDS DESENVOLVIMENTO DE SOFTWARE E ASSESSORIA LTDA. **IDS Saúde**. Software
+comercial de gestão de saúde pública. Disponível em: https://ids.inf.br/. Acesso
+em: 14 set. 2026.
+
+SOCIEDADE BRASILEIRA DE INFORMÁTICA EM SAÚDE. **Certificado SBIS-SRES-079: IDS
+Saúde – Módulo Atendimento, versão 5.18**. Categoria Assistencial, nível NGS2,
+Manual de Certificação 2019 (v4.3). São Paulo: SBIS, 24 maio 2021. Disponível
+em: http://sbis.org.br/certificacao/certificados/Certificado_SBIS_SRES_079_IDS.pdf.
+Acesso em: 14 set. 2026.
+
+SOCIEDADE BRASILEIRA DE INFORMÁTICA EM SAÚDE. **Sistemas certificados S-RES**.
+Lista de sistemas com certificação vigente. Disponível em:
+https://sbis.org.br/certificacoes/certificacao-software/sistemas-certificados/.
+Acesso em: 14 set. 2026.
 
 ### Legislação e normas oficiais
 

@@ -294,7 +294,7 @@ def historia():
     # =========================================================== softwares
     h += secao(
         "Softwares comparáveis",
-        "Seis sistemas, todos abertos na fonte do projeto. Não estão aqui para "
+        "Sete sistemas, todos abertos na fonte do projeto. Não estão aqui para "
         "servir de modelo de arquitetura, e sim para responder à pergunta que a "
         "banca faz: por que não usar o que já existe?")
 
@@ -401,7 +401,30 @@ def historia():
         "bloquear, pontuar, decidir — com pessoa na decisão final. Serve para "
         "comparar quais atributos entram na pontuação e com que peso. "
         "<b>Atenção ao classificá-lo:</b> não é software livre, e citá-lo como "
-        "tal seria erro.",
+        "tal seria erro."))
+
+    h.append(entrada(
+        "IDS Saúde — e o certificado SBIS-SRES-079",
+        "IDS Desenvolvimento de Software e Assessoria Ltda. <b>Software "
+        "comercial</b> de gestão de saúde pública municipal. O certificado "
+        "SBIS-SRES-079 (categoria Assistencial, nível NGS2, manual 2019 v4.3) "
+        "foi lido na fonte: o PDF da própria SBIS.",
+        "http://sbis.org.br/certificacao/certificados/Certificado_SBIS_SRES_079_IDS.pdf",
+        "É o correlato mais próximo do contexto deste trabalho: comercial, "
+        "municipal, em operação em municípios baianos — inclusive Bom Jesus da "
+        "Lapa — e, como este, sobre PostgreSQL (o certificado registra Postgres "
+        "12, arquitetura Web e assinatura por módulo homologado). O certificado "
+        "é de 2021, sob o manual de 2019, e <b>não consta na lista atual de "
+        "sistemas com certificação vigente</b> (publicada sob o manual v5.2, "
+        "com números 144 a 207) — conferido na página de sistemas certificados "
+        "da SBIS.",
+        "ilumina a decisão de garantia, não a de funcionalidade: o IDS <i>obteve"
+        "</i> certificação externa NGS2; este sistema traz verificação própria e "
+        "aberta, requisito a requisito, em <code>sbis_gap_analysis.md</code>. São "
+        "complementares — o selo dá independência, a análise dá o mecanismo e o "
+        "teste. <b>Cuidado ao citar:</b> escreva que <i>obteve</i> a "
+        "certificação, não que a tem hoje; e o certificado revela o resultado da "
+        "auditoria e a plataforma, não a arquitetura interna.",
         ultima=True))
 
     h.append(Spacer(1, 14))
