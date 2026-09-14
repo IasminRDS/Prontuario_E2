@@ -223,3 +223,87 @@ def test_reescrita_continua_funcionando_para_public():
 
     assert "CREATE SCHEMA validacao_restore;" in saida
     assert "validacao_restore.pacientes" in saida
+
+
+def test_reescrita_nao_move_objeto_que_o_dump_nao_cria():
+    """O índice de trigramas, que foi o caso real acusado pelo CI.
+
+    `gin_trgm_ops` é classe de operadores da extensão `pg_trgm`, instalada em
+    `public` e que CONTINUA lá. A troca em bloco de `public.` a reapontava para
+    o schema temporário, onde ela não existe: o índice não era criado e o backup
+    saía reprovado — por defeito do validador, não do backup.
+
+    A regra que separa os dois casos é "reescrever só o que este dump CRIA". O
+    que ele apenas referencia fica onde está, que é onde continua existindo.
+    """
+    sql = (
+        "CREATE TABLE public.pacientes (id integer, nome text);\n"
+        "CREATE INDEX ix_pacientes_nome_trgm ON public.pacientes "
+        "USING gin (nome public.gin_trgm_ops);\n"
+    )
+    saida = bv._reescrever_schema(sql, "validacao_restore", origem="public",
+                                  preservar={"gin_trgm_ops"})
+
+    assert "validacao_restore.pacientes" in saida, "a tabela não foi reapontada"
+    assert "public.gin_trgm_ops" in saida, (
+        "a classe de operadores da extensão foi arrastada para o schema "
+        "temporário, onde ela não existe")
+    assert "validacao_restore.gin_trgm_ops" not in saida
+
+
+def test_reescrita_alcanca_tudo_que_o_dump_cria():
+    """O outro sentido: a regra não pode ter deixado a aplicação para trás.
+
+    Sequência, chave estrangeira e COPY referenciam objetos que o dump cria, e
+    todos precisam ir para o schema de validação — senão o restore "isolado"
+    volta a escrever na origem, que é o defeito que ele veio corrigir.
+    """
+    sql = (
+        "CREATE TABLE public.pacientes (id integer);\n"
+        "CREATE TABLE public.prontuarios (id integer, paciente_id integer);\n"
+        "CREATE SEQUENCE public.pacientes_id_seq;\n"
+        "ALTER SEQUENCE public.pacientes_id_seq OWNED BY public.pacientes.id;\n"
+        "ALTER TABLE ONLY public.prontuarios ADD CONSTRAINT fk "
+        "FOREIGN KEY (paciente_id) REFERENCES public.pacientes(id);\n"
+        "COPY public.pacientes (id) FROM stdin;\n"
+    )
+    saida = bv._reescrever_schema(sql, "validacao_restore", origem="public")
+
+    assert "public." not in saida, (
+        "sobrou referência à origem: o restore escreveria no banco vivo")
+    for esperado in ("validacao_restore.pacientes", "validacao_restore.prontuarios",
+                     "validacao_restore.pacientes_id_seq"):
+        assert esperado in saida, f"{esperado} não foi reapontado"
+
+
+def test_a_lista_de_excecoes_encontra_a_extensao_de_verdade(app):
+    """Sem isto, `preservar` podia vir vazia e o defeito voltava em silêncio.
+
+    A regra de exceção só protege se a consulta realmente achar os objetos da
+    extensão. `pg_trgm` está instalada porque o índice de busca de pacientes
+    depende dela — é o mesmo objeto que derrubou a validação no CI.
+    """
+    from extensions import db
+
+    with app.app_context():
+        if db.engine.dialect.name != "postgresql":
+            pytest.skip("pg_depend e pg_opclass são catálogos do PostgreSQL")
+        nomes = bv._objetos_de_extensao(db, "public")
+
+    assert "gin_trgm_ops" in nomes, (
+        "a consulta não encontrou a classe de operadores da extensão; a lista "
+        "de exceções sairia vazia e o índice de trigramas voltaria a quebrar")
+
+
+def test_a_lista_de_excecoes_nao_engole_tabela_da_aplicacao(app):
+    """O outro sentido: exceção demais deixaria objeto da aplicação na origem."""
+    from extensions import db
+
+    with app.app_context():
+        if db.engine.dialect.name != "postgresql":
+            pytest.skip("pg_depend e pg_opclass são catálogos do PostgreSQL")
+        nomes = bv._objetos_de_extensao(db, "public")
+
+    assert "pacientes" not in nomes and "prontuarios" not in nomes, (
+        "tabela da aplicação entrou na lista de exceções: ela ficaria apontando "
+        "para o schema de origem, e o restore escreveria no banco vivo")

@@ -79,6 +79,16 @@ Três coisas nele estavam erradas ao mesmo tempo, e as três se escondiam:
   passava a mexer no banco vivo. A origem agora é perguntada ao banco
   (`current_schema()`), e o `pg_restore` recebe `--schema`.
 
+E **nem tudo naquele schema é da aplicação**: `gin_trgm_ops` é da extensão
+`pg_trgm`, que fica onde está. Reapontada para o schema temporário, ela não
+existe — o índice de trigramas não é criado e o backup sai reprovado por defeito
+do validador. `_objetos_de_extensao` pergunta ao banco quais nomes pertencem a
+extensões, e a reescrita os preserva. A lista é de **exceções, e não de alvos**:
+o que não for reconhecido vai para o schema temporário, onde no pior caso dá
+erro. A regra inversa deixaria o desconhecido apontando para a origem, isto é,
+escrevendo em produção — entre errar para o lado do ruído e errar para o lado de
+tocar no banco vivo, este validador erra para o ruído.
+
 O primeiro só apareceu quando o CI — que fala inglês — enfim chegou a executar
 a suíte: na máquina de quem desenvolve, que fala português, o caso passava. Vale como aviso geral: **detector que lê
 texto traduzido não é detector.**

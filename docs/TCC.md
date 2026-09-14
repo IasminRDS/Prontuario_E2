@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 652, em 48 arquivos |
+| Casos de teste automatizados | 656, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,7 +1352,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **652 casos de teste**, provenientes de 413
+A suíte automatizada compreende **656 casos de teste**, provenientes de 417
 funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -2617,10 +2617,30 @@ bem-sucedida — este último para que a correção não pudesse consistir em re
 sempre. A reescrita de schema é exercitada com origem própria e com `public`,
 para que a generalização não quebre a instalação comum.
 
+**Um desdobramento, e o erro que ele corrigiu no próprio conserto.** Restaurado
+o funcionamento da detecção, a verificação passou a acusar um defeito que antes
+era invisível: a conversão de nomes movia para o schema temporário **tudo** o que
+estivesse qualificado com o schema de origem, inclusive objetos que não pertencem
+à aplicação. Uma classe de operadores fornecida por extensão, referenciada por um
+índice de busca textual, deixava de existir no destino — e a validação reprovava
+a cópia por defeito do validador, não da cópia.
+
+A primeira correção tentada restringia a conversão ao que o próprio arquivo
+**cria**. Um caso de teste anterior a reprovou, e com razão: objeto apenas
+referenciado permaneceria apontando para o schema de origem, o que significa
+escrever no banco em uso — exatamente o risco que a rotina deveria eliminar.
+Adotou-se então a regra inversa, que falha fechada: converte-se tudo, **exceto**
+os nomes que o banco de dados informa pertencerem a extensões. O desconhecido vai
+para o schema temporário, onde no pior caso produz erro; jamais para produção.
+
 **Lição transferível.** **Detector que lê texto traduzido não é detector.**
 Sempre que uma verificação automática interpreta a saída humana de outro
 programa, ela herda o idioma, a versão e o formato daquele programa. O sinal
-estruturado — código de saída, código de erro, campo de status — existe para isso.
+estruturado — código de saída, código de erro, campo de status — existe para
+isso. E vale o registro do segundo momento: **consertar um detector revela os
+defeitos que ele deveria ter acusado desde sempre**, e o primeiro reflexo de
+correção pode trocar um defeito visível por outro silencioso — foi um caso de
+teste preexistente que impediu a troca.
 
 ### 9.5 Testes de backup e restauração
 
@@ -2769,7 +2789,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 652 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 656 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

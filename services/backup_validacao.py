@@ -64,19 +64,72 @@ def _ambiente(url):
     return amb
 
 
-def _reescrever_schema(sql, schema, origem="public"):
+def _reescrever_schema(sql, schema, origem="public", preservar=()):
     """Aponta o SQL do dump para o schema de validação em vez do de origem.
 
-    `origem` era a constante `public`, e isso só é verdade quando a aplicação
-    mora ali. Num banco cujo schema seja outro, a reescrita não casava com nada:
-    o SQL continuava nomeando o schema ORIGINAL, e o restore de validação
-    escrevia em cima do banco vivo em vez de num schema à parte. Os `CREATE`
-    falhavam com "already exists" — o que mascarava o problema, porque parecia
-    ruído — e os `COPY` seguintes iam para as tabelas de produção.
+    Duas coisas estavam erradas, e a segunda só apareceu ao corrigir a primeira.
+
+    **`origem` era a constante `public`**, o que só é verdade quando a aplicação
+    mora ali. Num banco cujo schema seja outro — a suíte vive num
+    `teste_automatizado_<pid>` —, a reescrita não casava com nada: o SQL seguia
+    nomeando o schema ORIGINAL, e o restore que se anuncia isolado escrevia no
+    banco vivo.
+
+    **E nem tudo naquele schema é da aplicação.** `CREATE INDEX ... USING gin
+    (nome public.gin_trgm_ops)` referencia uma classe de operadores da extensão
+    `pg_trgm`, instalada em `public` e que CONTINUA lá depois do restore.
+    Reapontada para o schema temporário, ela não existe: o índice não é criado e
+    o backup sai reprovado por defeito do validador, não do backup. Foi o que o
+    CI acusou.
+
+    `preservar` traz os nomes que pertencem a extensões — `validar` os pergunta
+    ao banco. A lista é de EXCEÇÕES, e não de alvos, de propósito: o que não for
+    reconhecido vai para o schema temporário, onde no pior caso dá erro. A regra
+    inversa deixaria o desconhecido apontando para a origem, isto é, escrevendo
+    no banco vivo. Entre errar para o lado do ruído e errar para o lado de tocar
+    em produção, este validador erra para o ruído.
     """
-    sql = re.sub(rf"\b{re.escape(origem)}\.", f"{schema}.", sql)
+    preservar = set(preservar)
+
+    def _trocar(achado):
+        aspas, nome = achado.group(1), achado.group(2)
+        if nome in preservar:
+            return achado.group(0)
+        return f"{schema}.{aspas}{nome}{aspas}"
+
+    sql = re.sub(rf"\b{re.escape(origem)}\.(\"?)([A-Za-z_][A-Za-z0-9_$]*)\1",
+                 _trocar, sql)
     sql = sql.replace(f"CREATE SCHEMA {origem};", f"CREATE SCHEMA {schema};")
     return re.sub(r"SET search_path = [^;]+;", f"SET search_path = {schema};", sql)
+
+
+def _objetos_de_extensao(db, schema):
+    """Nomes, naquele schema, que pertencem a uma extensão e não à aplicação.
+
+    Um `pg_dump` do schema referencia esses objetos mas não os cria — a extensão
+    já está instalada no banco de destino. São eles que não podem ser
+    reapontados para o schema temporário.
+    """
+    import sqlalchemy as sa
+
+    consulta = sa.text("""
+        select c.relname  from pg_class    c join pg_depend d on d.objid = c.oid
+               and d.deptype = 'e' where c.relnamespace  = to_regnamespace(:s)
+        union
+        select p.proname  from pg_proc     p join pg_depend d on d.objid = p.oid
+               and d.deptype = 'e' where p.pronamespace  = to_regnamespace(:s)
+        union
+        select t.typname  from pg_type     t join pg_depend d on d.objid = t.oid
+               and d.deptype = 'e' where t.typnamespace  = to_regnamespace(:s)
+        union
+        select o.opcname  from pg_opclass  o join pg_depend d on d.objid = o.oid
+               and d.deptype = 'e' where o.opcnamespace  = to_regnamespace(:s)
+        union
+        select f.opfname  from pg_opfamily f join pg_depend d on d.objid = f.oid
+               and d.deptype = 'e' where f.opfnamespace  = to_regnamespace(:s)
+    """)
+    with db.engine.connect() as conn:
+        return {linha[0] for linha in conn.execute(consulta, {"s": schema})}
 
 
 def _erros_de(resultado):
@@ -183,7 +236,7 @@ def validar(caminho_dump, tabelas=TABELAS_PADRAO, schema=SCHEMA_VALIDACAO,
 
         sql_schema.write_text(
             _reescrever_schema(sql_bruto.read_text(encoding="utf-8", errors="replace"),
-                               schema, origem),
+                               schema, origem, _objetos_de_extensao(db, origem)),
             encoding="utf-8")
 
         _psql("-c", f"DROP SCHEMA IF EXISTS {schema} CASCADE")
