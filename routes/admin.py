@@ -180,8 +180,13 @@ def editar_usuario(id):
     # E o mesmo pelo território: administrador de unidade que editasse usuário
     # de outra unidade poderia trazê-lo para a sua, ou ler o que ele alcança
     # pela via de trocar-lhe a senha.
-    if user.unidade_id and not territorio.contido(
-            territorio.territorio_da_unidade(user.unidade), escopo):
+    #
+    # Compara o ALCANCE do alvo, e não a lotação dele. A primeira versão desta
+    # linha era `if user.unidade_id and not contido(...)`: quem não tem lotação
+    # escapava da verificação inteira, e gestor estadual é exatamente esse caso
+    # — alcance de UF, unidade nenhuma. Sem a guarda certa, bastava abrir o
+    # cadastro e definir uma senha nova.
+    if not territorio.contido(territorio.territorio_do_usuario(user), escopo):
         abort(403)
 
     if request.method == "POST":

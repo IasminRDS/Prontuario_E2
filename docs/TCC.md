@@ -1051,7 +1051,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 16 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 656, em 48 arquivos |
+| Casos de teste automatizados | 657, em 48 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1352,7 +1352,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **656 casos de teste**, provenientes de 417
+A suíte automatizada compreende **657 casos de teste**, provenientes de 418
 funções distribuídas em 48 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1414,7 +1414,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte e quatro achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e cinco achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1520,7 +1520,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte e quatro defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e cinco defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2642,6 +2642,51 @@ defeitos que ele deveria ter acusado desde sempre**, e o primeiro reflexo de
 correção pode trocar um defeito visível por outro silencioso — foi um caso de
 teste preexistente que impediu a troca.
 
+#### 9.4.25 A guarda que media o atributo errado
+
+**Achado.** A verificação territorial acrescentada à tela de edição de contas
+(9.4.20) comparava a **unidade de lotação** do cadastro alvo com o território de
+quem edita. A condição estava escrita de modo que o cadastro **sem lotação**
+escapava dela por inteiro.
+
+Não se trata de caso hipotético: é exatamente a configuração de um gestor de
+âmbito municipal ou estadual, cujo alcance é definido pelo território e que pode
+não estar lotado em unidade alguma. Para o administrador de uma única unidade,
+bastava abrir esse cadastro e definir uma senha nova para passar a operar com
+alcance estadual — a mesma elevação de privilégio que 9.4.20 declarava ter
+fechado.
+
+**Análise.** O defeito é da própria correção anterior, e sua origem é
+conceitual: a tela introduzida em 9.4.20 distingue **lotação** de **alcance**
+justamente porque são coisas diferentes, e a guarda, escrita na mesma ocasião,
+comparava a primeira quando o que importa é a segunda. A distinção estava
+corretamente formulada na interface e incorretamente aplicada no controle.
+
+Há também um aspecto de forma que merece registro. A condição era da espécie
+"se o atributo existir **e** não estiver contido, recuse" — construção que falha
+**aberta** quando o atributo não existe. A formulação equivalente que falha
+fechada — "recuse salvo se estiver contido" — dispensa o caso especial e não
+admite a omissão. Em código de autorização, a diferença entre as duas redações
+é a diferença entre negar e permitir aquilo que não se sabe avaliar.
+
+**Correção.** A comparação passou a derivar o território do **nível de acesso**
+do cadastro alvo, e não de sua lotação: unidade, município, regional ou UF,
+conforme o nível declarado. Quando o nível não possui o campo que ele próprio
+exige, a função devolve território indeterminado, que a comparação trata como
+recusa — cadastro cujo alcance não se sabe medir só pode ser alterado por quem
+opera a plataforma.
+
+**Verificação.** O caso de teste foi escrito **antes** da correção e reprovou
+com a resposta HTTP 200 onde se espera 403, reproduzindo a elevação em sua forma
+completa: abertura do cadastro, tentativa de redefinição de senha e conferência
+de que a senha não mudou.
+
+**Lição transferível.** Correção que fecha uma via de elevação de privilégio é,
+ela própria, código de autorização — e merece a mesma desconfiança que o código
+que a motivou. A pergunta que revelou este caso não foi "a guarda funciona?",
+mas "**sobre qual atributo** ela decide, e o que acontece quando esse atributo
+está ausente?".
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2789,7 +2834,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 656 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 657 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de treze migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

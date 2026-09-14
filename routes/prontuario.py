@@ -36,6 +36,20 @@ def _medico_do_usuario():
     return Medico.query.filter_by(user_id=current_user.id).first()
 
 
+def _frase(campo, defeito):
+    """Mensagem pronta, com maiúscula e ponto — e sem `.capitalize()` depois.
+
+    As rotas faziam `flash(e.capitalize() + ".")`, o que servia para fragmentos
+    curtos ("temperatura deve ser numérico") e ESTRAGA texto já formado:
+    `str.capitalize` minúscula todo o resto da frase. As mensagens de
+    plausibilidade, que são frases completas, apareciam na tela com a segunda
+    oração em minúscula, com ponto final duplicado e — pior — com a unidade
+    corrompida: "°C" virava "°c", "mg/dL" virava "mg/dl". Unidade de medida
+    escrita errada num prontuário não é detalhe de estilo.
+    """
+    return f"{campo.replace('_', ' ').capitalize()} {defeito}."
+
+
 def _preencher(p, form):
     """Aplica o formulário no prontuário. Devolve a lista de erros."""
     erros = []
@@ -52,16 +66,16 @@ def _preencher(p, form):
             try:
                 setattr(p, campo, decimal_de(form.get(campo)))
             except ValueError:
-                erros.append(f"{campo.replace('_', ' ')} deve ser numérico")
+                erros.append(_frase(campo, "deve ser numérico"))
 
     for campo in CAMPOS_INT:
         if campo in form:
             try:
                 setattr(p, campo, inteiro_de(form.get(campo)))
             except ValueError:
-                erros.append(f"{campo.replace('_', ' ')} deve ser inteiro")
+                erros.append(_frase(campo, "deve ser inteiro"))
 
-    # Converter não é conferir:  diz que "172" é um número, não
+    # Converter não é conferir: `decimal_de` diz que "172" é um número, não
     # que 172 pode ser uma altura em metros. A recusa acontece DEPOIS de aplicar
     # os campos porque o formulário é parcial — só o que veio é tocado — e é o
     # valor já convertido que se julga.
@@ -80,7 +94,7 @@ def _preencher(p, form):
             continue
         cid = (form.get(campo) or "").strip().upper() or None
         if cid and not validar_cid10(cid):
-            erros.append(f"{campo.replace('_', ' ')} não é um CID-10 válido")
+            erros.append(_frase(campo, "não é um CID-10 válido"))
         else:
             setattr(p, campo, cid)
 
@@ -171,7 +185,7 @@ def novo(paciente_id):
         erros = _preencher(p, request.form)
         if erros:
             for e in erros:
-                flash(e.capitalize() + ".", "warning")
+                flash(e, "warning")
             return render_template("prontuario/form.html", paciente=paciente,
                                    prontuario=p, edicao=False)
 
@@ -211,7 +225,7 @@ def editar(id):
         erros = _preencher(p, request.form)
         if erros:
             for e in erros:
-                flash(e.capitalize() + ".", "warning")
+                flash(e, "warning")
             return render_template("prontuario/form.html", paciente=p.paciente,
                                    prontuario=p, edicao=True)
 

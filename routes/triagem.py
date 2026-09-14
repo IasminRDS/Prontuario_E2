@@ -87,7 +87,12 @@ def _reexibir(pacientes, paciente_id, enviado):
             devolvido[campo] = valor.replace(",", ".")
     enviado = devolvido
 
+    # Só reconsulta se for número: `paciente_id` vem do POST, e um valor
+    # qualquer aí faria `query.get` estourar no banco. A rota tem um `except`
+    # largo em volta, então não viraria erro 500 — viraria a mensagem genérica
+    # "não foi possível registrar a triagem", que aponta para o lugar errado.
     escolhido = enviado.get("paciente_id") or paciente_id
+    escolhido = escolhido if str(escolhido or "").isdigit() else None
     return render_template(
         "triagem/form.html", pacientes=pacientes, enviado=enviado,
         paciente_sel=Paciente.query.get(escolhido) if escolhido else None)

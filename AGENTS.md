@@ -429,6 +429,16 @@ Três coisas que a mesma porta expunha e que ficaram fechadas junto:
   uma senha nova, entrar como ele;
 - **`minlength="6"` no campo de senha** contradizia a rota, que exige 8.
 
+**A guarda da edição compara o ALCANCE do alvo, não a lotação dele** — e a
+primeira versão dela errava justamente nisso. Estava escrita como "se tem
+unidade E não está contida, recuse", de modo que cadastro SEM lotação escapava
+inteiro: gestor estadual é exatamente esse caso, e bastava abrir o cadastro e
+trocar-lhe a senha. A redação que falha fechada é a inversa — "recuse salvo se
+estiver contido" —, que dispensa o caso especial. Em código de autorização, a
+diferença entre as duas é negar ou permitir o que não se sabe avaliar. Quem
+mexer aqui use `territorio_do_usuario`, que devolve território indeterminado
+quando o nível não tem o campo que ele próprio exige.
+
 `SISTEMA` não é oferecido: `escopo_do_usuario` o rebaixa para `UNIDADE` quando
 vem do cadastro, porque é escopo de processo (CLI, migration, backup) e não de
 gente. Oferecê-lo seria prometer na tela um valor que o banco ignora.

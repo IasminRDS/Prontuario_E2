@@ -297,3 +297,47 @@ def test_escopo_sem_nivel_nao_concede_nada():
 
     assert territorio.contido({"uf": "BA"}, {"nivel": None}) is False
     assert territorio.contido({"uf": "BA"}, {}) is False
+
+
+def test_administrador_nao_edita_gestor_estadual_sem_lotacao(app, cliente,
+                                                             sem_csrf):
+    """O furo que a minha própria guarda deixou aberto.
+
+    A verificação territorial da edição era `if user.unidade_id and not
+    contido(...)`: quem NÃO tem lotação escapava dela inteira. E existe gente
+    assim — gestor estadual é cadastrado com alcance de UF e pode não ter
+    unidade. Para o administrador de uma unidade, bastava abrir esse cadastro e
+    definir uma senha nova para entrar como um usuário que enxerga o estado
+    todo.
+
+    O que se compara tem de ser o ALCANCE do alvo, não a lotação dele.
+    """
+    from extensions import db
+    from models.user import User
+
+    email = "estadual-sem-lotacao@sus.gov.br"
+    with app.app_context():
+        alvo = User.query.filter_by(email=email).first()
+        if alvo is None:
+            alvo = User(nome="Gestor Estadual", email=email, perfil="Gestor",
+                        ativo=True, nivel_acesso="ESTADO", uf="BA",
+                        unidade_id=None)
+            alvo.set_password("senha-longa-1")
+            db.session.add(alvo)
+            db.session.commit()
+        alvo_id = alvo.id
+
+    assert cliente.get(f"/admin/usuarios/{alvo_id}/editar").status_code == 403, (
+        "administrador de unidade abriu o cadastro de um gestor estadual")
+
+    resposta = cliente.post(f"/admin/usuarios/{alvo_id}/editar",
+                            data={"nome": "Invadido", "perfil": "Recepcao",
+                                  "senha": "senha-do-invasor"},
+                            follow_redirects=False)
+    assert resposta.status_code == 403
+
+    with app.app_context():
+        depois = db.session.get(User, alvo_id)
+        assert not depois.check_password("senha-do-invasor"), (
+            "a senha do gestor estadual foi trocada por quem não o alcança")
+        assert depois.nivel_acesso == "ESTADO"

@@ -43,8 +43,9 @@ ROTULOS = {
     "MUNICIPIO": "Município — todas as unidades do município",
     "REGIONAL": "Regional de saúde — todas as unidades da regional",
     "ESTADO": "Estado — todas as unidades da UF",
-    "SISTEMA": "Plataforma — atravessa o isolamento territorial",
 }
+# `SISTEMA` NÃO tem rótulo aqui, e a ausência é deliberada: rótulo pronto para
+# um nível que este módulo proíbe oferecer é um convite a oferecê-lo.
 
 # Perfil que atravessa o isolamento pelo próprio perfil não tem escopo a
 # guardar. Zerar os quatro campos é melhor do que deixá-los preenchidos: valor
@@ -52,15 +53,6 @@ ROTULOS = {
 # perfil, sem que ninguém tenha revisto o alcance.
 SEM_TERRITORIO = {"nivel_acesso": "UNIDADE", "unidade_id": None,
                   "municipio_ibge": None, "regional_id": None, "uf": None}
-
-# O que cada nível pede que esteja preenchido, em linguagem de tela. A chave
-# técnica é `utils.rls.CAMPO_DO_NIVEL`, que é a mesma que o banco lê.
-PEDE = {
-    "UNIDADE": "a unidade de lotação",
-    "MUNICIPIO": "o município",
-    "REGIONAL": "a regional de saúde",
-    "ESTADO": "a UF",
-}
 
 
 # --------------------------------------------------------- territórios
@@ -114,6 +106,46 @@ def territorio_da_uf(uf):
         return None
     return {"unidade_id": None, "municipio_ibge": None, "regional_id": None,
             "uf": uf}
+
+
+def territorio_do_usuario(usuario):
+    """O território que um cadastro JÁ alcança — pelo nível dele, não pela lotação.
+
+    Nasceu de um furo na primeira versão desta tela. A edição comparava só a
+    unidade de lotação (`if user.unidade_id and not contido(...)`), então quem
+    **não tem lotação** escapava da verificação inteira — e gestor estadual é
+    exatamente o caso: alcance de UF, unidade nenhuma. Para o administrador de
+    uma unidade bastava abrir esse cadastro e definir uma senha nova.
+
+    Devolve `None` quando o nível não tem o campo que ele exige. `contido` lê
+    isso como recusa, que é o certo: cadastro cujo alcance não se sabe medir só
+    pode ser tocado por quem opera a plataforma.
+    """
+    from utils.rbac import SUPER_ADMIN, _normalizar
+
+    if _normalizar(getattr(usuario, "perfil", None)) == SUPER_ADMIN:
+        # Atravessa o isolamento pelo perfil: não há território que o contenha.
+        return None
+
+    nivel = (getattr(usuario, "nivel_acesso", None) or "UNIDADE").upper()
+    if nivel not in NIVEIS_ATRIBUIVEIS:
+        nivel = "UNIDADE"   # inclui o `SISTEMA` que o RLS já rebaixa
+
+    if nivel == "UNIDADE":
+        return territorio_da_unidade(getattr(usuario, "unidade", None))
+    if nivel == "MUNICIPIO":
+        codigo = getattr(usuario, "municipio_ibge", None)
+        if not codigo:
+            return None
+        return {"unidade_id": None, "municipio_ibge": codigo,
+                "regional_id": None, "uf": uf_do_codigo(codigo)}
+    if nivel == "REGIONAL":
+        rid = getattr(usuario, "regional_id", None)
+        if rid is None:
+            return None
+        return {"unidade_id": None, "municipio_ibge": None,
+                "regional_id": rid, "uf": None}
+    return territorio_da_uf(getattr(usuario, "uf", None))
 
 
 def contido(territorio, escopo):
@@ -226,8 +258,14 @@ def resolver(nivel, formulario, escopo):
     # A unidade de lotação é onde o usuário ESCREVE, e é exigida em todos os
     # níveis: um gestor estadual sem lotação registraria eventos clínicos sem
     # unidade, e registro com `unidade_id` nulo some de toda tela sob RLS.
+    # `ativo` também é conferido AQUI, e não só na lista que a tela oferece:
+    # esconder a opção nunca foi a defesa. Lotar alguém numa unidade desativada
+    # produz um cadastro que não registra nada em lugar nenhum.
     unidade_id = (formulario.get("unidade_id") or "").strip()
     unidade = UnidadeSaude.query.get(int(unidade_id)) if unidade_id.isdigit() else None
+    if unidade is not None and not unidade.ativo:
+        return None, (f"A unidade {unidade.nome} está desativada. Escolha uma "
+                      "unidade ativa para lotar o usuário.")
     if unidade is None:
         return None, ("Selecione a unidade de lotação: sem ela o usuário não "
                       "tem onde registrar atendimento, e o que ele registrar "
