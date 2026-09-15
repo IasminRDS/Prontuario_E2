@@ -796,10 +796,27 @@ convertidos para FHIR no momento do envio. A escolha tem custo — a tradução
 precisa ser mantida em correspondência com o modelo — e tem razão: a Rede
 Nacional de Dados em Saúde não publica perfil para todos os recursos que o
 sistema emite, de modo que armazenar em FHIR significaria armazenar numa forma
-que ainda assim exigiria adaptação no envio. O OpenMRS, por sua vez, mostra o
-que essa tradução ganharia se extraída para camada própria, em vez de residir
-junto às rotas de envio, como ocorre neste sistema — observação que a seção 13
-recolhe como trabalho futuro.
+que ainda assim exigiria adaptação no envio. O OpenMRS faz a mesma escolha de
+traduzir na borda, mas a materializa como camada dedicada: o módulo FHIR2 reúne
+mais de duzentos tradutores bidirecionais — cada recurso convertido nos dois
+sentidos entre o modelo relacional próprio e o FHIR —, enquanto neste sistema a
+tradução é apenas de saída e reside junto às rotas de envio. É diferença de
+maturidade, que a seção 13 recolhe como trabalho futuro, e de papel: o OpenMRS é
+servidor FHIR, e precisa receber tanto quanto emitir, ao passo que este sistema é
+cliente da Rede Nacional de Dados em Saúde, para a qual só emite.
+
+O mesmo OpenMRS ilumina a decisão de **isolamento**, e aqui a comparação diverge
+em vez de convergir. O controle de acesso dos dois é o mesmo em espécie —
+autorização por privilégio nomeado na camada de serviço, que responde *o que* o
+usuário pode fazer. Mas o acesso a dados do módulo FHIR2 não aplica recorte por
+unidade: não há segurança em nível de linha, e uma consulta responde *quais*
+registros apenas pelo que o privilégio já libera. O isolamento entre organizações,
+no OpenMRS, resolve-se por instância separada por inquilino — que é precisamente a
+alternativa avaliada e recusada na seção 7.2, por inviabilizar o prontuário
+longitudinal. A dimensão que este trabalho acrescenta, o escopo territorial imposto
+dentro do banco e com falha fechada, corresponde portanto a uma escolha distinta no
+mesmo espaço de projeto, e não a uma carência do sistema comparado — leitura que a
+verificação direta do código-fonte do módulo, de licença aberta, permitiu firmar.
 
 **Integração de sistemas ou sistema único.** O Bahmni compõe quatro projetos
 independentes — registro clínico, gestão administrativa, laboratório e imagem —
@@ -834,11 +851,13 @@ grandeza do que se deve esperar, não como resultado próprio; e o OpenEMPI, a
 despeito do nome e da origem, é atualmente distribuído como produto comercial,
 de modo que citá-lo como software livre seria incorreto.
 
-**Certificação externa ou verificação própria.** O IDS Saúde é o correlato mais
-próximo do contexto desta monografia: sistema comercial de gestão de saúde
-pública municipal, em operação em municípios baianos — inclusive Bom Jesus da
-Lapa, sede do campus onde este trabalho se desenvolve —, construído, como este,
-sobre PostgreSQL. A comparação que ele ilumina não é de funcionalidade, e sim de
+**Certificação externa ou verificação própria.** O IDS Saúde, da IDS
+Desenvolvimento de Software e Assessoria, é o correlato comercial mais próximo do
+contexto desta monografia: sistema de gestão de saúde pública municipal e, como
+este, construído sobre PostgreSQL — o certificado registra a versão 12 do banco.
+(Há instalações de sistemas homônimos operadas por outras empresas, cuja
+identidade com o produto certificado não se pôde estabelecer a partir de fonte
+pública; a comparação aqui se restringe ao produto a que o certificado se refere.) A comparação que ele ilumina não é de funcionalidade, e sim de
 **como cada um sustenta a afirmação de que é seguro**.
 
 O IDS Saúde obteve a certificação S-RES da Sociedade Brasileira de Informática
