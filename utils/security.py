@@ -78,16 +78,24 @@ def pode_acessar_paciente(paciente, usuario):
     # atravessar o isolamento por hospital"; aqui o código passa a cumprir isso.
     #
     # O escopo continua sendo respeitado pelo administrador via `nivel_acesso`:
-    # quem precisa enxergar além da unidade recebe MUNICIPIO, REGIONAL, ESTADO
-    # ou SISTEMA no cadastro, que é onde essa decisão deve morar.
+    # quem precisa enxergar além da unidade recebe MUNICIPIO, REGIONAL ou ESTADO
+    # no cadastro. Atravessar o isolamento POR INTEIRO é do perfil SuperAdmin, e
+    # não de um `nivel_acesso` editável — a decisão sai de `escopo_do_usuario`, a
+    # MESMA função que o RLS usa, para que este módulo não conceda o que o banco
+    # depois negaria. Antes, este ponto honrava `SISTEMA` vindo do cadastro e o
+    # `rls.py` o recusava: em PostgreSQL o RLS anulava o efeito, mas em SQLite,
+    # sem RLS, um `nivel_acesso = 'SISTEMA'` editável abria acesso nacional.
     from utils.rbac import is_super_admin
+    from utils.rls import escopo_do_usuario
 
     if is_super_admin(usuario.perfil):
         return True
 
-    nivel = getattr(usuario, "nivel_acesso", "UNIDADE")
+    # `escopo_do_usuario` rebaixa `SISTEMA` de cadastro a UNIDADE; aqui só chega
+    # SISTEMA por perfil SuperAdmin, já tratado acima.
+    nivel = escopo_do_usuario(usuario)["nivel"]
 
-    if nivel in ("ESTADO", "SISTEMA"):
+    if nivel == "ESTADO":
         return True
 
     # MUNICIPIO: preferir municipio_ibge
@@ -141,7 +149,7 @@ def query_pacientes_no_escopo(usuario=None):
     from flask_login import current_user
 
     from models.paciente import Paciente
-    from utils.rbac import is_super_admin
+    from utils.rls import escopo_do_usuario
 
     u = usuario if usuario is not None else current_user
     q = Paciente.query.filter_by(ativo=True)
@@ -150,11 +158,15 @@ def query_pacientes_no_escopo(usuario=None):
             current_app.config.get("FEATURE_BYPASS_PACIENTE_SCOPE", False):
         return q
 
-    if is_super_admin(getattr(u, "perfil", None)) or getattr(
-            u, "nivel_acesso", "UNIDADE") in ("ESTADO", "SISTEMA"):
-        return q
+    # O nível sai de `escopo_do_usuario` — a mesma função do RLS —, e não do campo
+    # `nivel_acesso` cru: com isso `SISTEMA` de cadastro é rebaixado a UNIDADE e só
+    # o perfil SuperAdmin (que a função devolve como SISTEMA) atravessa o
+    # isolamento. Ler o campo direto aqui era a segunda fonte de verdade que
+    # divergia do banco e abria acesso nacional em SQLite.
+    nivel = escopo_do_usuario(u)["nivel"]
 
-    nivel = getattr(u, "nivel_acesso", "UNIDADE")
+    if nivel in ("SISTEMA", "ESTADO"):
+        return q
 
     if nivel == "MUNICIPIO":
         user_ibge = getattr(u, "municipio_ibge", None)

@@ -137,10 +137,14 @@ def test_rastro_da_criacao_identifica_o_paciente(app, admin, sem_csrf):
             f"o evento aponta para {evento.registro_id}, não para {criado}")
 
 
-def test_atualizar_paciente_deixa_rastro(app, admin, sem_csrf):
+def test_atualizar_paciente_deixa_rastro(app, cliente_super, sem_csrf):
+    # SuperAdmin: o alvo é o rastro da escrita, não a autorização. O `admin`
+    # (Administrador) só edita paciente da própria unidade, e o paciente semeado
+    # cai fora — devolveria 403 antes de chegar à escrita, medindo o controle
+    # errado. Alcance nacional é do perfil SuperAdmin.
     antes = _contar(app, "pacientes", "update")
     alvo = _paciente_id(app)
-    resposta = admin.put(f"/pacientes/{alvo}", data=json.dumps(
+    resposta = cliente_super.put(f"/pacientes/{alvo}", data=json.dumps(
         {"observacoes": "anotação de teste"}), content_type="application/json")
 
     assert resposta.status_code == 200, resposta.get_data(as_text=True)

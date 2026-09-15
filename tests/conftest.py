@@ -74,6 +74,15 @@ PERFIS = {
     "farmaceutico": ("Farm. Teste", "farmaceutico2@sus.gov.br", "farmaceutico"),
 }
 
+# O operador da plataforma — o único que atravessa o isolamento por inteiro.
+# Fica FORA de `PERFIS` de propósito: `PERFIS` alimenta as matrizes de RBAC, e o
+# SuperAdmin, que tem `admin:full`, distorceria toda linha da matriz. Quem
+# precisa de alcance nacional (buscar ou editar qualquer paciente do país) usa o
+# `cliente_super`, e não o `admin` — porque alcance nacional é do PERFIL
+# SuperAdmin, nunca de um `nivel_acesso` editável. É a regra que `utils.rls` e
+# `utils.security` agora aplicam em conjunto.
+SUPERADMIN = ("Sara Super", "super@sus.gov.br", "SuperAdmin")
+
 
 def _isolar_postgres(engine):
     """Cria o schema da suíte e prende toda conexão a ele."""
@@ -142,19 +151,34 @@ def _semear():
     # usuário acabaria vinculado a uma unidade diferente da que os testes
     # semeiam, e nada seria visível.
     unidade = UnidadeSaude.query.order_by(UnidadeSaude.id.asc()).first()
+    # Todos os perfis da matriz nascem com alcance de UNIDADE, o "admin"
+    # inclusive: ele é `Administrador` (admin de hospital), e admin de hospital
+    # não enxerga além da própria unidade. A versão anterior semeava o admin com
+    # `nivel_acesso = 'SISTEMA'` para lhe dar alcance nacional, mas isso só
+    # funcionava por causa de uma divergência: o RLS rebaixava esse SISTEMA a
+    # UNIDADE (só o PERFIL SuperAdmin atravessa), enquanto `utils.security` o
+    # honrava e liberava paciente do país inteiro — em SQLite, onde não há RLS
+    # para anular. Fechada a divergência, o SISTEMA de cadastro é inócuo; quem
+    # precisa de alcance nacional é o `cliente_super`, abaixo.
     for _chave, (nome, email, perfil) in PERFIS.items():
         if User.query.filter_by(email=email).first():
             continue
-        # O "admin" da suíte é o operador da plataforma nos testes: precisa
-        # enxergar além da unidade. Desde que só SuperAdmin atravessa hospital
-        # por PERFIL, esse alcance passa a vir do nível de acesso — que é onde a
-        # decisão deve morar.
-        nivel = "SISTEMA" if perfil == "admin" else "UNIDADE"
         u = User(nome=nome, email=email, perfil=perfil, ativo=True,
                  unidade_id=unidade.id if unidade else None,
-                 nivel_acesso=nivel)
+                 nivel_acesso="UNIDADE")
         u.set_password(SENHA)
         db.session.add(u)
+
+    # O SuperAdmin, com alcance nacional pelo PERFIL — e `nivel_acesso` de
+    # UNIDADE de propósito, para deixar medido que o alcance vem do perfil, não
+    # do campo.
+    nome_s, email_s, perfil_s = SUPERADMIN
+    if not User.query.filter_by(email=email_s).first():
+        s = User(nome=nome_s, email=email_s, perfil=perfil_s, ativo=True,
+                 unidade_id=unidade.id if unidade else None,
+                 nivel_acesso="UNIDADE")
+        s.set_password(SENHA)
+        db.session.add(s)
     db.session.commit()
 
     # O usuário médico precisa de cadastro em `medicos` para prescrever e
@@ -239,8 +263,25 @@ def anonimo(app):
 
 @pytest.fixture
 def cliente(app):
-    """Sessão de admin — o perfil com mais permissão."""
+    """Sessão de admin — `Administrador`, com alcance de UNIDADE.
+
+    É o perfil administrativo, não o operador da plataforma: enxerga e edita só
+    o que está na própria unidade. Para alcance nacional (qualquer paciente do
+    país), use `cliente_super`.
+    """
     return autenticar(app, PERFIS["admin"][1])
+
+
+@pytest.fixture
+def cliente_super(app):
+    """Sessão de SuperAdmin — o único que atravessa o isolamento por inteiro.
+
+    O alcance vem do PERFIL, não de `nivel_acesso` (o usuário é semeado com
+    UNIDADE de propósito). Use onde o alvo do teste é a forma do dado ou o
+    rastro, e não o escopo territorial — antes esse papel era feito pelo `admin`
+    com um `SISTEMA` de cadastro que só o `utils.security` honrava.
+    """
+    return autenticar(app, SUPERADMIN[1])
 
 
 @pytest.fixture

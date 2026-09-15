@@ -23,7 +23,7 @@ from datetime import date
 
 import pytest
 
-from tests.conftest import PERFIS, autenticar
+from tests.conftest import PERFIS, SUPERADMIN, autenticar
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 
@@ -88,13 +88,14 @@ def test_todo_fetch_aponta_para_rota_existente(app):
 
 @pytest.fixture(scope="module")
 def cliente_api(app, dados_clinicos):
-    """Admin: o alvo aqui é a FORMA do payload, não o escopo territorial.
+    """SuperAdmin: o alvo aqui é a FORMA do payload, não o escopo territorial.
 
     Com um perfil de unidade, o paciente semeado cairia fora do escopo (o
     município dele não é o da unidade de teste) e a lista viria vazia — o teste
-    passaria sem nunca olhar uma linha.
+    passaria sem nunca olhar uma linha. Alcance nacional é do PERFIL SuperAdmin;
+    o `admin` (Administrador) é escopo de unidade e não serve aqui.
     """
-    return autenticar(app, PERFIS["admin"][1])
+    return autenticar(app, SUPERADMIN[1])
 
 
 @pytest.fixture(scope="module")

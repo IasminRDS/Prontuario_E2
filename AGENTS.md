@@ -532,12 +532,21 @@ escopo sobre território onde a rede não tem unidade não alcança registro nen
 e concedê-lo faria quem concedeu acreditar que abriu um acesso que não abre
 nada. A lista fica limitada pela pegada da rede, não pelos 5.570 municípios.
 
-**Há uma divergência conhecida e ainda aberta:** `utils/security.py`
-(`pode_acessar_paciente`) honra `nivel_acesso == "SISTEMA"` vindo do cadastro, e
-`utils/rls.py` o recusa. Em PostgreSQL o RLS decide e o efeito é nulo; em SQLite,
-que não tem RLS, o valor liberaria acesso nacional. A tela não concede `SISTEMA`,
-então nada novo entra por aqui — mas quem for reconciliar os dois módulos comece
-por `tests/conftest.py`, que semeia o admin da suíte com `SISTEMA` de propósito.
+**Havia uma divergência entre os dois módulos, agora fechada.**
+`utils/security.py` (`pode_acessar_paciente` e `query_pacientes_no_escopo`)
+honrava `nivel_acesso == "SISTEMA"` vindo do cadastro e liberava paciente do país
+inteiro, enquanto `utils/rls.py` o recusa — atravessar o isolamento é decisão de
+PERFIL (SuperAdmin), não de um campo editável. Em PostgreSQL o RLS anulava o
+efeito; em SQLite, sem RLS, o campo abria acesso nacional de verdade. E pacientes
+NÃO são protegidos por RLS (cadastro é nacional, `FORA_DO_ESCOPO`), então esse
+recorte em Python é a única defesa nos dois bancos — o que tornava a divergência
+real, não teórica. A correção é de fonte única: as duas funções de
+`utils/security.py` derivam o nível de `utils.rls.escopo_do_usuario`, a MESMA
+função que o RLS usa, que rebaixa `SISTEMA` de cadastro a UNIDADE. `SISTEMA` só
+chega por perfil SuperAdmin. `tests/test_escopo_paciente.py` prende isso nos dois
+sentidos, e essas funções, que não tinham teste direto, passaram a ter. A suíte
+deixou de dar ao seu `admin` um `SISTEMA` de cadastro; quem precisa de alcance
+nacional usa o `cliente_super` (perfil SuperAdmin).
 
 ## Sinais vitais: número válido e medida impossível
 
