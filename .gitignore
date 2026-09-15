@@ -69,3 +69,12 @@ docs/datasus_levantamento.docx
 # Lock que o LibreOffice cria ao abrir o .docx e deixa para tras quando o
 # processo e encerrado a forca. Aparece no `git status` como arquivo novo.
 .~lock.*#
+
+# .docx dos documentos da avaliacao de usabilidade e da submissao ao CEP,
+# convertidos de docs/*.md por conversao UNICA (markdown -> HTML -> docx via
+# LibreOffice). Ao contrario do TCC.docx, NAO sao regenerados: a autora preenche
+# os campos [...], poe timbre e assina no Word, e dali o .docx e a copia viva. O
+# .md fica no git como origem/historico. Binario nao versiona.
+docs/avaliacao_usabilidade.docx
+docs/cep_submissao.docx
+docs/instrumentos_usabilidade.docx
