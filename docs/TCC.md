@@ -1476,7 +1476,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte e cinco achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e seis achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1506,7 +1506,7 @@ real, e não com outra declaração — a lista de tabelas protegidas derivada d
 **Classe II — A regra escrita mais de uma vez.** A mesma decisão registrada em
 dois ou mais lugares, que divergem sem que nada acuse, porque cada cópia é
 internamente consistente. É a causa isolada mais frequente deste trabalho.
-*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22.* **Verificação
+*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26.* **Verificação
 correspondente:** comparar as cópias entre si, e no nível de abstração certo —
 não os nomes das permissões, mas o conjunto de perfis que cada caminho admite.
 
@@ -1535,22 +1535,22 @@ Quadro — Mecanismos recorrentes e achados correspondentes
 | Classe | Mecanismo | Achados | Verificação que a torna detectável |
 |---|---|---|---|
 | I | Declaração que deixou de valer | 9.4.1, 9.4.5, 9.4.19, 9.4.20 | confronto com o estado real, não com outra declaração |
-| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22 | comparação entre as cópias, no nível de abstração do efeito |
+| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26 | comparação entre as cópias, no nível de abstração do efeito |
 | III | Caminho inexistente | 9.4.10, 9.4.11, 9.4.12, 9.4.16 | alcançabilidade nos dois sentidos |
 | IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13, 9.4.21 | medição do efeito, não da chamada |
 | V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15, 9.4.23, 9.4.24, 9.4.25 | verificação de segunda ordem sobre o próprio controle |
 
 
 **A taxonomia foi obtida a partir dos dezenove primeiros achados e absorveu os
-seis seguintes sem exigir classe nova.** O registro importa porque uma
+sete seguintes sem exigir classe nova.** O registro importa porque uma
 classificação construída *a posteriori* corre sempre o risco de descrever apenas
-o conjunto de onde saiu. Os achados 9.4.20 a 9.4.25 surgiram depois, de
+o conjunto de onde saiu. Os achados 9.4.20 a 9.4.26 surgiram depois, de
 investigação independente, e cada um encontrou classe existente: a declaração
 que deixou de valer, a regra com duas fontes de verdade, o efeito esperado que
 não ocorre e — em três casos — o próprio controle como origem do defeito. É
 evidência de que os mecanismos são do objeto, e não do olhar.
 
-Vale notar a distribuição: **três dos seis caíram na classe V**, a do controle
+Vale notar a distribuição: **três dos sete caíram na classe V**, a do controle
 que produz o que deveria impedir. Não é acaso, e sim consequência do próprio
 método: quanto mais instrumentos de verificação um sistema acumula, maior a
 superfície em que essa classe pode se manifestar.
@@ -1594,7 +1594,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte e cinco defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e seis defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2760,6 +2760,60 @@ ela própria, código de autorização — e merece a mesma desconfiança que o 
 que a motivou. A pergunta que revelou este caso não foi "a guarda funciona?",
 mas "**sobre qual atributo** ela decide, e o que acontece quando esse atributo
 está ausente?".
+
+#### 9.4.26 A trava de isolamento que existia num módulo e não no seu gêmeo
+
+**Achado.** O acesso aos registros de paciente é decidido em dois lugares: dentro
+do banco, pela segurança em nível de linha (`utils/rls`), e na aplicação, por
+`utils/security` — `pode_acessar_paciente`, para um registro já carregado, e
+`query_pacientes_no_escopo`, para o conjunto. Os dois traduzem a mesma pergunta —
+quem atravessa o isolamento territorial — e divergiam num ponto: `utils/security`
+honrava um `nivel_acesso` igual a `SISTEMA` gravado no cadastro do usuário e
+liberava o paciente de qualquer município do país, ao passo que a política do
+banco recusa esse valor, porque atravessar o isolamento é atributo de **perfil**
+— o operador da plataforma — e não um campo editável na tela de contas.
+
+Uma circunstância torna a divergência real, e não acadêmica. O paciente é o único
+agregado clínico deliberadamente **fora** da segurança em nível de linha: o
+cadastro é nacional, para que o prontuário longitudinal encontre quem foi
+atendido em outro município. O recorte territorial de paciente não tem, portanto,
+a política do banco como rede de segurança — a regra escrita na aplicação é a
+única defesa, e vale nos dois sistemas de banco de dados. Sobre paciente, um
+usuário comum com `nivel_acesso = "SISTEMA"` — valor que a tela não concede, mas
+que um cadastro montado à mão ou uma migração de dados poderia gravar — lia a base
+inteira.
+
+**Análise.** É a classe II desta taxonomia: a mesma decisão escrita em dois
+lugares, cada cópia internamente consistente, divergindo sem que nada acuse. A
+cópia correta era a do banco (`escopo_do_usuario`), que rebaixa o `SISTEMA` de
+cadastro a escopo de unidade; a da aplicação lia o campo cru. Concorreu para o
+silêncio o fato de essas duas funções não possuírem teste direto — eram
+exercitadas apenas por meio das rotas, com dados semeados no mesmo município do
+usuário, onde recorte nacional e recorte de unidade devolvem exatamente as mesmas
+linhas.
+
+**Correção.** As duas funções de `utils/security` passaram a derivar o nível de
+`escopo_do_usuario` — a mesma função que a política do banco usa —, o que elimina
+a segunda fonte de verdade. O `SISTEMA` de cadastro é rebaixado a unidade; o
+alcance nacional só chega pelo perfil de operador da plataforma, que a função
+devolve como escopo de sistema. A pergunta "quem atravessa o isolamento" passa a
+ter uma resposta única.
+
+**Verificação.** Um caso de teste novo exercita as duas funções diretamente,
+antes sem cobertura, e reprova nos dois sentidos: um usuário comum com `SISTEMA`
+de cadastro não pode ver nem listar paciente de outra unidade, e o operador da
+plataforma pode — de modo que reintroduzir a leitura do campo cru reabre o acesso
+e derruba o primeiro caso, e retirar do operador a travessia derruba o segundo. A
+própria suíte deixou de conceder ao seu administrador de teste um `SISTEMA` de
+cadastro que apenas mascarava o defeito; o alcance nacional que alguns testes
+exigem passou a vir de um usuário com o perfil de operador da plataforma.
+
+**Lição transferível.** Quando a mesma decisão de autorização é tomada em duas
+camadas — uma no banco, outra na aplicação —, a camada que não tem rede de
+segurança embaixo é a que merece mais desconfiança, não menos. E função de
+autorização sem teste direto é função cuja regra ninguém confronta com a da sua
+gêmea: aqui, a ausência de um teste sobre `pode_acessar_paciente` foi o que
+permitiu às duas cópias divergirem caladas.
 
 ### 9.5 Testes de backup e restauração
 
