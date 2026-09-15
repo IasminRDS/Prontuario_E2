@@ -6,7 +6,10 @@ os dados do SUS e gera relatórios.
 
 Data do levantamento: 10 de setembro de 2026. **Revisão 2** — os quatro itens que
 haviam ficado como indicação de busca foram conferidos nas fontes oficiais; o
-resultado está na seção 6.
+resultado está na seção 6. **Revisão 3** (15 de setembro de 2026) — acrescentadas
+a receita do que se lê **sem** o `.DBC` (seção 5.5) e a seleção de **três
+municípios** para um relatório territorial (seção 5.6), com códigos IBGE,
+populações e história conferidos no IBGE e na Sesab.
 
 Vale aqui a mesma régua do resto do projeto: **nada é afirmado sem a fonte que
 prova**. Cada item traz a coluna *Verificação*, que diz se a informação foi lida
@@ -290,6 +293,75 @@ de indicadores assistenciais"* já consta da seção **13. Trabalhos Futuros**, 
 Entre B e C, a diferença não é de esforço apenas: é de identidade do trabalho. O
 caminho C transforma um TCC sobre controles de segurança em um TCC sobre
 inteligência em saúde, e a banca avalia o que o texto prometeu.
+
+### 5.5 Os dados que você consegue ler, sem o `.DBC`
+
+Se o objetivo é **ler** e montar um relatório à mão — não programar um baixador —,
+duas das três portas bastam, e **nenhuma exige o `.DBC`**:
+
+- **TABNET** (`tabnet.datasus.gov.br`). No navegador, escolha a base (SIH, SIA,
+  SIM, SINASC, CNES…), ponha **Município** na linha, o ano na coluna, filtre pela
+  UF/município e gere. O botão **"Copia como .CSV"** entrega a tabela já somada,
+  que abre no Excel ou no LibreOffice. É o caminho para exploração humana: sem
+  instalar nada, sem formato proprietário.
+- **OpenDataSUS / dados.gov.br**. Conjuntos publicados como **CSV/JSON** por HTTP
+  (API CKAN) — para quando você quiser automatizar, mas ainda em formato aberto.
+
+O que **não** encostar, se o objetivo é apenas ler: a Transferência de Arquivos
+(FTP), que só serve `.DBC` — microdado registro a registro, que precisa de
+descompressor (seção 3). Ele é para cruzamento fino, não para leitura.
+
+**E há uma razão que não é só de conveniência.** O TABNET entrega **agregado** —
+contagem por município, já somada, sem uma linha por pessoa. Isso é exatamente o
+que um relatório territorial precisa, e é o que mantém o exercício **fora de dado
+identificável**: nenhuma religação possível, nenhuma pessoa reconhecível. Casa com
+a decisão do projeto de manter o paciente sintético — o dado externo entra
+**agregado e público**, como referência, do mesmo modo que a seção 7.6 já
+incorpora eventos vitais do IBGE.
+
+### 5.6 Três municípios para um relatório territorial
+
+Um relatório territorial só diz alguma coisa se os municípios **se relacionam** —
+senão são três colunas sem fluxo entre elas. O melhor trio para isto não foi
+escolhido por conveniência: os três já foram **um só território**.
+
+| Município | Código IBGE | População | Papel no relatório |
+|---|---|---|---|
+| **Bom Jesus da Lapa** | 2903904 | 65.550 (Censo 2022); 68.866 (est. 2025) | **Polo** — interna e recebe referência: tem hospital, leitos de UTI, hemodiálise e centro de imagem, e Hospital Regional em construção |
+| **Serra do Ramalho** | 2930154 | ~36.119 (est. 2024) | Refere ao polo — **desmembrado de Bom Jesus da Lapa em 1989** (Projeto Especial de Colonização de Sobradinho) |
+| **Sítio do Mato** | 2930758 | 13.408 (Censo 2022); 13.982 (est. 2025) | Refere ao polo — **também desmembrado de Bom Jesus da Lapa em 1989** |
+
+Os três estão na **Região de Saúde de Santa Maria da Vitória**, e os dois menores
+foram literalmente recortados do polo em 1989 — de modo que existe entre eles um
+**gradiente de referência real**: quem precisa de internação em Serra do Ramalho
+ou em Sítio do Mato tende a ser internado em Bom Jesus da Lapa, que ficou com a
+estrutura hospitalar. É esse gradiente que um relatório territorial revela, e que
+o sistema modela pelo código IBGE.
+
+**O que ler, por município, tudo agregado e sem `.DBC`:**
+
+- **SIHSUS** — internações por **município de residência** *e* por **município de
+  internação**. O cruzamento dos dois é o coração do relatório: mostra quantos
+  residentes dos dois menores internaram no polo. É o fluxo territorial em número.
+- **SIM** — óbitos por município de residência, causa e faixa etária.
+- **SINASC** — nascidos vivos por município de residência.
+- **CNES** — estabelecimentos e leitos por município: explica, do lado da oferta,
+  **por que** o polo interna e os outros referem.
+- **IBGE** — população (o denominador, para virar taxa em vez de contagem crua).
+
+O relatório que isso permite é o que a seção 7.6 já faz em espécie: confrontar o
+indicador **interno** do Prontuário_E2 (sobre a rede sintética) com o indicador
+**municipal real** do DATASUS, como referência externa — agora sobre três
+municípios que formam uma micro-região com fluxo entre si, e não um município
+isolado.
+
+**Verificação.** Códigos IBGE, populações e a história de desmembramento de 1989
+conferidos nas fichas municipais do IBGE (Cidades@) e na Wikipédia lusófona citada
+por elas; a composição da Região de Saúde de Santa Maria da Vitória e a estrutura
+hospitalar de Bom Jesus da Lapa, em material da Secretaria de Saúde do Estado da
+Bahia (Sesab). As **contagens** de internação, óbito e nascimento **não** são
+afirmadas aqui: são o que você puxa do TABNET ao montar o relatório — este
+documento diz **onde** e **como** ler, não inventa o número.
 
 ---
 
