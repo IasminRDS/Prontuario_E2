@@ -29,6 +29,16 @@ class Paciente(db.Model):
         db.Index("ix_pacientes_nome_trgm", "nome",
                  postgresql_using="gin",
                  postgresql_ops={"nome": "public.gin_trgm_ops"}),
+        # A listagem SEM recorte territorial (operador da plataforma: escopo
+        # SISTEMA/ESTADO) não casa com o prefixo (município, UF) do índice acima,
+        # então caía em Seq Scan da tabela inteira + Sort por nome. Um índice só
+        # em `nome`, parcial em `ativo`, serve a ordenação direto e elimina o
+        # Sort. Medido em `ix_pacientes_listagem_nome`: 55,8ms → 1,2ms a 50 mil
+        # linhas. Não cobre o usuário de unidade — esse já é servido pelo índice
+        # territorial —, e por isso é ganho de um caminho só, não hot path.
+        db.Index("ix_pacientes_listagem_nome", "nome",
+                 postgresql_where=db.text("ativo"),
+                 sqlite_where=db.text("ativo")),
     )
 
     id = db.Column(db.Integer, primary_key=True)

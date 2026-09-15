@@ -238,10 +238,10 @@ def historia():
     h.append(tabela(
         None,
         [["Módulos (blueprints)", "<b>45</b>", "Testes",
-          "<b>666</b> casos, em 427 funções e 49 arquivos"],
+          "<b>668</b> casos, em 428 funções e 50 arquivos"],
          ["Rotas", "<b>214</b> (153 GET, 105 mutação)", "Tabelas sob RLS", "<b>23</b>"],
          ["Telas (templates)", "<b>117</b>", "Permissões RBAC", "<b>27</b>, em 7 perfis"],
-         ["Modelos de dados", "<b>42</b> tabelas, 538 colunas, 114 FKs", "Migrações", "<b>16</b>"],
+         ["Modelos de dados", "<b>42</b> tabelas, 538 colunas, 114 FKs", "Migrações", "<b>17</b>"],
          ["Terminologias oficiais", "CID-10, RENAME, CBO, SIGTAP, CNES", "Bancos exercitados",
           "PostgreSQL e SQLite, no CI"]],
         [3.9 * cm, 4.9 * cm, 3.3 * cm, 5.3 * cm]))
