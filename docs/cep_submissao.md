@@ -204,10 +204,32 @@ Recursos próprios. Itens previstos: [material de consumo, se houver],
 
 ### 10. Bibliografia (referência)
 
-ISO 9241‑11; NIELSEN, J. *Usability Engineering*; BROOKE, J. *SUS: A quick and
-dirty usability scale*; SAURO, J.; LEWIS, J. R. *Quantifying the User Experience*;
-BRASIL. Resolução CNS 466/2012; Resolução CNS 510/2016; Lei 13.709/2018 (LGPD).
-[Completar no formato ABNT e alinhar com a `docs/LEITURAS.pdf`.]
+**Metodologia e norma** (a completar no formato ABNT e alinhar com a
+`docs/LEITURAS.pdf`): ISO 9241‑11; NIELSEN, J. *Usability Engineering*; BROOKE, J.
+*SUS: A quick and dirty usability scale*; SAURO, J.; LEWIS, J. R. *Quantifying the
+User Experience*; BRASIL. Resolução CNS 466/2012; Resolução CNS 510/2016; Lei
+13.709/2018 (LGPD).
+
+**Referências verificadas na fonte** (lidas no original, não em agregador):
+
+- LOURENÇO, D. F.; CARMONA, E. V.; LOPES, M. H. B. M. Translation and Cross-Cultural
+  Adaptation of the System Usability Scale to Brazilian Portuguese. **Aquichan**,
+  v. 22, n. 2, e2228, 2022. DOI: 10.5294/aqui.2022.22.2.8. — *adaptação
+  transcultural validada da SUS para o português do Brasil; é a versão do
+  instrumento aplicado (Anexo II).*
+- NEVES, R. B.; CARVALHO, D. B. F.; GUIMARÃES, E. A. A.; OLIVEIRA, V. C.; QUITES,
+  H. F. O.; CAVALCANTE, R. B.; GONTIJO, T. L. Desafios na usabilidade do aplicativo
+  e-SUS Território da Estratégia de Saúde Digital do Brasil. **Saúde em Debate**,
+  v. 49, n. spe1, e19774, 2025. DOI: 10.1590/2358-28982025E19774P. — *avaliação de
+  usabilidade com SUS em sistema do próprio SUS (254 agentes comunitários; escore
+  médio 55,3), precedente de método e da régua de interpretação.*
+
+**Indicações a conferir na fonte primária** antes de citar (padrão do
+`LEITURAS.pdf` — indicação de busca, não referência lida): estudo de avaliação
+heurística de protótipo de tecnologia em saúde (RLAE/SciELO); usabilidade do
+Prontuário Eletrônico do Cidadão na ótica da enfermagem em sala de vacinação; e a
+avaliação do e-SUS Território com equipes de ESF (resultado divergente do de Neves,
+útil de contrastar).
 
 ---
 

@@ -33,9 +33,12 @@ negativas, em escala de 1 (**discordo totalmente**) a 5 (**concordo totalmente**
 Peça que responda a todos, sem deixar em branco; se hesitar, marque o ponto do
 meio.
 
-> **Nota de origem.** A SUS é de Brooke (1996). Use uma **tradução validada para o
-> português do Brasil** e cite-a; a redação abaixo segue as versões validadas
-> correntes e serve de base — confira contra a fonte que você referenciar.
+> **Nota de origem.** A SUS é de Brooke (1996). A versão em português do Brasil a
+> citar é a **adaptação transcultural validada** de LOURENÇO, CARMONA e LOPES
+> (Aquichan, v. 22, n. 2, e2228, 2022; DOI 10.5294/aqui.2022.22.2.8), com estrutura
+> unidimensional e alfa de Cronbach 0,76. A redação dos dez itens abaixo deve ser
+> **conferida item a item contra essa fonte** antes de aplicar — o texto aqui é
+> base de trabalho, e a versão publicada é a autoridade.
 
 | # | Afirmação | 1 | 2 | 3 | 4 | 5 |
 |---|---|:-:|:-:|:-:|:-:|:-:|
