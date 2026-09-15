@@ -240,6 +240,15 @@ dos números da monografia: **nenhum "Atende" sem o arquivo ou o teste que prova
 e requisito não verificado aparece como não verificado, nunca como atendido.
 Refaça a classificação quando o código mudar — ela é um retrato datado.
 
+`docs/avaliacao_usabilidade.md` é o **desenho** (protocolo) da avaliação de
+usabilidade com usuários reais — a lacuna que a §10.1 da monografia declara e que
+a §13 recolhe como trabalho futuro. Documento de trabalho, não parte da
+monografia: é um plano, e **nenhum número nele é medição** — tamanhos de amostra,
+tempos-alvo e limiar de SUS são parâmetros do desenho. Executado, vira a §10.3
+(resultados com usuários) e retira a limitação. O caminho crítico do cronograma é
+a aprovação no CEP (Plataforma Brasil), que precede qualquer coleta — por isso o
+documento manda começá-la cedo.
+
 `docs/defesa_roteiro.md` é o roteiro de apresentação e defesa — documento de
 trabalho, não parte da monografia, e descartável depois da banca. Tem gerador
 próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aqui
