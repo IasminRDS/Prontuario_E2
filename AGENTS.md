@@ -249,6 +249,13 @@ tempos-alvo e limiar de SUS são parâmetros do desenho. Executado, vira a §10.
 a aprovação no CEP (Plataforma Brasil), que precede qualquer coleta — por isso o
 documento manda começá-la cedo.
 
+`docs/cep_submissao.md` é o rascunho da submissão a esse CEP, derivado do desenho:
+o Projeto de Pesquisa detalhado e o TCLE, mais a lista do pacote da Plataforma
+Brasil. Tudo entre `[...]` é campo a preencher com dado que só a autora tem
+(orientador(a), datas, contatos do CEP) — não inventar. Vale a mesma disciplina:
+**é uma proposta, nenhum número de resultado entra nela**, porque o CEP avalia o
+projeto, não achados.
+
 `docs/defesa_roteiro.md` é o roteiro de apresentação e defesa — documento de
 trabalho, não parte da monografia, e descartável depois da banca. Tem gerador
 próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aqui
