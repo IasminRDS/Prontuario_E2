@@ -1,5 +1,5 @@
 import pikepdf
-from PyPDF2 import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter
 import os
 
 class PDFManager:

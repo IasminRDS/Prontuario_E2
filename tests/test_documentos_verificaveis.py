@@ -35,7 +35,7 @@ def limpar_documentos(app):
 
 
 def _texto_do_pdf(conteudo):
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
     from io import BytesIO
 
     leitor = PdfReader(BytesIO(conteudo))

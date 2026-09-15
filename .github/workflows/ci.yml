@@ -144,3 +144,32 @@ jobs:
 
       - name: Testes
         run: pytest
+
+  dependencias:
+    name: Auditoria de dependências
+    runs-on: ubuntu-latest
+    # RLS e a trilha de auditoria protegem o dado em uso; nenhum dos dois alcança
+    # a versão vulnerável de uma biblioteca que já veio no `requirements.txt`.
+    # Este job fecha essa superfície: `pip-audit` confronta os pins com o banco de
+    # vulnerabilidades da PyPA e REPROVA quando um pin tem CVE com correção
+    # publicada. É gate, e não informativo, de propósito: a versão da dependência
+    # está no controle deste repositório — ao contrário do `hardening-check`, que
+    # interroga o ambiente de implantação e por isso é informativo. Confere o
+    # `requirements.txt`, a superfície que vai para produção. Quando um aviso não
+    # tiver correção disponível, a saída é `--ignore-vuln <ID>` com a razão
+    # escrita ao lado, na mesma regra das outras listas de exceção do projeto —
+    # nunca baixar a versão do detector.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar o pip-audit
+        run: pip install pip-audit==2.10.1
+
+      - name: Auditar as dependências de produção
+        # `--strict` reprova também quando alguma dependência não pôde ser
+        # auditada: aviso não conferido é o mesmo silêncio de aviso ausente.
+        run: pip-audit -r requirements.txt --strict

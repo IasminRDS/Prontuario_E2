@@ -21,7 +21,7 @@ import io
 import re
 
 import pytest
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 from tests.conftest import PERFIS, autenticar
 from utils.datas import MESES
