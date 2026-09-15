@@ -256,6 +256,15 @@ Brasil. Tudo entre `[...]` é campo a preencher com dado que só a autora tem
 **é uma proposta, nenhum número de resultado entra nela**, porque o CEP avalia o
 projeto, não achados.
 
+`docs/instrumentos_usabilidade.md` são os instrumentos por extenso, prontos para
+anexar à submissão e usar na coleta: questionário de caracterização, SUS (dez
+itens em português, com o cálculo do escore), SEQ, roteiro do moderador e cartões
+de tarefa por perfil — cada cartão com o que o participante lê separado do que só
+o moderador vê (critério de sucesso, o que observar). As três sondas da PP5 (E2 o
+valor impossível, M3 a RNDS simulada, G2 o recorte territorial) põem à prova se as
+**negações** do sistema se explicam para quem não escreveu o código. Instrumentos,
+não medições.
+
 `docs/defesa_roteiro.md` é o roteiro de apresentação e defesa — documento de
 trabalho, não parte da monografia, e descartável depois da banca. Tem gerador
 próprio, e não reaproveita o do TCC porque o destino é outro: ali é ABNT, aqui
