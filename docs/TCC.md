@@ -1113,7 +1113,7 @@ Quadro — Dimensão do artefato construído
 | Migrações de esquema versionadas | 17 |
 | Telas (*templates*) | 117 |
 | Permissões nomeadas · perfis | 27 · 7 |
-| Casos de teste automatizados | 671, em 51 arquivos |
+| Casos de teste automatizados | 674, em 51 arquivos |
 
 
 Fonte: elaborado pela autora (2026), por contagem automatizada sobre o repositório.
@@ -1414,7 +1414,7 @@ correção passou a incluir a sequência.
 
 ### 9.1 Estratégia
 
-A suíte automatizada compreende **671 casos de teste**, provenientes de 431
+A suíte automatizada compreende **674 casos de teste**, provenientes de 434
 funções distribuídas em 51 arquivos — a diferença corresponde às funções
 parametrizadas, executadas uma vez por conjunto de entradas. A suíte é executada
 integralmente sobre os dois sistemas gerenciadores de banco de dados
@@ -1476,7 +1476,7 @@ Esta seção apresenta os achados da avaliação. Sua inclusão é deliberada: e
 governança, a capacidade de detectar falhas nos próprios controles é evidência de
 maturidade mais significativa que a ausência de relato de falhas.
 
-Os vinte e seis achados relatados a seguir não constituem uma lista de defeitos
+Os vinte e sete achados relatados a seguir não constituem uma lista de defeitos
 independentes. Enumerados isoladamente, sugeririam apenas que o sistema continha
 erros — afirmação verdadeira, pouco informativa e válida para qualquer software.
 Examinados em conjunto, revelam algo mais útil: **agrupam-se em um número
@@ -1506,7 +1506,7 @@ real, e não com outra declaração — a lista de tabelas protegidas derivada d
 **Classe II — A regra escrita mais de uma vez.** A mesma decisão registrada em
 dois ou mais lugares, que divergem sem que nada acuse, porque cada cópia é
 internamente consistente. É a causa isolada mais frequente deste trabalho.
-*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26.* **Verificação
+*Instâncias: 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26, 9.4.27.* **Verificação
 correspondente:** comparar as cópias entre si, e no nível de abstração certo —
 não os nomes das permissões, mas o conjunto de perfis que cada caminho admite.
 
@@ -1535,22 +1535,22 @@ Quadro — Mecanismos recorrentes e achados correspondentes
 | Classe | Mecanismo | Achados | Verificação que a torna detectável |
 |---|---|---|---|
 | I | Declaração que deixou de valer | 9.4.1, 9.4.5, 9.4.19, 9.4.20 | confronto com o estado real, não com outra declaração |
-| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26 | comparação entre as cópias, no nível de abstração do efeito |
+| II | Regra escrita mais de uma vez | 9.4.3, 9.4.14, 9.4.17, 9.4.18, 9.4.19, 9.4.22, 9.4.26, 9.4.27 | comparação entre as cópias, no nível de abstração do efeito |
 | III | Caminho inexistente | 9.4.10, 9.4.11, 9.4.12, 9.4.16 | alcançabilidade nos dois sentidos |
 | IV | Efeito que não ocorre | 9.4.4, 9.4.8, 9.4.13, 9.4.21 | medição do efeito, não da chamada |
 | V | Controle como origem do defeito | 9.4.2, 9.4.7, 9.4.9, 9.4.15, 9.4.23, 9.4.24, 9.4.25 | verificação de segunda ordem sobre o próprio controle |
 
 
 **A taxonomia foi obtida a partir dos dezenove primeiros achados e absorveu os
-sete seguintes sem exigir classe nova.** O registro importa porque uma
+oito seguintes sem exigir classe nova.** O registro importa porque uma
 classificação construída *a posteriori* corre sempre o risco de descrever apenas
-o conjunto de onde saiu. Os achados 9.4.20 a 9.4.26 surgiram depois, de
+o conjunto de onde saiu. Os achados 9.4.20 a 9.4.27 surgiram depois, de
 investigação independente, e cada um encontrou classe existente: a declaração
 que deixou de valer, a regra com duas fontes de verdade, o efeito esperado que
 não ocorre e — em três casos — o próprio controle como origem do defeito. É
 evidência de que os mecanismos são do objeto, e não do olhar.
 
-Vale notar a distribuição: **três dos sete caíram na classe V**, a do controle
+Vale notar a distribuição: **três dos oito caíram na classe V**, a do controle
 que produz o que deveria impedir. Não é acaso, e sim consequência do próprio
 método: quanto mais instrumentos de verificação um sistema acumula, maior a
 superfície em que essa classe pode se manifestar.
@@ -1594,7 +1594,7 @@ justificar um caso novo. Sem isso, a lista de exceções vira decoração, e a
 verificação que ela acompanha deixa de medir sem deixar de passar.
 
 Um defeito de qualquer dessas classes que reapareça em versão futura reprova a
-suíte. É a diferença entre haver corrigido vinte e seis defeitos e haver instalado
+suíte. É a diferença entre haver corrigido vinte e sete defeitos e haver instalado
 cinco instrumentos que encontram a próxima ocorrência de cada um.
 
 #### 9.4.1 Cobertura incompleta do isolamento no banco de dados
@@ -2815,6 +2815,47 @@ autorização sem teste direto é função cuja regra ninguém confronta com a d
 gêmea: aqui, a ausência de um teste sobre `pode_acessar_paciente` foi o que
 permitiu às duas cópias divergirem caladas.
 
+#### 9.4.27 A mesma trava, na função gêmea do prontuário
+
+**Achado.** A função que decide acesso a prontuário — `pode_acessar_prontuario`,
+que guarda cinco rotas — repetia o padrão de 9.4.26 num vizinho, com dois furos
+próprios. O primeiro: liberava o acesso quando `usuario.perfil == "admin"`,
+comparação de string crua — o mesmo defeito de normalização de 9.4.19 —, de modo
+que o administrador de um hospital lia o prontuário de **qualquer** unidade da
+rede, a travessia de hospital que o modelo reserva ao operador da plataforma. O
+segundo: para o escopo estadual, devolvia acesso nacional, quando a regra
+territorial correta recorta por UF.
+
+**Análise.** É novamente a classe II — a mesma decisão territorial escrita duas
+vezes, aqui na função em Python e na política de RLS, divergindo em silêncio. Mas
+há uma diferença informativa em relação a 9.4.26: o prontuário, ao contrário do
+paciente, **tem** `unidade_id` e é protegido por RLS. Em PostgreSQL, portanto, a
+política do banco recortava o resultado antes que a função errasse, e a
+divergência ficava mascarada — a única exposição real era em SQLite, onde não há
+RLS e esta função é a única porta. O defeito e a ausência de teste que o encobria
+eram, um e outro, invisíveis num dos dois bancos.
+
+**Correção.** A função passou a espelhar a própria política de RLS, nível a
+nível, derivando o nível de `escopo_do_usuario` — a mesma fonte única que 9.4.26
+adotou. A comparação de string crua saiu; a travessia do isolamento vem do escopo
+de sistema, que só o operador da plataforma recebe; o escopo estadual recorta por
+UF, o municipal por município, o regional por regional. As duas expressões da
+mesma regra passaram a dizer o mesmo.
+
+**Verificação.** Casos de teste novos, no mesmo arquivo que prende 9.4.26,
+exercitam a função diretamente — ela também não tinha teste próprio — e reprovam
+nos dois sentidos: o administrador de hospital não lê prontuário de outra unidade
+e o operador da plataforma lê; o gestor estadual lê o prontuário da própria UF e
+não o de outra. Reintroduzir o `perfil == "admin"` ou o acesso nacional do escopo
+estadual derruba um caso específico.
+
+**Lição transferível.** Uma regra de isolamento escrita em duas camadas precisa
+de um teste em cada camada onde ela é a única defesa. A de prontuário tinha o RLS
+como rede em PostgreSQL, o que escondeu por completo tanto o furo quanto a
+ausência de teste: só o banco sem rede os revelava. Quando a mesma decisão vale
+em dois lugares, o lugar que parece redundante é justamente o que ninguém pensa
+em verificar.
+
 ### 9.5 Testes de backup e restauração
 
 A validação foi executada em duas modalidades: restauração de arquivo contendo
@@ -2962,7 +3003,7 @@ verificação automatizada de que os eventos são efetivamente persistidos.
 A estratégia de continuidade compreende backup completo sob RLS e validação
 automatizada de restauração, executável de forma agendada.
 
-A suíte de 671 casos de teste executa sem falhas em ambos os sistemas de banco de
+A suíte de 674 casos de teste executa sem falhas em ambos os sistemas de banco de
 dados. A sequência de dezessete migrações foi exercitada a partir de banco vazio e
 também no sentido inverso, com reversão completa até o estado inicial e
 reaplicação.

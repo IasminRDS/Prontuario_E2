@@ -193,24 +193,38 @@ def query_pacientes_no_escopo(usuario=None):
 
 
 def pode_acessar_prontuario(prontuario, usuario):
-    if usuario.perfil == "admin":
+    # Espelha a MESMA regra territorial da política de RLS (`utils.rls._politica`)
+    # e deriva o nível da MESMA função, `escopo_do_usuario`. Antes esta função
+    # tinha regra própria, com dois furos: `usuario.perfil == "admin"` — comparação
+    # de string crua, o defeito de normalização de 9.4.19 — liberava o
+    # Administrador de hospital a ler prontuário de QUALQUER unidade, a travessia
+    # de hospital que só o operador da plataforma pode; e `ESTADO` devolvia acesso
+    # nacional em vez de recorte por UF. Prontuário TEM `unidade_id` e é protegido
+    # por RLS, então em PostgreSQL a divergência ficava mascarada; em SQLite, sem
+    # RLS, esta função é a única porta. Agora as duas dizem a mesma coisa.
+    from utils.rls import escopo_do_usuario
+
+    escopo = escopo_do_usuario(usuario)
+    nivel = escopo["nivel"]
+    if nivel == "SISTEMA":
         return True
 
-    nivel = getattr(usuario, "nivel_acesso", "UNIDADE")
+    unidade = getattr(prontuario, "unidade", None)
+
     if nivel == "ESTADO":
-        return True
-
-    if nivel in ("UNIDADE", "MUNICIPIO"):
-        if usuario.unidade_id and prontuario.unidade_id:
-            return usuario.unidade_id == prontuario.unidade_id
-        return False
+        return bool(unidade and escopo.get("uf")
+                    and unidade.uf == escopo["uf"])
 
     if nivel == "REGIONAL":
-        unidade = getattr(prontuario, "unidade", None)
-        return bool(
-            unidade
-            and getattr(usuario, "regional_id", None)
-            and unidade.regional_id == usuario.regional_id
-        )
+        return bool(unidade and escopo.get("regional_id")
+                    and unidade.regional_id == escopo["regional_id"])
+
+    if nivel == "MUNICIPIO":
+        return bool(unidade and escopo.get("municipio_ibge")
+                    and unidade.municipio_ibge == escopo["municipio_ibge"])
+
+    if nivel == "UNIDADE":
+        return bool(escopo.get("unidade_id") and prontuario.unidade_id
+                    and escopo["unidade_id"] == prontuario.unidade_id)
 
     return False
